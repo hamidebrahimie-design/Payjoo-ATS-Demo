@@ -1,4 +1,4 @@
-# Payjo ATS - Applicant Tracking System / سامانه جذب و استخدام پیجو
+# Payjoo ATS - Applicant Tracking System / سامانه جذب و استخدام پیجو
 
 Payjo ATS is a modern, responsive, and bilingual (Persian & English) Applicant Tracking System built with Python, Django, and HTMX. It provides recruiters and managers with tools to manage job opportunities, define custom evaluation stages with dynamic weights, assign recruiters, track candidate progress through pipeline workflows, and generate printable audit-ready exam documents.
 
