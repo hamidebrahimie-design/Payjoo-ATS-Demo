@@ -1,0 +1,842 @@
+{% extends 'base_candidate.html' %}
+{% load jalali_tags %}
+
+{% block title %}میز کار من | سامانه جذب{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
+<style>
+    .section-title {
+        font-weight: 600;
+        color: #1e293b;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.5rem;
+        margin-top: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .formset-row {
+        position: relative;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.25rem;
+    }
+    .job-dept-header {
+        background-color: #f1f5f9;
+        border-radius: 8px;
+        padding: 0.75rem 1.25rem;
+        margin-top: 1.5rem;
+        font-weight: 600;
+        color: #475569;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar profile info (summary) -->
+    <div class="col-lg-3 mb-4">
+        <div class="card candidate-card p-4 text-center">
+            <div class="avatar-placeholder mx-auto mb-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
+                    <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                </svg>
+            </div>
+            <h5 class="fw-bold m-0">{{ candidate.first_name }} {{ candidate.last_name }}</h5>
+            <p class="text-muted small mb-3">متقاضی همکاری</p>
+            <div class="text-start mb-3">
+                <p class="mb-1 text-secondary small"><strong>کد ملی:</strong> <span class="font-semibold">{{ candidate.national_id }}</span></p>
+                <p class="mb-1 text-secondary small"><strong>تلفن:</strong> <span class="font-semibold">{{ candidate.phone_number }}</span></p>
+                {% if candidate.personnel_number %}
+                    <p class="mb-1 text-secondary small"><strong>کد پرسنلی:</strong> <span class="font-semibold">{{ candidate.personnel_number }}</span></p>
+                {% endif %}
+            </div>
+            <a href="{% url 'candidate_password_change' %}" class="btn btn-sm btn-outline-secondary w-100 text-xs font-semibold py-1.5 rounded-pill d-flex align-items-center justify-content-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+                </svg>
+                تغییر رمز عبور
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Tabs -->
+    <div class="col-lg-9">
+        <div class="d-flex justify-content-center justify-content-lg-start mb-4">
+            <div class="nav nav-tabs-premium" id="nav-tab" role="tablist">
+                <button class="nav-link {% if not active_tab or active_tab == 'jobs' %}active{% endif %}" id="nav-jobs-tab" data-bs-toggle="tab" data-bs-target="#nav-jobs" type="button" role="tab">💼 فرصت‌های شغلی</button>
+                <button class="nav-link {% if active_tab == 'applications' %}active{% endif %}" id="nav-applications-tab" data-bs-toggle="tab" data-bs-target="#nav-applications" type="button" role="tab">📑 درخواست‌های من</button>
+                <button class="nav-link {% if active_tab == 'profile' %}active{% endif %}" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab">👤 مشخصات و سوابق</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="nav-tabContent">
+            <!-- TAB 1: Job Opportunities -->
+            <div class="tab-pane fade {% if not active_tab or active_tab == 'jobs' %}show active{% endif %}" id="nav-jobs" role="tabpanel">
+                <div class="card candidate-card p-4">
+                    <h4 class="fw-bold mb-3 text-secondary">فرصت‌های شغلی فعال</h4>
+                    <p class="text-muted small">شغل مورد نظر خود را انتخاب کرده و با یک کلیک درخواست همکاری خود را ارسال کنید.</p>
+                    
+                    {% for dept, dept_jobs in grouped_jobs.items %}
+                        <div class="job-dept-header">{{ dept }}</div>
+                        <div class="row g-3 mt-1">
+                            {% for job in dept_jobs %}
+                                <div class="col-md-6">
+                                    <div class="card h-100 p-3 border-light shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="fw-bold text-dark m-0">{{ job.title }}</h6>
+                                            <span class="badge bg-light text-secondary border small">کد: {{ job.code }}</span>
+                                        </div>
+                                        <p class="text-muted small text-truncate-2 flex-grow-1" style="font-size: 0.8rem; line-height: 1.5; height: 2.4rem;">
+                                            {{ job.description|striptags }}
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-light">
+                                            <span class="text-muted small">ظرفیت: {{ job.headcount }} نفر</span>
+                                            {% if job.id in applied_job_ids %}
+                                                <button class="btn btn-sm btn-secondary rounded-pill px-3" disabled>✓ درخواست ثبت شده</button>
+                                            {% else %}
+                                                <form action="{% url 'candidate_apply_direct' job.id %}" method="post" class="m-0">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-premium rounded-pill px-3">ثبت درخواست سریع</button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-5 text-muted">در حال حاضر هیچ فرصت شغلی فعالی منتشر نشده است.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- TAB 2: My Applications -->
+            <div class="tab-pane fade {% if active_tab == 'applications' %}show active{% endif %}" id="nav-applications" role="tabpanel">
+                <div class="card candidate-card p-4">
+                    <h4 class="fw-bold mb-3 text-secondary">درخواست‌های همکاری من</h4>
+                    <p class="text-muted small">در این بخش می‌توانید وضعیت فعلی ارزیابی‌ها و تاریخچه بررسی درخواست‌های خود را مشاهده کنید.</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mt-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>عنوان شغل</th>
+                                    <th>تاریخ ثبت‌نام</th>
+                                    <th>وضعیت نهایی</th>
+                                    <th>مرحله ارزیابی فعلی</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in applications %}
+                                    <tr class="border-bottom-0">
+                                        <td class="fw-semibold text-dark">
+                                            {{ app.job.title }}
+                                            <small class="text-muted d-block small" style="font-size: 0.75rem;">دپارتمان: {{ app.job.department }} | کد: {{ app.job.code }}</small>
+                                        </td>
+                                        <td class="small">{{ app.created_at|to_jalali }}</td>
+                                        <td>
+                                            {% if app.status == 'IN_PROGRESS' %}
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-3 py-1.5 rounded-pill text-xs">در حال بررسی</span>
+                                            {% elif app.status == 'SELECTED' %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1.5 rounded-pill text-xs">قبول نهایی</span>
+                                            {% elif app.status == 'RESERVE' %}
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info px-3 py-1.5 rounded-pill text-xs">ذخیره</span>
+                                            {% elif app.status == 'REJECTED' %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-1.5 rounded-pill text-xs">مردود شده</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="small fw-medium">
+                                            {% if app.status == 'IN_PROGRESS' %}
+                                                {% if app.current_stage %}
+                                                    <span class="text-primary">{{ app.current_stage.name }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">شروع ارزیابی</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">پایان فرآیند</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-light bg-opacity-25" style="border-bottom: 2px solid #e2e8f0;">
+                                        <td colspan="4" class="py-2.5 px-4">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="text-xs font-semibold text-secondary me-2">روند مراحل ارزیابی:</span>
+                                                {% for state in app.stage_states.all %}
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="d-flex align-items-center gap-1.5 px-2.5 py-1 rounded text-xs border {% if state.status == 'COMPLETED' %}bg-success bg-opacity-10 text-success border-success{% elif state.status == 'FAILED' %}bg-danger bg-opacity-10 text-danger border-danger{% elif app.status == 'IN_PROGRESS' and app.current_stage == state.stage %}bg-primary bg-opacity-10 text-primary border-primary{% else %}bg-secondary bg-opacity-5 text-muted border-secondary border-opacity-10{% endif %}"
+                                                             {% if state.status != 'PENDING' %}title="تاریخ ثبت: {{ state.updated_at|to_jalali }}"{% endif %}>
+                                                            {% if state.status == 'COMPLETED' %}
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="text-success">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                                </svg>
+                                                                <span>{{ state.stage.name }} (تایید شده)</span>
+                                                            {% elif state.status == 'FAILED' %}
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="text-danger">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                                </svg>
+                                                                <span>{{ state.stage.name }} (مردود)</span>
+                                                            {% elif app.status == 'IN_PROGRESS' and app.current_stage == state.stage %}
+                                                                <div class="spinner-grow spinner-grow-sm text-primary" role="status" style="width: 8px; height: 8px;"></div>
+                                                                <span class="font-semibold">{{ state.stage.name }} (جاری)</span>
+                                                            {% else %}
+                                                                <span>{{ state.stage.name }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        {% if not forloop.last %}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-muted mx-1">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                                                            </svg>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 text-muted">هنوز هیچ درخواستی ثبت نکرده‌اید. از بخش «فرصت‌های شغلی» اقدام فرمایید.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Edit Profile & Experience -->
+            <div class="tab-pane fade {% if active_tab == 'profile' %}show active{% endif %}" id="nav-profile" role="tabpanel">
+                <!-- Personal Details Card -->
+                <div class="card candidate-card p-4 mb-4">
+                    <h5 class="section-title mt-0">۱. اطلاعات شناسنامه‌ای و رزومه</h5>
+                    <form method="post" action="{% url 'candidate_profile_update' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">نام</label>
+                                {{ profile_form.first_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">نام خانوادگی</label>
+                                {{ profile_form.last_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">کد ملی</label>
+                                {{ profile_form.national_id }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">شماره تماس</label>
+                                {{ profile_form.phone_number }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">ایمیل</label>
+                                {{ profile_form.email }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small font-medium">شماره پرسنلی (برای همکاران داخلی)</label>
+                                {{ profile_form.personnel_number }}
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label small font-medium">فایل رزومه (PDF یا Word)</label>
+                                {{ profile_form.resume }}
+                                {% if candidate.resume %}
+                                    <div class="text-xs text-muted mt-2">
+                                        فایل رزومه فعلی: <a href="{{ candidate.resume.url }}" target="_blank" class="text-primary text-decoration-none">مشاهده/دانلود رزومه آپلود شده</a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="submit" class="btn btn-premium px-4">ذخیره مشخصات فردی</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Education Card -->
+                <div class="card candidate-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center section-title mt-0">
+                        <h5 class="m-0 font-semibold text-secondary">۲. سوابق تحصیلی</h5>
+                        <button type="button" id="add-education-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن مقطع تحصیلی
+                        </button>
+                    </div>
+                    
+                    <form method="post" action="{% url 'candidate_education_update' %}">
+                        {% csrf_token %}
+                        {{ education_formset.management_form }}
+                        <div id="education-formset-container" class="d-flex flex-column gap-3 mb-4">
+                            {% for edu_form in education_formset %}
+                                <div class="formset-row education-form-row" id="education-form-{{ forloop.counter0 }}">
+                                    {{ edu_form.id }}
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">مقطع تحصیلی</label>
+                                            {{ edu_form.degree }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">رشته تحصیلی</label>
+                                            {{ edu_form.major }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">دانشگاه / موسسه</label>
+                                            {{ edu_form.university }}
+                                        </div>
+                                        <div class="col-md-1.5 col-6">
+                                            <label class="form-label text-xs text-muted mb-1">معدل</label>
+                                            {{ edu_form.gpa }}
+                                        </div>
+                                        <div class="col-md-1.5 col-6">
+                                            <label class="form-label text-xs text-muted mb-1">سال فراغت</label>
+                                            {{ edu_form.graduation_year }}
+                                        </div>
+                                        
+                                        <div class="col-12 text-end">
+                                            {% if edu_form.instance.pk %}
+                                                <div class="form-check d-none">
+                                                    {{ edu_form.DELETE }}
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteEducationRow('{{ forloop.counter0 }}')">حذف سابقه</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewEducationRow('{{ forloop.counter0 }}')">حذف سابقه</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium px-4">به‌روزرسانی سوابق تحصیلی</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Experience Card -->
+                <div class="card candidate-card p-4">
+                    <div class="d-flex justify-content-between align-items-center section-title mt-0">
+                        <h5 class="m-0 font-semibold text-secondary">۳. سوابق کاری و تجربیات</h5>
+                        <button type="button" id="add-experience-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن سابقه کاری
+                        </button>
+                    </div>
+                    
+                    <form method="post" action="{% url 'candidate_experience_update' %}">
+                        {% csrf_token %}
+                        {{ experience_formset.management_form }}
+                        <div id="experience-formset-container" class="d-flex flex-column gap-3 mb-4">
+                            {% for exp_form in experience_formset %}
+                                <div class="formset-row experience-form-row" id="experience-form-{{ forloop.counter0 }}">
+                                    {{ exp_form.id }}
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label text-xs text-muted mb-1">نام سازمان / شرکت</label>
+                                            {{ exp_form.company }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-xs text-muted mb-1">عنوان شغلی</label>
+                                            {{ exp_form.job_title }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label text-xs text-muted mb-1">تاریخ شروع (شمسی)</label>
+                                            {{ exp_form.start_date }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label text-xs text-muted mb-1">تاریخ پایان (شمسی)</label>
+                                            {{ exp_form.end_date }}
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label text-xs text-muted mb-1">توضیحات و سوابق فعالیت</label>
+                                            {{ exp_form.description }}
+                                        </div>
+                                        
+                                        <div class="col-12 text-end">
+                                            {% if exp_form.instance.pk %}
+                                                <div class="form-check d-none">
+                                                    {{ exp_form.DELETE }}
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteExperienceRow('{{ forloop.counter0 }}')">حذف سابقه</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewExperienceRow('{{ forloop.counter0 }}')">حذف سابقه</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium px-4">به‌روزرسانی سوابق کاری</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Languages Card -->
+                <div class="card candidate-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center section-title mt-0">
+                        <h5 class="m-0 font-semibold text-secondary">۴. زبان‌های خارجی</h5>
+                        <button type="button" id="add-language-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن زبان
+                        </button>
+                    </div>
+                    
+                    <form method="post" action="{% url 'candidate_language_update' %}">
+                        {% csrf_token %}
+                        {{ language_formset.management_form }}
+                        <div id="language-formset-container" class="d-flex flex-column gap-3 mb-4">
+                            {% for lang_form in language_formset %}
+                                <div class="formset-row language-form-row" id="language-form-{{ forloop.counter0 }}">
+                                    {{ lang_form.id }}
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label text-xs text-muted mb-1">نام زبان</label>
+                                            {{ lang_form.name }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-xs text-muted mb-1">سطح تسلط</label>
+                                            {{ lang_form.proficiency }}
+                                        </div>
+                                        
+                                        <div class="col-12 text-end">
+                                            {% if lang_form.instance.pk %}
+                                                <div class="form-check d-none">
+                                                    {{ lang_form.DELETE }}
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteLanguageRow('{{ forloop.counter0 }}')">حذف زبان</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewLanguageRow('{{ forloop.counter0 }}')">حذف زبان</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium px-4">به‌روزرسانی زبان‌ها</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Skills Card -->
+                <div class="card candidate-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center section-title mt-0">
+                        <h5 class="m-0 font-semibold text-secondary">۵. مهارت‌های تخصصی</h5>
+                        <button type="button" id="add-skill-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن مهارت
+                        </button>
+                    </div>
+                    
+                    <form method="post" action="{% url 'candidate_skill_update' %}">
+                        {% csrf_token %}
+                        {{ skill_formset.management_form }}
+                        <div id="skill-formset-container" class="d-flex flex-column gap-3 mb-4">
+                            {% for sk_form in skill_formset %}
+                                <div class="formset-row skill-form-row" id="skill-form-{{ forloop.counter0 }}">
+                                    {{ sk_form.id }}
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label text-xs text-muted mb-1">نام مهارت</label>
+                                            {{ sk_form.name }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-xs text-muted mb-1">سطح تسلط</label>
+                                            {{ sk_form.level }}
+                                        </div>
+                                        
+                                        <div class="col-12 text-end">
+                                            {% if sk_form.instance.pk %}
+                                                <div class="form-check d-none">
+                                                    {{ sk_form.DELETE }}
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSkillRow('{{ forloop.counter0 }}')">حذف مهارت</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewSkillRow('{{ forloop.counter0 }}')">حذف مهارت</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium px-4">به‌روزرسانی مهارت‌ها</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Certificates Card -->
+                <div class="card candidate-card p-4">
+                    <div class="d-flex justify-content-between align-items-center section-title mt-0">
+                        <h5 class="m-0 font-semibold text-secondary">۶. دوره‌ها و گواهینامه‌ها</h5>
+                        <button type="button" id="add-certificate-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن دوره / مدرک
+                        </button>
+                    </div>
+                    
+                    <form method="post" action="{% url 'candidate_certificate_update' %}">
+                        {% csrf_token %}
+                        {{ certificate_formset.management_form }}
+                        <div id="certificate-formset-container" class="d-flex flex-column gap-3 mb-4">
+                            {% for cert_form in certificate_formset %}
+                                <div class="formset-row certificate-form-row" id="certificate-form-{{ forloop.counter0 }}">
+                                    {{ cert_form.id }}
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">عنوان دوره / مدرک</label>
+                                            {{ cert_form.name }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">موسسه صادرکننده</label>
+                                            {{ cert_form.issuer }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">تاریخ اخذ (شمسی)</label>
+                                            {{ cert_form.issue_date }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-xs text-muted mb-1">تاریخ انقضا (شمسی - اختیاری)</label>
+                                            {{ cert_form.expiration_date }}
+                                        </div>
+                                        
+                                        <div class="col-12 text-end">
+                                            {% if cert_form.instance.pk %}
+                                                <div class="form-check d-none">
+                                                    {{ cert_form.DELETE }}
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteCertificateRow('{{ forloop.counter0 }}')">حذف مدرک</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewCertificateRow('{{ forloop.counter0 }}')">حذف مدرک</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium px-4">به‌روزرسانی گواهینامه‌ها</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Education Form Row Template -->
+<div id="education-row-template" class="d-none">
+    <div class="formset-row education-form-row mb-3" id="education-form-__prefix__">
+        {{ education_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">مقطع تحصیلی</label>
+                {{ education_formset.empty_form.degree }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">رشته تحصیلی</label>
+                {{ education_formset.empty_form.major }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">دانشگاه / موسسه</label>
+                {{ education_formset.empty_form.university }}
+            </div>
+            <div class="col-md-1.5 col-6">
+                <label class="form-label text-xs text-muted mb-1">معدل</label>
+                {{ education_formset.empty_form.gpa }}
+            </div>
+            <div class="col-md-1.5 col-6">
+                <label class="form-label text-xs text-muted mb-1">سال فراغت</label>
+                {{ education_formset.empty_form.graduation_year }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewEducationRow('__prefix__')">حذف سابقه</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Experience Form Row Template -->
+<div id="experience-row-template" class="d-none">
+    <div class="formset-row experience-form-row mb-3" id="experience-form-__prefix__">
+        {{ experience_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label text-xs text-muted mb-1">نام سازمان / شرکت</label>
+                {{ experience_formset.empty_form.company }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-xs text-muted mb-1">عنوان شغلی</label>
+                {{ experience_formset.empty_form.job_title }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-xs text-muted mb-1">تاریخ شروع (شمسی)</label>
+                {{ experience_formset.empty_form.start_date }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-xs text-muted mb-1">تاریخ پایان (شمسی)</label>
+                {{ experience_formset.empty_form.end_date }}
+            </div>
+            <div class="col-12">
+                <label class="form-label text-xs text-muted mb-1">توضیحات و سوابق فعالیت</label>
+                {{ experience_formset.empty_form.description }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewExperienceRow('__prefix__')">حذف سابقه</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Language Form Row Template -->
+<div id="language-row-template" class="d-none">
+    <div class="formset-row language-form-row mb-3" id="language-form-__prefix__">
+        {{ language_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label text-xs text-muted mb-1">نام زبان</label>
+                {{ language_formset.empty_form.name }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label text-xs text-muted mb-1">سطح تسلط</label>
+                {{ language_formset.empty_form.proficiency }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewLanguageRow('__prefix__')">حذف زبان</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skill Form Row Template -->
+<div id="skill-row-template" class="d-none">
+    <div class="formset-row skill-form-row mb-3" id="skill-form-__prefix__">
+        {{ skill_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label text-xs text-muted mb-1">نام مهارت</label>
+                {{ skill_formset.empty_form.name }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label text-xs text-muted mb-1">سطح تسلط</label>
+                {{ skill_formset.empty_form.level }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewSkillRow('__prefix__')">حذف مهارت</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Certificate Form Row Template -->
+<div id="certificate-row-template" class="d-none">
+    <div class="formset-row certificate-form-row mb-3" id="certificate-form-__prefix__">
+        {{ certificate_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">عنوان دوره / مدرک</label>
+                {{ certificate_formset.empty_form.name }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">موسسه صادرکننده</label>
+                {{ certificate_formset.empty_form.issuer }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">تاریخ اخذ (شمسی)</label>
+                {{ certificate_formset.empty_form.issue_date }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">تاریخ انقضا (شمسی)</label>
+                {{ certificate_formset.empty_form.expiration_date }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewCertificateRow('__prefix__')">حذف مدرک</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    function initDatepickers() {
+        $('.date-picker').each(function() {
+            var el = $(this);
+            var id = el.attr('id');
+            if (!id) {
+                id = 'datepicker-' + Math.random().toString(36).substring(2, 9);
+                el.attr('id', id);
+            }
+            if ($('#bd-root-' + id).length === 0) {
+                kamaDatepicker(id, {
+                    buttonsColor: '#4f46e5',
+                    markToday: true,
+                    gotoToday: true,
+                    twodigit: true,
+                    closeAfterSelect: true,
+                    nextButtonIcon: '>',
+                    previousButtonIcon: '<'
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initDatepickers();
+
+        // Education Formset handling
+        const eduContainer = document.getElementById('education-formset-container');
+        const eduTemplate = document.getElementById('education-row-template').innerHTML;
+        const eduTotalForms = document.getElementById('id_edu-TOTAL_FORMS');
+        const addEduBtn = document.getElementById('add-education-btn');
+
+        addEduBtn.addEventListener('click', function() {
+            const count = parseInt(eduTotalForms.value);
+            const html = eduTemplate.replace(/__prefix__/g, count);
+            eduContainer.insertAdjacentHTML('beforeend', html);
+            eduTotalForms.value = count + 1;
+        });
+
+        window.deleteEducationRow = function(index) {
+            const row = document.getElementById('education-form-' + index);
+            const deleteInput = document.getElementById('id_edu-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewEducationRow = function(index) {
+            const row = document.getElementById('education-form-' + index);
+            row.remove();
+        };
+
+        // Experience Formset handling
+        const expContainer = document.getElementById('experience-formset-container');
+        const expTemplate = document.getElementById('experience-row-template').innerHTML;
+        const expTotalForms = document.getElementById('id_exp-TOTAL_FORMS');
+        const addExpBtn = document.getElementById('add-experience-btn');
+
+        addExpBtn.addEventListener('click', function() {
+            const count = parseInt(expTotalForms.value);
+            const html = expTemplate.replace(/__prefix__/g, count);
+            expContainer.insertAdjacentHTML('beforeend', html);
+            expTotalForms.value = count + 1;
+            initDatepickers();
+        });
+
+        window.deleteExperienceRow = function(index) {
+            const row = document.getElementById('experience-form-' + index);
+            const deleteInput = document.getElementById('id_exp-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewExperienceRow = function(index) {
+            const row = document.getElementById('experience-form-' + index);
+            row.remove();
+        };
+
+        // Language Formset handling
+        const langContainer = document.getElementById('language-formset-container');
+        const langTemplate = document.getElementById('language-row-template').innerHTML;
+        const langTotalForms = document.getElementById('id_lang-TOTAL_FORMS');
+        const addLangBtn = document.getElementById('add-language-btn');
+
+        if (addLangBtn) {
+            addLangBtn.addEventListener('click', function() {
+                const count = parseInt(langTotalForms.value);
+                const html = langTemplate.replace(/__prefix__/g, count);
+                langContainer.insertAdjacentHTML('beforeend', html);
+                langTotalForms.value = count + 1;
+            });
+        }
+
+        window.deleteLanguageRow = function(index) {
+            const row = document.getElementById('language-form-' + index);
+            const deleteInput = document.getElementById('id_lang-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewLanguageRow = function(index) {
+            const row = document.getElementById('language-form-' + index);
+            row.remove();
+        };
+
+        // Skill Formset handling
+        const skillContainer = document.getElementById('skill-formset-container');
+        const skillTemplate = document.getElementById('skill-row-template').innerHTML;
+        const skillTotalForms = document.getElementById('id_skill-TOTAL_FORMS');
+        const addSkillBtn = document.getElementById('add-skill-btn');
+
+        if (addSkillBtn) {
+            addSkillBtn.addEventListener('click', function() {
+                const count = parseInt(skillTotalForms.value);
+                const html = skillTemplate.replace(/__prefix__/g, count);
+                skillContainer.insertAdjacentHTML('beforeend', html);
+                skillTotalForms.value = count + 1;
+            });
+        }
+
+        window.deleteSkillRow = function(index) {
+            const row = document.getElementById('skill-form-' + index);
+            const deleteInput = document.getElementById('id_skill-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewSkillRow = function(index) {
+            const row = document.getElementById('skill-form-' + index);
+            row.remove();
+        };
+
+        // Certificate Formset handling
+        const certContainer = document.getElementById('certificate-formset-container');
+        const certTemplate = document.getElementById('certificate-row-template').innerHTML;
+        const certTotalForms = document.getElementById('id_cert-TOTAL_FORMS');
+        const addCertBtn = document.getElementById('add-certificate-btn');
+
+        if (addCertBtn) {
+            addCertBtn.addEventListener('click', function() {
+                const count = parseInt(certTotalForms.value);
+                const html = certTemplate.replace(/__prefix__/g, count);
+                certContainer.insertAdjacentHTML('beforeend', html);
+                certTotalForms.value = count + 1;
+                initDatepickers();
+            });
+        }
+
+        window.deleteCertificateRow = function(index) {
+            const row = document.getElementById('certificate-form-' + index);
+            const deleteInput = document.getElementById('id_cert-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewCertificateRow = function(index) {
+            const row = document.getElementById('certificate-form-' + index);
+            row.remove();
+        };
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}مدیریت فرصت‌های شغلی{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="font-semibold text-secondary mb-1">فرصت‌های شغلی</h3>
+        <p class="text-muted text-sm m-0">تعریف فرصت‌های شغلی جدید و تنظیم مراحل و وزن‌های پویای فرآیند ارزیابی متقاضیان</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'job_export_excel' %}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
+                <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            </svg>
+            خروجی اکسل
+        </a>
+        {% if user.profile.can_manage_jobs %}
+        <a href="{% url 'job_add' %}" class="btn btn-sm btn-primary-custom d-flex align-items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            افزودن فرصت شغلی جدید
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card premium-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">کد / شماره درخواست</th>
+                        <th>عنوان شغل</th>
+                        <th>دپارتمان / واحد</th>
+                        <th>ظرفیت جذب</th>
+                        <th>نوع استخدام</th>
+                        <th>متقاضیان ثبت‌نامی</th>
+                        <th>مراحل و ضرایب ارزیابی (به ترتیب فرآیند)</th>
+                        <th>وضعیت</th>
+                        <th class="pe-4 text-end">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody id="job-table-body">
+                    {% for job in jobs %}
+                    <tr id="job-{{ job.id }}">
+                        <td class="ps-4">
+                            <span class="font-medium text-primary d-block">{{ job.code }}</span>
+                            <span class="text-muted text-xs">درخواست: {{ job.request_number }}</span>
+                        </td>
+                        <td class="font-semibold">{{ job.title }}</td>
+                        <td>
+                            <span>{{ job.department }}</span>
+                            {% if job.unit %}
+                            <small class="text-muted d-block">{{ job.unit }}</small>
+                            {% endif %}
+                            {% if job.job_category %}
+                            <span class="badge bg-light text-secondary text-xxs mt-1 px-1.5 py-0.5 rounded font-normal d-inline-block border">{{ job.job_category }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ job.headcount }} نفر</td>
+                        <td>{{ job.get_recruitment_type_display }}</td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1.5 rounded font-semibold text-xs">
+                                {{ job.candidate_count|default:"0" }} نفر
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center flex-wrap">
+                                {% for stage in job.stages.all %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1.5 rounded text-xs">
+                                    {{ stage.name }}: {{ stage.weight }}٪
+                                </span>
+                                {% empty %}
+                                <span class="text-muted text-xs">بدون مرحله ارزیابی</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if job.status == 'RECEIVED' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded font-medium">دریافت شده</span>
+                            {% elif job.status == 'PLANNING' %}
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1.5 rounded font-medium">برنامه‌ریزی</span>
+                            {% elif job.status == 'PUBLISHED' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded font-medium">منتشر شده</span>
+                            {% elif job.status == 'REGISTRATION_CLOSED' %}
+                                <span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-25 px-2.5 py-1.5 rounded font-medium">خاتمه ثبت‌نام</span>
+                            {% elif job.status == 'SCREENING' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded font-medium">غربالگری اولیه</span>
+                            {% elif job.status == 'EXAM' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">آزمون کتبی</span>
+                            {% elif job.status == 'INTERVIEW' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">مصاحبه حضوری</span>
+                            {% elif job.status == 'ASSESSMENT' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">کانون ارزیابی</span>
+                            {% elif job.status == 'FINAL_SELECTION' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded font-medium">انتخاب نهایی</span>
+                            {% elif job.status == 'CLOSED' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded font-medium">اتمام یافته</span>
+                            {% elif job.status == 'CANCELLED' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded font-medium">لغو شده</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            {% if user.profile.is_recruitment_staff %}
+                            <a href="{% url 'job_pipeline' job.id %}" class="btn btn-sm btn-outline-info me-1">پایپلاین ارزیابی</a>
+                            {% endif %}
+                            {% if user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
+                            <a href="{% url 'job_print_doc' job.id %}" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="چاپ سند آزمون">🖨️</a>
+                            {% endif %}
+                            {% if user.profile.can_manage_jobs %}
+                            <a href="{% url 'job_edit' job.id %}" class="btn btn-sm btn-outline-primary me-1">ویرایش</a>
+                            <button hx-delete="{% url 'job_delete' job.id %}" 
+                                    hx-target="#job-{{ job.id }}" 
+                                    hx-confirm="آیا از حذف این فرصت شغلی مطمئن هستید؟" 
+                                    class="btn btn-sm btn-outline-danger">
+                                حذف
+                            </button>
+                            {% else %}
+                            {% if not user.profile.is_recruitment_staff %}
+                            <span class="text-muted text-xs">بدون دسترسی</span>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            هیچ فرصت شغلی در سیستم تعریف نشده است.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

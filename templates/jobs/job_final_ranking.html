@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}رتبه‌بندی نهایی متقاضیان: {{ job.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .ranking-badge {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .rank-1 {
+        background-color: #fef08a;
+        color: #854d0e;
+        border: 2px solid #eab308;
+        box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+    }
+    .rank-2 {
+        background-color: #e2e8f0;
+        color: #475569;
+        border: 2px solid #cbd5e1;
+        box-shadow: 0 0 10px rgba(148, 163, 184, 0.2);
+    }
+    .rank-3 {
+        background-color: #ffedd5;
+        color: #c2410c;
+        border: 2px solid #f97316;
+        box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+    }
+    .rank-other {
+        background-color: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+    .score-badge {
+        font-size: 16px;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+    .premium-table th {
+        font-weight: 700;
+        color: #334155;
+        background-color: #f8fafc;
+        border-bottom: 2px solid #cbd5e1;
+    }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+    }
+    .sticky-bottom-bar {
+        position: sticky;
+        bottom: 1.5rem;
+        z-index: 1020;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        padding: 1rem 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-end">
+    <div>
+        <a href="{% url 'job_pipeline' job.id %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            بازگشت به پایپلاین ارزیابی
+        </a>
+        <h3 class="font-semibold text-secondary m-0">
+            رتبه‌بندی نهایی و تصمیم‌گیری نهایی متقاضیان
+        </h3>
+        <p class="text-muted text-sm m-0">فرصت شغلی: {{ job.title }} | کد شغل: {{ job.code }}</p>
+    </div>
+    <div>
+        <a href="{% url 'job_ranking_export_excel' job.id %}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
+                <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            </svg>
+            خروجی اکسل رتبه‌بندی
+        </a>
+    </div>
+</div>
+
+<!-- Opportunity Stats Grid -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card premium-card h-100 bg-gradient bg-light">
+            <div class="card-body py-3.5 px-4 d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-primary bg-opacity-10 text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h6 class="text-muted text-xs mb-1 font-medium">کل متقاضیان</h6>
+                    <h3 class="font-bold text-secondary m-0">{{ applications.count }} نفر</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card premium-card h-100 bg-gradient bg-light">
+            <div class="card-body py-3.5 px-4 d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-success bg-opacity-10 text-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h6 class="text-muted text-xs mb-1 font-medium">پذیرش نهایی شده</h6>
+                    <h3 class="font-bold text-success m-0" id="stats-selected">{{ selected_count }} نفر</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card premium-card h-100 bg-gradient bg-light">
+            <div class="card-body py-3.5 px-4 d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-info bg-opacity-10 text-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25L7.5 16.5V3.75H16.5Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h6 class="text-muted text-xs mb-1 font-medium">لیست ذخیره</h6>
+                    <h3 class="font-bold text-info m-0" id="stats-reserve">{{ reserve_count }} نفر</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card premium-card h-100 bg-gradient bg-light">
+            <div class="card-body py-3.5 px-4 d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-danger bg-opacity-10 text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h6 class="text-muted text-xs mb-1 font-medium">مردود شده</h6>
+                    <h3 class="font-bold text-danger m-0" id="stats-rejected">{{ rejected_count }} نفر</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-Selector Capacity Setup -->
+<div class="card premium-card glass-card mb-4">
+    <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary bg-opacity-10 p-2.5 rounded-circle text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 12.408l-1.62 1.62a.75.75 0 01-1.06 0l-.75-.75a.75.75 0 011.06-1.06l.22.22 1.09-1.09a.75.75 0 111.06 1.06zm0-3l-1.62 1.62a.75.75 0 01-1.06 0l-.75-.75a.75.75 0 111.06-1.06l.22.22 1.09-1.09a.75.75 0 111.06 1.06zm0-3l-1.62 1.62a.75.75 0 01-1.06 0l-.75-.75a.75.75 0 011.06-1.06l.22.22 1.09-1.09a.75.75 0 111.06 1.06z" />
+                </svg>
+            </div>
+            <div>
+                <h5 class="font-bold text-secondary m-0">ابزار انتخاب هوشمند بر اساس ظرفیت جذب</h5>
+                <p class="text-muted text-xs m-0">تعداد نفرات مورد نیاز خود را وارد کنید تا سیستم به ترتیب رتبه برتر، آن‌ها را برای شما علامت‌گذاری کند.</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group style-group" style="max-width: 250px;">
+                <span class="input-group-text bg-light border-slate font-medium text-xs">ظرفیت پذیرش:</span>
+                <input type="number" id="headcount-capacity" min="1" max="{{ applications.count }}" class="form-control border-slate text-center font-bold" placeholder="مثلاً ۳">
+            </div>
+            <button type="button" id="apply-capacity-btn" class="btn btn-primary font-semibold shadow-xs d-inline-flex align-items-center gap-1">
+                انتخاب بر اساس رتبه برتر
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Candidates Final Scores & Rank Table -->
+<div class="card premium-card mb-5">
+    <div class="card-header bg-white border-bottom border-slate py-3 d-flex justify-content-between align-items-center">
+        <h5 class="font-bold text-secondary m-0">لیست رتبه‌بندی نهایی متقاضیان</h5>
+        <span class="text-xs text-muted">ترتیب یافته بر اساس بیشترین امتیاز نهایی وزنی</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 premium-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4 text-center" style="width: 60px;">رتبه</th>
+                        <th class="text-center" style="width: 50px;">
+                            <input type="checkbox" id="select-all" class="form-check-input">
+                        </th>
+                        <th style="min-width: 200px;">مشخصات متقاضی</th>
+                        <th class="text-center" style="min-width: 120px;">امتیاز نهایی وزنی</th>
+                        {% for stage in stages %}
+                        <th class="text-center text-xs font-semibold" style="min-width: 110px;">{{ stage.name }}</th>
+                        {% endfor %}
+                        <th class="pe-4 text-center" style="min-width: 130px;">وضعیت درخواست</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr class="candidate-row" data-app-id="{{ app.id }}" data-status="{{ app.status }}">
+                        <td class="ps-4 text-center">
+                            <div class="d-flex justify-content-center">
+                                {% if forloop.counter == 1 %}
+                                <span class="ranking-badge rank-1" title="رتبه اول">🥇</span>
+                                {% elif forloop.counter == 2 %}
+                                <span class="ranking-badge rank-2" title="رتبه دوم">🥈</span>
+                                {% elif forloop.counter == 3 %}
+                                <span class="ranking-badge rank-3" title="رتبه سوم">🥉</span>
+                                {% else %}
+                                <span class="ranking-badge rank-other">{{ forloop.counter }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            {% if app.status == 'IN_PROGRESS' %}
+                            <input type="checkbox" name="application_ids" value="{{ app.id }}" form="ranking-action-form" class="app-checkbox form-check-input">
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'candidate_detail' app.candidate.id %}" target="_blank" class="font-bold text-secondary text-decoration-none hover-text-primary">
+                                {{ app.candidate.first_name }} {{ app.candidate.last_name }}
+                            </a>
+                            <div class="text-muted text-xs mt-0.5">کد ملی: {{ app.candidate.national_id }}</div>
+                            {% if app.candidate.personnel_number %}
+                            <div class="text-primary font-semibold text-xxs mt-0.5">شماره پرسنلی: {{ app.candidate.personnel_number }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="score-badge font-bold">{{ app.final_score }}</span>
+                        </td>
+                        
+                        {% for stage in stages %}
+                            {% with state=app|get_stage_state:stage %}
+                                <td class="text-center font-semibold">
+                                    {% if state %}
+                                        {% if state.status == 'COMPLETED' %}
+                                            <span class="text-secondary" style="font-size: 14px;">{{ state.score }}</span>
+                                        {% else %}
+                                            <span class="text-muted text-xs">در حال ارزیابی</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted text-xs">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                        
+                        <td class="pe-4 text-center">
+                            <div id="status-badge-{{ app.id }}">
+                                {% if app.status == 'IN_PROGRESS' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded text-xs">در حال ارزیابی</span>
+                                {% elif app.status == 'SELECTED' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded text-xs font-bold pulse-animation">قبول نهایی</span>
+                                {% elif app.status == 'RESERVE' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">ذخیره</span>
+                                {% elif app.status == 'REJECTED' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded text-xs">مردود شده</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ stages.count|add:6 }}" class="text-center py-5 text-muted">
+                            هیچ متقاضی برای این فرصت شغلی ثبت‌نام نکرده است.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Bulk Actions Panel -->
+<div id="bulk-decision-bar" class="sticky-bottom-bar d-none justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-2">
+        <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+            </svg>
+        </div>
+        <div>
+            <h6 class="font-bold text-secondary m-0">عملیات گروهی تصمیم‌گیری نهایی</h6>
+            <span class="text-xs text-muted"><strong id="selected-decision-count" class="text-primary fs-6">0</strong> متقاضی انتخاب شده‌اند</span>
+        </div>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" name="status_action" value="SELECTED" form="ranking-action-form" class="btn btn-success font-semibold d-inline-flex align-items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            قبول نهایی (SELECTED)
+        </button>
+        
+        <button type="submit" name="status_action" value="RESERVE" form="ranking-action-form" class="btn btn-info text-white font-semibold d-inline-flex align-items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.5 3.75V16.5L12 14.25L7.5 16.5V3.75H17.5Z" />
+            </svg>
+            لیست ذخیره (RESERVE)
+        </button>
+        
+        <button type="submit" name="status_action" value="REJECTED" form="ranking-action-form" class="btn btn-danger font-semibold d-inline-flex align-items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            رد درخواست (REJECTED)
+        </button>
+    </div>
+</div>
+
+<!-- Hidden Action Form -->
+<form id="ranking-action-form" method="post" action="{% url 'bulk_update_application_status' job.id %}" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('select-all');
+        const candidateCheckboxes = document.querySelectorAll('.app-checkbox');
+        const bulkDecisionBar = document.getElementById('bulk-decision-bar');
+        const selectedDecisionCountSpan = document.getElementById('selected-decision-count');
+        const applyCapacityBtn = document.getElementById('apply-capacity-btn');
+        const headcountCapacityInput = document.getElementById('headcount-capacity');
+
+        function updateBulkBarState() {
+            const checkedCount = Array.from(candidateCheckboxes).filter(cb => cb.checked).length;
+            if (checkedCount > 0) {
+                bulkDecisionBar.classList.remove('d-none');
+                bulkDecisionBar.classList.add('d-flex');
+                selectedDecisionCountSpan.textContent = checkedCount;
+            } else {
+                bulkDecisionBar.classList.remove('d-flex');
+                bulkDecisionBar.classList.add('d-none');
+            }
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                candidateCheckboxes.forEach(cb => {
+                    cb.checked = selectAllCheckbox.checked;
+                });
+                updateBulkBarState();
+            });
+        }
+
+        candidateCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const allChecked = Array.from(candidateCheckboxes).every(c => c.checked);
+                const someChecked = Array.from(candidateCheckboxes).some(c => c.checked);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
+                updateBulkBarState();
+            });
+        });
+
+        // Capacity Selector logic
+        applyCapacityBtn.addEventListener('click', function() {
+            const capacity = parseInt(headcountCapacityInput.value, 10);
+            if (isNaN(capacity) || capacity < 1) {
+                alert('لطفاً یک عدد معتبر بزرگتر از صفر برای ظرفیت پذیرش وارد کنید.');
+                return;
+            }
+
+            // Uncheck all checkboxes first
+            candidateCheckboxes.forEach(cb => cb.checked = false);
+
+            // Select active candidates in ranking order up to the capacity limit
+            let selectedCount = 0;
+            const rows = document.querySelectorAll('.candidate-row');
+            
+            for (let i = 0; i < rows.length; i++) {
+                if (selectedCount >= capacity) break;
+                
+                const row = rows[i];
+                const status = row.getAttribute('data-status');
+                const checkbox = row.querySelector('.app-checkbox');
+                
+                // Only select if the candidate is in progress
+                if (status === 'IN_PROGRESS' && checkbox) {
+                    checkbox.checked = true;
+                    selectedCount++;
+                }
+            }
+
+            updateBulkBarState();
+            
+            // Adjust Select All checkbox state
+            const allChecked = Array.from(candidateCheckboxes).every(c => c.checked);
+            const someChecked = Array.from(candidateCheckboxes).some(c => c.checked);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+</script>
+{% endblock %}

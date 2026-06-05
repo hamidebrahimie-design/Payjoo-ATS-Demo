@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}سامانه پیجو (Payjo){% endblock %}</title>
+    <!-- Bootstrap RTL 5.3.3 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts / Vazirmatn -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        {% if user.is_authenticated %}
+        <aside class="sidebar d-flex flex-column flex-shrink-0 p-3">
+            <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center w-100 py-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-rocket-takeoff-fill me-2 text-primary" viewBox="0 0 16 16">
+                    <path d="M12.17 9.53c-.077-.193-.213-.37-.413-.513-.48-.344-1.181-.617-2.03-.812a8 8 0 0 0-.77-.136 2.5 2.5 0 0 1-.044-.389c-.014-.244.008-.562.1-.92.117-.459.324-.937.58-1.33.254-.39.518-.629.74-.75a.75.75 0 0 0-.166-1.397c-.074-.015-.178-.01-.303.022a4 4 0 0 0-2.518 1.62c-.226.27-.47.662-.647 1.064-.179.407-.299.824-.34 1.157a3 3 0 0 1-.027.31c-.328.027-.645.075-.945.143-.836.19-1.52.457-1.99.789-.2.14-.337.315-.415.508L0 16l6.83-3.415c.08.196.223.385.441.523.511.324 1.25.568 2.142.748.892.18 1.874.249 2.766.19a8 8 0 0 0 .809-.092l5.012 2.506-1.077-7.535zM7.447 11.238a.5.5 0 0 1-.447-.553c.048-.386.136-.837.28-1.303.146-.47.362-.93.633-1.3.267-.367.545-.584.773-.667a.5.5 0 0 1 .632.632c-.083.228-.3.506-.667.773-.37.271-.83.487-1.3.633-.466.144-.917.232-1.303.28a.5.5 0 0 1-.073.006z"/>
+                </svg>
+                <span class="fs-5 font-semibold text-white">سامانه پیجو</span>
+            </a>
+            <hr class="border-secondary">
+            
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li>
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                        </svg>
+                        داشبورد
+                    </a>
+                </li>
+
+                <!-- مدیریت فرصت‌های شغلی (دسترسی همه نقش‌ها جز مصاحبه‌گران و ارزیابان مستقیم) -->
+                {% if user.profile.role != 'INTERVIEWER' and user.profile.role != 'EXTERNAL_ASSESSOR' %}
+                <li>
+                    <a href="{% url 'job_list' %}" class="nav-link {% if 'jobs' in request.path and 'workflows' not in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .621-.504 1.125-1.125 1.125H4.875c-.621 0-1.125-.504-1.125-1.125v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H3.468c-.266 0-.523-.093-.717-.258m16.5 0V8.706c0-1.081-.768-2.015-1.837-2.175a48.111 48.111 0 0 0-3.48-.388M3.468 14.15a2.18 2.18 0 0 1-.75-1.661V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.48-.388M12 9.75v-3.75m0 0a3 3 0 1 0-3 3M12 6a3 3 0 1 1 3 3" />
+                        </svg>
+                        فرصت‌های شغلی
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- مدیریت الگوهای فرآیند استخدام (دسترسی کارشناسان جذب و ادمین) -->
+                {% if user.profile.is_recruitment_staff %}
+                <li>
+                    <a href="{% url 'workflow_list' %}" class="nav-link {% if 'workflows' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7C4.547 9.547 4.5 10.768 4.5 12s.047 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.092-1.209.138-2.43.138-3.662Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 10.5h6m-6 3h6" />
+                        </svg>
+                        الگوهای فرآیند استخدام
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- مدیریت متقاضیان (دسترسی کارشناسان جذب و ادمین) -->
+                {% if user.profile.is_recruitment_staff %}
+                <li>
+                    <a href="{% url 'candidate_list' %}?view=candidates" class="nav-link {% if 'candidates' in request.path and 'score-entry' not in request.path and 'interviews' not in request.path and 'assessment-center' not in request.path %}{% if request.GET.view == 'candidates' or request.resolver_match.url_name != 'candidate_list' %}active{% endif %}{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.109A11.386 11.386 0 0 1 10.089 20.4H9.91A11.386 11.386 0 0 1 5 19.237v-.109c0-1.11.283-2.155.783-3.063M21.75 8.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0ZM14.25 7.5a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0ZM12 15.75a3 3 0 1 0-3-3m3 3a3 3 0 1 1-3-3m3 3v3.75m-6-3.75a3 3 0 1 1-3-3 3 3 0 0 1 3 3m-3 3v3.75m16.5-3.75a3 3 0 1 1-3-3 3 3 0 0 1 3 3m-3 3v3.75" />
+                        </svg>
+                        متقاضیان
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- ثبت و ورود نمرات (دسترسی کارشناس جذب و ادمین) -->
+                {% if user.profile.can_enter_exam_scores %}
+                <li>
+                    <a href="{% url 'candidate_score_entry' %}" class="nav-link {% if 'score-entry' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        ثبت و ورود نمرات
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- پنل مصاحبه‌ها (دسترسی مصاحبه‌گران و کارشناس جذب و ادمین) -->
+                {% if user.profile.can_view_interviews %}
+                <li>
+                    <a href="{% url 'candidate_interviews' %}" class="nav-link {% if 'interviews' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                        </svg>
+                        پنل مصاحبه‌ها
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- کانون ارزیابی (PDF) -->
+                {% if user.profile.is_recruitment_staff or user.profile.role == 'EXTERNAL_ASSESSOR' %}
+                <li>
+                    <a href="{% url 'assessment_center_report' %}" class="nav-link {% if 'assessment-center' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        کانون ارزیابی (PDF)
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- بانک استعدادها -->
+                {% if user.profile.is_recruitment_staff %}
+                <li>
+                    <a href="{% url 'candidate_list' %}" class="nav-link {% if request.resolver_match.url_name == 'candidate_list' and request.GET.view != 'candidates' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9s2.015-9 4.5-9m0 0a9.003 9.003 0 0 1 8.716 2.253M12 3a9.003 9.003 0 0 0-8.716 2.253M21 12H3" />
+                        </svg>
+                        بانک استعدادها
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- دسترسی مدیر سیستم -->
+                {% if user.profile.role == 'ADMIN' %}
+                <hr class="border-secondary">
+                <span class="text-xs text-muted px-4 py-2 d-block">بخش مدیریت سیستم</span>
+                <li>
+                    <a href="{% url 'user_list' %}" class="nav-link {% if 'users' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                        </svg>
+                        مدیریت کاربران (RBAC)
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if user.profile.can_view_audit_logs %}
+                <li>
+                    <a href="{% url 'audit_log_list' %}" class="nav-link {% if request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        لاگ‌های ممیزی (Audit Logs)
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </aside>
+        {% endif %}
+
+        <!-- Content Area -->
+        <div class="flex-grow-1 d-flex flex-column min-vh-100">
+            <!-- Navbar -->
+            {% if user.is_authenticated %}
+            <nav class="navbar navbar-custom navbar-expand-lg d-flex justify-content-between align-items-center">
+                <div class="navbar-brand font-semibold text-secondary">
+                    سامانه هوشمند جذب و استخدام پیجو
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge badge-role-{{ user.profile.role|lower }} px-3 py-2 rounded-pill font-medium">
+                        {{ user.profile.get_role_display }}
+                    </span>
+                    <span class="text-secondary font-medium">
+                        {{ user.get_full_name|default:user.username }} خوش آمدید
+                    </span>
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">خروج</button>
+                    </form>
+                </div>
+            </nav>
+            {% endif %}
+
+            <!-- Main Block -->
+            <main class="p-4 flex-grow-1">
+                {% if messages %}
+                    <div class="messages-container mb-4">
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 8px;">
+                                {{ message|safe }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
+            <footer class="py-2.5 text-center border-top mt-auto bg-light" style="background-color: #f8fafc;">
+                <span class="text-muted text-xs" style="color: #94a3b8 !important;">نوشته شده جهت پیشنهاد توسط امید صالحی</span>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

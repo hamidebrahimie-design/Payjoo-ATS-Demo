@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}پنل متقاضی | سامانه پیجو (Payjo){% endblock %}</title>
+    <!-- Bootstrap RTL 5.3.3 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts / Vazirmatn -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .navbar-candidate {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 1rem 2rem;
+        }
+        .candidate-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-premium {
+            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-premium:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #2e288a 100%);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        .badge-status {
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .nav-tabs-premium {
+            border: none;
+            background: #e2e8f0;
+            padding: 6px;
+            border-radius: 12px;
+            display: inline-flex;
+        }
+        .nav-tabs-premium .nav-link {
+            border: none;
+            color: #4a5568;
+            padding: 8px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-tabs-premium .nav-link.active {
+            background: #ffffff;
+            color: #4f46e5;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    <!-- Top Navbar for Candidate -->
+    <nav class="navbar navbar-expand-lg navbar-candidate sticky-top">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <a href="{% url 'careers_list' %}" class="d-flex align-items-center text-decoration-none text-dark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-rocket-takeoff text-primary me-2" viewBox="0 0 16 16">
+                    <path d="M9.171 1c-1.882 0-3.516.924-4.542 2.378-.328.465-.635 1.002-.917 1.59-.283.59-.533 1.254-.741 1.942-.208.689-.37 1.402-.483 2.115-.113.712-.178 1.408-.19 2.069H1.145c-.244-.015-.494-.01-.749.014a.75.75 0 0 0-.166 1.397c.074.015.178.01.303.022a4 4 0 0 0 2.518 1.62c.226.27.47.662.647 1.064.179.407.299.824.34 1.157.042.332.062.639.062.903v.248a.75.75 0 0 0 1.348.452c.28-.39.544-.629.766-.75a.75.75 0 0 0-.166-1.397c-.074-.015-.178-.01-.303-.022a4 4 0 0 0-2.518-1.62c-.226-.27-.47-.662-.647-1.064-.179-.407-.299-.824-.34-1.157-.042-.332-.062-.639-.062-.903v-.248a.75.75 0 0 0-1.348-.452c-.28.39-.544.629-.766.75a.75.75 0 0 0 .166 1.397c.074.015.178.01.303.022.083.007.172.012.268.014L6.83 12.585c.08.196.223.385.441.523.511.324 1.25.568 2.142.748.892.18 1.874.249 2.766.19a8 8 0 0 0 .809-.092l5.012 2.506-1.077-7.535zM7.447 11.238a.5.5 0 0 1-.447-.553c.048-.386.136-.837.28-1.303.146-.47.362-.93.633-1.3.267-.367.545-.584.773-.667a.5.5 0 0 1 .632.632c-.083.228-.3.506-.667.773-.37.271-.83.487-1.3.633-.466.144-.917.232-1.303.28a.5.5 0 0 1-.073.006z"/>
+                </svg>
+                <span class="fs-5 fw-bold text-dark">فرصت‌های شغلی و جذب سرمایه انسانی پیجو</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                {% if user.is_authenticated %}
+                    <span class="text-secondary font-medium d-none d-md-inline">
+                        داوطلب گرامی، <strong>{{ user.get_full_name|default:user.username }}</strong> خوش آمدید
+                    </span>
+                    <a href="{% url 'candidate_dashboard' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">میز کار من</a>
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">خروج</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">ورود به سیستم</a>
+                    <a href="{% url 'candidate_signup' %}" class="btn btn-sm btn-primary rounded-pill px-3">ثبت‌نام متقاضی</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="py-5">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="py-2.5 text-center border-top mt-auto bg-light" style="background-color: #f8fafc;">
+        <span class="text-muted text-xs" style="color: #94a3b8 !important;">نوشته شده جهت پیشنهاد توسط امید صالحی</span>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,282 @@
+{% load jalali_tags %}
+{% if selected_job %}
+{% if bulk_success %}
+    <div class="alert alert-success border-success border-opacity-30 bg-success bg-opacity-10 d-flex align-items-center gap-2 mb-4 py-3 px-4 rounded-3 text-success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <span class="font-semibold" style="font-size: 0.9rem;">تمامی نمرات و وضعیت‌های وارد شده با موفقیت ثبت نهایی گردیدند و متقاضیان پذیرفته شده به مرحله بعد منتقل شدند.</span>
+    </div>
+{% endif %}
+
+<form hx-post="{% url 'candidate_score_entry' %}" 
+      hx-target="#score-entry-list-container" 
+      hx-indicator="#loading-indicator" 
+      class="m-0">
+    {% csrf_token %}
+    <input type="hidden" name="job_id" value="{{ selected_job.id }}">
+    {% if selected_stage %}
+    <input type="hidden" name="stage_id" value="{{ selected_stage.id }}">
+    {% endif %}
+    {% if is_paginated %}
+    <input type="hidden" name="page" value="{{ page_obj.number }}">
+    {% endif %}
+
+    {% if selected_stage %}
+    <div class="row g-3 mb-4 align-items-end p-3 bg-light bg-opacity-50 border border-slate rounded-3">
+        <div class="col-md-4">
+            <label class="form-label font-semibold text-xs text-muted mb-1.5">جستجوی متقاضی (نام، نام خانوادگی، یا کد ملی):</label>
+            <div class="input-group">
+                <span class="input-group-text bg-white border-slate border-end-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                    </svg>
+                </span>
+                <input type="text" 
+                       name="q" 
+                       value="{{ selected_q|default:'' }}" 
+                       hx-get="{% url 'candidate_score_entry' %}"
+                       hx-trigger="keyup changed delay:400ms"
+                       hx-include="[name='job_id'], [name='stage_id'], [name='eval_status'], [name='show_failed_prior']"
+                       hx-target="#score-entry-list-container"
+                       hx-indicator="#loading-indicator"
+                       class="form-control border-slate border-start-0 ps-0 text-xs" 
+                       placeholder="برای جستجو تایپ کنید...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label font-semibold text-xs text-muted mb-1.5">وضعیت ارزیابی مرحله:</label>
+            <select name="eval_status" 
+                    hx-get="{% url 'candidate_score_entry' %}"
+                    hx-trigger="change"
+                    hx-include="[name='job_id'], [name='stage_id'], [name='q'], [name='show_failed_prior']"
+                    hx-target="#score-entry-list-container"
+                    hx-indicator="#loading-indicator"
+                    class="form-select border-slate text-xs font-semibold">
+                <option value="PENDING" {% if selected_eval_status == 'PENDING' %}selected{% endif %}>فقط در انتظار ارزیابی (پیش‌فرض)</option>
+                <option value="COMPLETED_FAILED" {% if selected_eval_status == 'COMPLETED_FAILED' %}selected{% endif %}>فقط ارزیابی شده‌ها</option>
+                <option value="ALL" {% if selected_eval_status == 'ALL' %}selected{% endif %}>همه متقاضیان (در انتظار و ارزیابی شده)</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <div class="form-check form-switch mb-2 pb-1">
+                <input class="form-check-input shadow-none" type="checkbox" name="show_failed_prior" id="showFailedPrior"
+                       hx-get="{% url 'candidate_score_entry' %}"
+                       hx-trigger="change"
+                       hx-include="[name='job_id'], [name='stage_id'], [name='q'], [name='eval_status']"
+                       hx-target="#score-entry-list-container"
+                       hx-indicator="#loading-indicator"
+                       {% if show_failed_prior %}checked{% endif %}>
+                <label class="form-check-label font-semibold text-xs text-muted cursor-pointer" for="showFailedPrior">
+                    نمایش مردودین
+                </label>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label font-semibold text-xs text-muted mb-1.5">ثبت تاریخ گروهی (اختیاری):</label>
+            <div class="input-group input-group-sm">
+                <input type="text" 
+                       id="bulk_eval_date" 
+                       placeholder="مثال: ۱۴۰۵/۰۳/۱۶" 
+                       class="form-control text-center text-xs" 
+                       autocomplete="off">
+                <button type="button" 
+                        class="btn btn-primary text-xs font-semibold" 
+                        onclick="applyBulkDate()">
+                    اعمال به همه
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+ 
+    <div class="card premium-card">
+        <div class="card-header bg-white border-bottom border-slate py-3 d-flex justify-content-between align-items-center">
+            <h5 class="font-semibold text-secondary m-0">متقاضیان در حال بررسی برای: {{ selected_job.title }}</h5>
+            <div class="d-flex align-items-center gap-2">
+                {% if selected_stage %}
+                <a href="{% url 'score_entry_export_excel' %}?job_id={{ selected_job.id }}&stage_id={{ selected_stage.id }}&q={{ selected_q|default:'' }}&eval_status={{ selected_eval_status|default:'PENDING' }}&show_failed_prior={% if show_failed_prior %}true{% else %}false{% endif %}" class="btn btn-outline-success btn-xs d-flex align-items-center gap-1.5 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
+                        <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    خروجی اکسل
+                </a>
+                <button type="button" class="btn btn-outline-primary btn-xs d-flex align-items-center gap-1.5 font-semibold" data-bs-toggle="modal" data-bs-target="#importScoreModal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v12m0 0-3-3m3 3 3-3m-3-12h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
+                    </svg>
+                    ورود نمرات از اکسل
+                </button>
+                {% endif %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">
+                    {{ pending_states|length }} متقاضی فعال در این مرحله
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4" style="width: 230px;">مشخصات متقاضی</th>
+                            <th style="width: 150px;">مرحله ارزیابی فعال</th>
+                            <th class="text-center" style="width: 110px;">نمره (از ۱۰۰)</th>
+                            <th style="width: 190px;">وضعیت تصمیم‌گیری</th>
+                            <th class="text-center" style="width: 130px;">تاریخ ارزیابی</th>
+                            <th>توضیحات و یادداشت ارزیاب</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for state in pending_states %}
+                            {% include "candidates/partials/score_entry_row.html" with state=state %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    هیچ متقاضی در مرحله فعال ارزیابی برای این فرصت شغلی یافت نشد یا تمام مراحل متقاضیان تکمیل شده است.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if pending_states %}
+        <div class="card-footer bg-white border-top border-slate p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                {% if is_paginated %}
+                <nav aria-label="Score Entry Pagination">
+                    <ul class="pagination pagination-sm mb-0 gap-1">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link border-slate rounded px-2.5 py-1.5 font-semibold text-secondary hover-bg-light"
+                                   hx-post="{% url 'candidate_score_entry' %}?{% param_replace page=1 %}"
+                                   hx-include="closest form"
+                                   hx-target="#score-entry-list-container"
+                                   hx-indicator="#loading-indicator"
+                                   href="?{% param_replace page=1 %}" aria-label="First">
+                                    «
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link border-slate rounded px-2.5 py-1.5 font-semibold text-secondary hover-bg-light"
+                                   hx-post="{% url 'candidate_score_entry' %}?{% param_replace page=page_obj.previous_page_number %}"
+                                   hx-include="closest form"
+                                   hx-target="#score-entry-list-container"
+                                   hx-indicator="#loading-indicator"
+                                   href="?{% param_replace page=page_obj.previous_page_number %}" aria-label="Previous">
+                                    ‹
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link bg-primary border-primary text-white rounded px-2.5 py-1.5 font-bold">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link border-slate rounded px-2.5 py-1.5 font-semibold text-secondary hover-bg-light"
+                                       hx-post="{% url 'candidate_score_entry' %}?{% param_replace page=num %}"
+                                       hx-include="closest form"
+                                       hx-target="#score-entry-list-container"
+                                       hx-indicator="#loading-indicator"
+                                       href="?{% param_replace page=num %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link border-slate rounded px-2.5 py-1.5 font-semibold text-secondary hover-bg-light"
+                                   hx-post="{% url 'candidate_score_entry' %}?{% param_replace page=page_obj.next_page_number %}"
+                                   hx-include="closest form"
+                                   hx-target="#score-entry-list-container"
+                                   hx-indicator="#loading-indicator"
+                                   href="?{% param_replace page=page_obj.next_page_number %}" aria-label="Next">
+                                    ›
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link border-slate rounded px-2.5 py-1.5 font-semibold text-secondary hover-bg-light"
+                                   hx-post="{% url 'candidate_score_entry' %}?{% param_replace page=paginator.num_pages %}"
+                                   hx-include="closest form"
+                                   hx-target="#score-entry-list-container"
+                                   hx-indicator="#loading-indicator"
+                                   href="?{% param_replace page=paginator.num_pages %}" aria-label="Last">
+                                    »
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom px-4 py-2 font-semibold shadow-sm d-inline-flex align-items-center gap-2" style="border-radius: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                ثبت نهایی همه نمرات وارد شده
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<!-- Modal for Excel Score Import -->
+<div class="modal fade" id="importScoreModal" tabindex="-1" aria-labelledby="importScoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-start">
+            <form method="post" action="{% url 'score_entry_import_excel' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="job_id" value="{{ selected_job.id }}">
+                <input type="hidden" name="stage_id" value="{{ selected_stage.id }}">
+                
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title font-bold text-secondary fs-6" id="importScoreModalLabel">ورود نمرات از فایل اکسل</h5>
+                    <button type="button" class="btn-close m-0 ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-info border-opacity-25 bg-info bg-opacity-10 text-secondary text-xs mb-4">
+                        <h6 class="font-bold text-secondary mb-1.5">راهنمای بارگذاری نمرات:</h6>
+                        <ul class="mb-0 ps-3">
+                            <li class="mb-1">ابتدا با دکمه <strong>«خروجی اکسل»</strong> فایل حاوی لیست داوطلبان فعلی را دانلود کنید.</li>
+                            <li class="mb-1">نمره‌ها را در ستون <strong>«نمره نهایی مرحله»</strong> (بین ۰ تا ۱۰۰) بنویسید.</li>
+                            <li class="mb-1">وضعیت هر داوطلب را در ستون <strong>«وضعیت ارزیابی»</strong> وارد کنید:
+                                <ul>
+                                    <li><strong>«در انتظار ارزیابی»</strong></li>
+                                    <li><strong>«قبول شده در این مرحله»</strong></li>
+                                    <li><strong>«مردود شده در این مرحله»</strong></li>
+                                </ul>
+                            </li>
+                            <li>تغییرات را ذخیره کرده و فایل را در کادر زیر بارگذاری نمایید.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label font-semibold text-xs text-secondary mb-1.5">انتخاب فایل اکسل (.xlsx):</label>
+                        <input type="file" name="excel_file" accept=".xlsx" required class="form-control text-xs">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-sm btn-outline-secondary font-semibold" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-sm btn-primary font-semibold">ثبت و بارگذاری نمرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-slate text-center py-5 bg-light bg-opacity-40">
+    <div class="text-muted mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="d-inline-block text-secondary opacity-50">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+        </svg>
+    </div>
+    <h6 class="font-semibold text-secondary mb-1">فرصت شغلی انتخاب نشده است</h6>
+    <p class="text-muted text-xs">جهت ورود نمرات و بررسی وضعیت متقاضیان، ابتدا از منوی بالا یک فرصت شغلی را انتخاب کنید.</p>
+</div>
+{% endif %}

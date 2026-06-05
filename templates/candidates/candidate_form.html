@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}ویرایش متقاضی: {{ object.first_name }} {{ object.last_name }}{% else %}افزودن متقاضی جدید{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
+<style>
+    .section-title {
+        font-weight: 600;
+        color: #1e293b;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.5rem;
+        margin-top: 2rem;
+        margin-bottom: 1.25rem;
+    }
+    .formset-row {
+        position: relative;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% if object %}{% url 'candidate_detail' object.id %}{% else %}{% url 'candidate_list' %}{% endif %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        بازگشت
+    </a>
+    <h3 class="font-semibold text-secondary">
+        {% if object %}ویرایش پرونده متقاضی: {{ object.first_name }} {{ object.last_name }}{% else %}ثبت متقاضی جدید{% endif %}
+    </h3>
+    <p class="text-muted text-sm m-0">اطلاعات شناسنامه‌ای، تحصیلی و سوابق کاری متقاضی را وارد کنید</p>
+</div>
+
+{% if form.errors or education_formset.errors or experience_formset.errors %}
+<div class="alert alert-danger mb-4 py-2.5 px-3 text-sm">
+    لطفاً خطاهای موجود در فرم را بررسی و اصلاح فرمایید.
+    {% for field in form %}
+        {% if field.errors %}
+            <div><strong>{{ field.label }}:</strong> {{ field.errors.0 }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="card premium-card mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title mt-0">۱. اطلاعات عمومی و هویتی</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نام <span class="text-danger">*</span></label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نام خانوادگی <span class="text-danger">*</span></label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">کد ملی <span class="text-danger">*</span></label>
+                    {{ form.national_id }}
+                    {% if form.national_id.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.national_id.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">شماره پرسنلی (برای همکاران داخلی)</label>
+                    {{ form.personnel_number }}
+                    {% if form.personnel_number.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.personnel_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">شماره تماس <span class="text-danger">*</span></label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.phone_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">پست الکترونیکی <span class="text-danger">*</span></label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">فایل رزومه (PDF یا Word)</label>
+                    {{ form.resume }}
+                    {% if object and object.resume %}
+                    <div class="text-xs text-muted mt-1">
+                        فایل فعلی: <a href="{{ object.resume.url }}" target="_blank">مشاهده رزومه فعلی</a>
+                    </div>
+                    {% endif %}
+                    {% if form.resume.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.resume.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Education Formset -->
+            <div class="d-flex justify-content-between align-items-center section-title">
+                <h5 class="m-0 font-semibold text-secondary">۲. سوابق تحصیلی</h5>
+                <button type="button" id="add-education-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    افزودن سابقه تحصیلی
+                </button>
+            </div>
+            
+            {{ education_formset.management_form }}
+            <div id="education-formset-container" class="d-flex flex-column gap-3 mb-4">
+                {% for edu_form in education_formset %}
+                <div class="formset-row education-form-row" id="education-form-{{ forloop.counter0 }}">
+                    {{ edu_form.id }}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">مقطع تحصیلی</label>
+                            {{ edu_form.degree }}
+                            {% if edu_form.degree.errors %}
+                            <div class="text-danger text-xs mt-1">{{ edu_form.degree.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">رشته تحصیلی</label>
+                            {{ edu_form.major }}
+                            {% if edu_form.major.errors %}
+                            <div class="text-danger text-xs mt-1">{{ edu_form.major.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">دانشگاه / موسسه</label>
+                            {{ edu_form.university }}
+                            {% if edu_form.university.errors %}
+                            <div class="text-danger text-xs mt-1">{{ edu_form.university.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1.5 col-6">
+                            <label class="form-label text-xs text-muted mb-1">معدل</label>
+                            {{ edu_form.gpa }}
+                            {% if edu_form.gpa.errors %}
+                            <div class="text-danger text-xs mt-1">{{ edu_form.gpa.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1.5 col-6">
+                            <label class="form-label text-xs text-muted mb-1">سال فارغ‌التحصیلی</label>
+                            {{ edu_form.graduation_year }}
+                            {% if edu_form.graduation_year.errors %}
+                            <div class="text-danger text-xs mt-1">{{ edu_form.graduation_year.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-12 text-end">
+                            {% if edu_form.instance.pk %}
+                                <div class="form-check d-none">
+                                    {{ edu_form.DELETE }}
+                                </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteEducationRow('{{ forloop.counter0 }}')">
+                                    حذف سابقه
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewEducationRow('{{ forloop.counter0 }}')">
+                                    حذف سابقه
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Experience Formset -->
+            <div class="d-flex justify-content-between align-items-center section-title">
+                <h5 class="m-0 font-semibold text-secondary">۳. سوابق کاری</h5>
+                <button type="button" id="add-experience-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    افزودن سابقه کاری
+                </button>
+            </div>
+
+            {{ experience_formset.management_form }}
+            <div id="experience-formset-container" class="d-flex flex-column gap-3 mb-4">
+                {% for exp_form in experience_formset %}
+                <div class="formset-row experience-form-row" id="experience-form-{{ forloop.counter0 }}">
+                    {{ exp_form.id }}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-xs text-muted mb-1">نام سازمان / شرکت</label>
+                            {{ exp_form.company }}
+                            {% if exp_form.company.errors %}
+                            <div class="text-danger text-xs mt-1">{{ exp_form.company.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-xs text-muted mb-1">عنوان شغلی</label>
+                            {{ exp_form.job_title }}
+                            {% if exp_form.job_title.errors %}
+                            <div class="text-danger text-xs mt-1">{{ exp_form.job_title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-xs text-muted mb-1">تاریخ شروع (شمسی)</label>
+                            {{ exp_form.start_date }}
+                            {% if exp_form.start_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ exp_form.start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-xs text-muted mb-1">تاریخ پایان (شمسی)</label>
+                            {{ exp_form.end_date }}
+                            {% if exp_form.end_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ exp_form.end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-xs text-muted mb-1">توضیحات و دستاوردها</label>
+                            {{ exp_form.description }}
+                            {% if exp_form.description.errors %}
+                            <div class="text-danger text-xs mt-1">{{ exp_form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-12 text-end">
+                            {% if exp_form.instance.pk %}
+                                <div class="form-check d-none">
+                                    {{ exp_form.DELETE }}
+                                </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteExperienceRow('{{ forloop.counter0 }}')">
+                                    حذف سابقه
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewExperienceRow('{{ forloop.counter0 }}')">
+                                    حذف سابقه
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-5 d-flex justify-content-end gap-2">
+                <a href="{% if object %}{% url 'candidate_detail' object.id %}{% else %}{% url 'candidate_list' %}{% endif %}" class="btn btn-outline-secondary px-4 py-2">انصراف</a>
+                <button type="submit" class="btn btn-primary-custom px-4 py-2">
+                    {% if object %}ذخیره تغییرات{% else %}ایجاد متقاضی{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Templates for dynamic rows -->
+<div id="education-row-template" class="d-none">
+    <div class="formset-row education-form-row mb-3" id="education-form-__prefix__">
+        {{ education_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">مقطع تحصیلی</label>
+                {{ education_formset.empty_form.degree }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">رشته تحصیلی</label>
+                {{ education_formset.empty_form.major }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-xs text-muted mb-1">دانشگاه / موسسه</label>
+                {{ education_formset.empty_form.university }}
+            </div>
+            <div class="col-md-1.5 col-6">
+                <label class="form-label text-xs text-muted mb-1">معدل</label>
+                {{ education_formset.empty_form.gpa }}
+            </div>
+            <div class="col-md-1.5 col-6">
+                <label class="form-label text-xs text-muted mb-1">سال فارغ‌التحصیلی</label>
+                {{ education_formset.empty_form.graduation_year }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewEducationRow('__prefix__')">
+                    حذف سابقه
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="experience-row-template" class="d-none">
+    <div class="formset-row experience-form-row mb-3" id="experience-form-__prefix__">
+        {{ experience_formset.empty_form.id }}
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label text-xs text-muted mb-1">نام سازمان / شرکت</label>
+                {{ experience_formset.empty_form.company }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-xs text-muted mb-1">عنوان شغلی</label>
+                {{ experience_formset.empty_form.job_title }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-xs text-muted mb-1">تاریخ شروع (شمسی)</label>
+                {{ experience_formset.empty_form.start_date }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-xs text-muted mb-1">تاریخ پایان (شمسی)</label>
+                {{ experience_formset.empty_form.end_date }}
+            </div>
+            <div class="col-12">
+                <label class="form-label text-xs text-muted mb-1">توضیحات و دستاوردها</label>
+                {{ experience_formset.empty_form.description }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeNewExperienceRow('__prefix__')">
+                    حذف سابقه
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    function initDatepickers() {
+        $('.date-picker').each(function() {
+            var el = $(this);
+            var id = el.attr('id');
+            if (!id) {
+                id = 'datepicker-' + Math.random().toString(36).substring(2, 9);
+                el.attr('id', id);
+            }
+            if ($('#bd-root-' + id).length === 0) {
+                kamaDatepicker(id, {
+                    buttonsColor: '#0052cc',
+                    markToday: true,
+                    gotoToday: true,
+                    twodigit: true,
+                    closeAfterSelect: true,
+                    nextButtonIcon: '>',
+                    previousButtonIcon: '<'
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initDatepickers();
+
+        // Education Formset handling
+        const eduContainer = document.getElementById('education-formset-container');
+        const eduTemplate = document.getElementById('education-row-template').innerHTML;
+        const eduTotalForms = document.getElementById('id_education-TOTAL_FORMS');
+        const addEduBtn = document.getElementById('add-education-btn');
+
+        addEduBtn.addEventListener('click', function() {
+            const count = parseInt(eduTotalForms.value);
+            const html = eduTemplate.replace(/__prefix__/g, count);
+            eduContainer.insertAdjacentHTML('beforeend', html);
+            eduTotalForms.value = count + 1;
+        });
+
+        window.deleteEducationRow = function(index) {
+            const row = document.getElementById('education-form-' + index);
+            const deleteInput = document.getElementById('id_education-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewEducationRow = function(index) {
+            const row = document.getElementById('education-form-' + index);
+            row.remove();
+        };
+
+        // Experience Formset handling
+        const expContainer = document.getElementById('experience-formset-container');
+        const expTemplate = document.getElementById('experience-row-template').innerHTML;
+        const expTotalForms = document.getElementById('id_experience-TOTAL_FORMS');
+        const addExpBtn = document.getElementById('add-experience-btn');
+
+        addExpBtn.addEventListener('click', function() {
+            const count = parseInt(expTotalForms.value);
+            const html = expTemplate.replace(/__prefix__/g, count);
+            expContainer.insertAdjacentHTML('beforeend', html);
+            expTotalForms.value = count + 1;
+            initDatepickers();
+        });
+
+        window.deleteExperienceRow = function(index) {
+            const row = document.getElementById('experience-form-' + index);
+            const deleteInput = document.getElementById('id_experience-' + index + '-DELETE');
+            if (deleteInput) {
+                deleteInput.checked = true;
+            }
+            row.style.display = 'none';
+        };
+
+        window.removeNewExperienceRow = function(index) {
+            const row = document.getElementById('experience-form-' + index);
+            row.remove();
+        };
+    });
+</script>
+{% endblock %}

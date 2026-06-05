@@ -1,0 +1,26 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database
+db.sqlite3
+
+# Logs
+*.log
+test_out.log
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# Media and Uploads
+media/
+resumes/

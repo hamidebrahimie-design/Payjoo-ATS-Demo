@@ -1,0 +1,7 @@
+django>=5.0,<6.0
+djangorestframework
+openpyxl
+pandas
+psycopg2-binary
+python-dotenv
+jdatetime

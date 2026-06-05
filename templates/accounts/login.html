@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}ورود به سامانه پیجو{% endblock %}
+
+{% block content %}
+<div class="login-bg d-flex align-items-center justify-content-center w-100">
+    <div class="card login-card p-4 shadow-lg w-100" style="max-width: 420px;">
+        <div class="text-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-primary mb-2" viewBox="0 0 16 16">
+                <path d="M12.17 9.53c-.077-.193-.213-.37-.413-.513-.48-.344-1.181-.617-2.03-.812a8 8 0 0 0-.77-.136 2.5 2.5 0 0 1-.044-.389c-.014-.244.008-.562.1-.92.117-.459.324-.937.58-1.33.254-.39.518-.629.74-.75a.75.75 0 0 0-.166-1.397c-.074-.015-.178-.01-.303.022a4 4 0 0 0-2.518 1.62c-.226.27-.47.662-.647 1.064-.179.407-.299.824-.34 1.157a3 3 0 0 1-.027.31c-.328.027-.645.075-.945.143-.836.19-1.52.457-1.99.789-.2.14-.337.315-.415.508L0 16l6.83-3.415c.08.196.223.385.441.523.511.324 1.25.568 2.142.748.892.18 1.874.249 2.766.19a8 8 0 0 0 .809-.092l5.012 2.506-1.077-7.535zM7.447 11.238a.5.5 0 0 1-.447-.553c.048-.386.136-.837.28-1.303.146-.47.362-.93.633-1.3.267-.367.545-.584.773-.667a.5.5 0 0 1 .632.632c-.083.228-.3.506-.667.773-.37.271-.83.487-1.3.633-.466.144-.917.232-1.303.28a.5.5 0 0 1-.073.006z"/>
+            </svg>
+            <h4 class="font-semibold text-secondary mb-1">سامانه پیجو (Payjo)</h4>
+            <p class="text-muted text-sm">لطفاً برای ورود اطلاعات کاربری خود را وارد کنید</p>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2 text-sm text-center" role="alert">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
+
+            <div class="mb-3">
+                <label for="username_field" class="form-label font-medium text-secondary">نام کاربری</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div class="text-danger text-xs mt-1">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                <label for="password_field" class="form-label font-medium text-secondary">رمز عبور</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <div class="text-danger text-xs mt-1">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom w-100 py-2.5 font-semibold shadow-sm">
+                ورود به سامانه
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* مخفی کردن نوار کناری و سربرگ در صفحه ورود */
+    .sidebar, .navbar-custom {
+        display: none !important;
+    }
+    main {
+        padding: 0 !important;
+        width: 100vw;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% load jalali_tags %}
+<tr id="score-row-{{ state.id }}" class="align-middle">
+    <td class="ps-4">
+        <div class="font-semibold text-secondary">
+            {{ state.application.candidate.first_name }} {{ state.application.candidate.last_name }}
+        </div>
+        <div class="text-muted text-xs mt-0.5">کد ملی: {{ state.application.candidate.national_id }}</div>
+        {% if state.application.candidate.personnel_number %}
+            <div class="text-primary font-semibold text-xxs mt-0.5">شماره پرسنلی: {{ state.application.candidate.personnel_number }}</div>
+        {% endif %}
+        {% if state.evaluator %}
+            <div class="text-success font-medium text-xxs mt-1">
+                ثبت کننده: {{ state.evaluator.get_full_name|default:state.evaluator.username }} در {{ state.updated_at|to_jalali }}
+            </div>
+        {% endif %}
+    </td>
+    <td>
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1.5 rounded font-medium text-xs">
+            {{ state.stage.name }}
+        </span>
+        <small class="text-muted d-block text-xxs mt-1">ترتیب: {{ state.stage.sequence }} | وزن: {{ state.stage.weight }}٪</small>
+    </td>
+    
+    <!-- Inputs for bulk score entry -->
+    <td>
+        {% if state.stage.competencies.exists %}
+            <div class="text-center">
+                <span class="font-bold text-secondary text-sm bg-light px-2.5 py-1 rounded border border-slate" style="font-size: 13px;">
+                    {{ state.score }}
+                </span>
+            </div>
+        {% else %}
+            {% if state.is_accessible %}
+                <input type="number" 
+                       name="score_{{ state.id }}" 
+                       value="{{ state.score }}" 
+                       step="0.1" 
+                       min="0" 
+                       max="100" 
+                       class="form-control form-control-sm text-center font-bold" 
+                       style="border-radius: 6px; font-size: 13px;"
+                       required>
+            {% else %}
+                <input type="number" 
+                       value="{{ state.score }}" 
+                       class="form-control form-control-sm text-center font-bold bg-light" 
+                       style="border-radius: 6px; font-size: 13px; opacity: 0.65;" 
+                       title="{% if state.has_failed_prior_stages %}این متقاضی در مراحل قبلی مردود شده است.{% else %}این مرحله برای این متقاضی هنوز فعال نشده است (مراحل قبل ناتمام است).{% endif %}"
+                       disabled>
+            {% endif %}
+        {% endif %}
+    </td>
+    <td>
+        {% if state.stage.competencies.exists %}
+            <div class="text-center">
+                {% if state.status == 'COMPLETED' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">قبول</span>
+                {% elif state.status == 'FAILED' %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">مردود</span>
+                {% else %}
+                    {% if state.has_failed_prior_stages %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">مردود (در مراحل قبلی)</span>
+                    {% else %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">در انتظار</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% else %}
+            {% if state.is_accessible %}
+                <select name="status_{{ state.id }}" class="form-select form-select-sm font-semibold" style="border-radius: 6px; font-size: 12px;">
+                    <option value="PENDING" {% if state.status == 'PENDING' %}selected{% endif %}>در انتظار ارزیابی</option>
+                    <option value="COMPLETED" {% if state.status == 'COMPLETED' %}selected{% endif %}>قبول شده در این مرحله</option>
+                    <option value="FAILED" {% if state.status == 'FAILED' %}selected{% endif %}>مردود شده در این مرحله</option>
+                </select>
+            {% else %}
+                <select class="form-select form-select-sm font-semibold bg-light text-muted" style="border-radius: 6px; font-size: 12px; opacity: 0.65;" disabled>
+                    {% if state.has_failed_prior_stages %}
+                        <option value="FAILED" selected>مردود (در مراحل قبلی)</option>
+                    {% else %}
+                        <option value="PENDING" selected>قفل شده (مراحل قبلی ناتمام)</option>
+                    {% endif %}
+                </select>
+            {% endif %}
+        {% endif %}
+    </td>
+    <td>
+        {% if state.is_accessible %}
+            <input type="text" 
+                   name="date_{{ state.id }}" 
+                   id="date_{{ state.id }}" 
+                   value="{{ state.evaluation_date|to_jalali }}" 
+                   placeholder="امروز" 
+                   class="form-control form-control-sm text-center jalali-datepicker-input text-xs mx-auto" 
+                   style="border-radius: 6px; max-width: 110px;"
+                   autocomplete="off">
+        {% else %}
+            <input type="text" 
+                   value="{{ state.evaluation_date|to_jalali }}" 
+                   placeholder="-" 
+                   class="form-control form-control-sm text-center bg-light text-xs mx-auto" 
+                   style="border-radius: 6px; max-width: 110px; opacity: 0.65;" 
+                   disabled>
+        {% endif %}
+    </td>
+    <td>
+        {% if state.stage.competencies.exists %}
+            <div class="d-flex align-items-center justify-content-between gap-3">
+                <small class="text-muted text-xxs text-truncate" style="max-width: 320px;" title="{{ state.notes }}">{{ state.notes|default:"بدون یادداشت عمومی" }}</small>
+                {% if state.is_accessible %}
+                    <button type="button" 
+                            hx-get="{% url 'candidate_assessment_sheet' state.id %}?source=score_entry" 
+                            hx-target="#assessment-modal-content"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#assessmentModal"
+                            class="btn btn-xs btn-outline-warning d-inline-flex align-items-center gap-1 py-1 px-2.5 font-medium" 
+                            style="border-radius: 6px; font-size: 11px;">
+                        📊 ورود نمرات کانون
+                    </button>
+                {% else %}
+                    <span class="text-muted text-xxs bg-light px-2 py-1 rounded">{% if state.has_failed_prior_stages %}مردود{% else %}قفل شده{% endif %}</span>
+                {% endif %}
+            </div>
+        {% else %}
+            {% if state.is_accessible %}
+                <input type="text" 
+                       name="notes_{{ state.id }}" 
+                       value="{{ state.notes|default:'' }}" 
+                       placeholder="یادداشت‌های ارزیاب..." 
+                       class="form-control form-control-sm text-muted" 
+                       style="border-radius: 6px; font-size: 11px;">
+            {% else %}
+                <input type="text" 
+                       value="{{ state.notes|default:'' }}" 
+                       placeholder="{% if state.has_failed_prior_stages %}مردود در مراحل قبلی...{% else %}قفل شده (مراحل قبلی ناتمام)...{% endif %}" 
+                       class="form-control form-control-sm text-muted bg-light" 
+                       style="border-radius: 6px; font-size: 11px; opacity: 0.65;" 
+                       disabled>
+            {% endif %}
+        {% endif %}
+    </td>
+</tr>

@@ -1,0 +1,24 @@
+<td id="stage-state-{{ state.id }}" class="p-2 align-middle bg-light" style="min-width: 165px;">
+    <form hx-post="{% url 'update_stage_state' state.id %}" hx-target="#stage-state-{{ state.id }}" hx-swap="outerHTML" class="m-0">
+        <div class="mb-1">
+            <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">نمره (از ۱۰۰)</label>
+            <input type="number" name="score" value="{{ state.score }}" step="0.1" min="0" max="100" class="form-control form-control-sm text-center font-bold" style="font-size: 11px; padding: 2px 4px;" required>
+        </div>
+        <div class="mb-1">
+            <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">وضعیت</label>
+            <select name="status" class="form-select form-select-sm" style="font-size: 11px; padding: 2px 4px;">
+                <option value="PENDING" {% if state.status == 'PENDING' %}selected{% endif %}>در انتظار</option>
+                <option value="COMPLETED" {% if state.status == 'COMPLETED' %}selected{% endif %}>قبول شده</option>
+                <option value="FAILED" {% if state.status == 'FAILED' %}selected{% endif %}>مردود شده</option>
+            </select>
+        </div>
+        <div class="mb-1.5">
+            <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">یادداشت ارزیاب</label>
+            <textarea name="notes" class="form-control form-control-sm" rows="1" placeholder="توضیحات..." style="font-size: 10px; padding: 2px 4px;">{{ state.notes }}</textarea>
+        </div>
+        <div class="d-flex gap-1 justify-content-center">
+            <button type="submit" class="btn btn-xs btn-primary py-0.5 px-2" style="font-size: 10px;">ثبت</button>
+            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" hx-get="{% url 'view_stage_state' state.id %}" hx-target="#stage-state-{{ state.id }}" hx-swap="outerHTML" style="font-size: 10px;">لغو</button>
+        </div>
+    </form>
+</td>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}الگوهای فرآیند استخدام{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="font-semibold text-secondary mb-1">الگوهای فرآیند استخدام</h3>
+        <p class="text-muted text-sm m-0">تعریف فرآیندهای استخدامی استاندارد و تعیین مراحل ارزیابی پیش‌فرض جهت کاهش خطا و افزایش کارایی</p>
+    </div>
+    <a href="{% url 'workflow_add' %}" class="btn btn-primary-custom d-flex align-items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        افزودن الگوی جدید
+    </a>
+</div>
+
+<div class="card premium-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">نام الگو</th>
+                        <th>توضیحات الگو</th>
+                        <th>مراحل پیش‌فرض و ضرایب ارزیابی</th>
+                        <th class="pe-4 text-end">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody id="workflow-table-body">
+                    {% for wf in workflows %}
+                    <tr id="workflow-{{ wf.id }}">
+                        <td class="ps-4 font-semibold text-secondary">{{ wf.name }}</td>
+                        <td class="text-muted text-sm" style="max-width: 250px;">{{ wf.description|default:"توضیحی ثبت نشده است." }}</td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center flex-wrap">
+                                {% for stage in wf.stages.all %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1.5 rounded text-xs">
+                                    {{ stage.name }}: {{ stage.default_weight }}٪
+                                </span>
+                                {% empty %}
+                                <span class="text-muted text-xs">بدون مرحله پیش‌فرض</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <a href="{% url 'workflow_edit' wf.id %}" class="btn btn-sm btn-outline-primary me-1">ویرایش</a>
+                            <button hx-delete="{% url 'workflow_delete' wf.id %}" 
+                                    hx-target="#workflow-{{ wf.id }}" 
+                                    hx-confirm="آیا از حذف این الگوی فرآیند مطمئن هستید؟" 
+                                    class="btn btn-sm btn-outline-danger">
+                                حذف
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            هیچ الگوی فرآیندی در سیستم تعریف نشده است.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

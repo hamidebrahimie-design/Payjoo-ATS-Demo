@@ -1,0 +1,200 @@
+{% extends "base_candidate.html" %}
+{% load jalali_tags %}
+{% block title %}{{ job.title }} | فرصت شغلی{% endblock %}
+
+{% block extra_head %}
+<style>
+    .job-details-container {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 2.5rem;
+    }
+    .apply-card {
+        background-color: #ffffff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="mb-4">
+        <a href="{% url 'careers_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            بازگشت به فرصت‌های شغلی
+        </a>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger mb-4 py-2.5 px-3 text-sm">
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Right: Job Details -->
+        <div class="col-lg-7">
+            <div class="job-details-container">
+                <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom border-slate-light">
+                    <div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold mb-2 d-inline-block">
+                            {{ job.department }}
+                        </span>
+                        <h2 class="font-bold text-secondary m-0">{{ job.title }}</h2>
+                    </div>
+                    <span class="text-muted text-xs font-medium">کد آگهی: {{ job.code }}</span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    {% if job.unit %}
+                    <div class="col-6 col-md-4">
+                        <label class="text-muted text-xxs d-block">واحد سازمانی</label>
+                        <span class="font-medium text-secondary text-sm">{{ job.unit }}</span>
+                    </div>
+                    {% endif %}
+                    {% if job.job_category %}
+                    <div class="col-6 col-md-4">
+                        <label class="text-muted text-xxs d-block">رده شغلی</label>
+                        <span class="font-medium text-secondary text-sm">{{ job.job_category }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="col-6 col-md-4">
+                        <label class="text-muted text-xxs d-block">نوع استخدام</label>
+                        <span class="font-medium text-secondary text-sm">{{ job.get_recruitment_type_display }}</span>
+                    </div>
+                    {% if job.end_date %}
+                    <div class="col-6 col-md-4">
+                        <label class="text-muted text-xxs d-block">مهلت ارسال درخواست</label>
+                        <span class="font-medium text-secondary text-sm text-danger">{{ job.end_date|to_jalali }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <h5 class="font-semibold text-secondary mb-3">شرح شغل و شرایط احراز</h5>
+                <p class="text-muted text-sm text-justify lh-lg" style="white-space: pre-line;">
+                    {{ job.description }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Left: Quick Apply or Action Card -->
+        <div class="col-lg-5">
+            <div class="card apply-card p-4">
+                {% if registration_closed %}
+                    <div class="text-center py-4">
+                        <div class="mx-auto mb-3 bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-exclamation-circle-fill" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                            </svg>
+                        </div>
+                        <h5 class="fw-bold text-secondary">مهلت ثبت‌نام به پایان رسیده است</h5>
+                        <p class="text-muted small">متأسفانه مهلت ثبت‌نام و ارسال رزومه برای این فرصت شغلی در تاریخ <span class="text-danger font-semibold">{{ job.end_date|to_jalali }}</span> به پایان رسیده است.</p>
+                        <a href="{% url 'careers_list' %}" class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4">مشاهده سایر فرصت‌های شغلی</a>
+                    </div>
+                {% else %}
+                    {% if user.is_authenticated and user.profile.role == 'CANDIDATE' %}
+                        {% if has_applied %}
+                            <div class="text-center py-4">
+                                <div class="mx-auto mb-3 bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16">
+                                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                                    </svg>
+                                </div>
+                                <h5 class="fw-bold text-secondary">درخواست شما ثبت شده است</h5>
+                                <p class="text-muted small">شما قبلاً درخواست همکاری خود را برای این موقعیت شغلی ارسال کرده‌اید.</p>
+                                <a href="{% url 'candidate_dashboard' %}" class="btn btn-sm btn-outline-primary mt-2 rounded-pill px-4">مشاهده وضعیت در میز کار من</a>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <h5 class="fw-bold text-secondary mb-3">ثبت‌نام سریع با یک کلیک</h5>
+                                <p class="text-muted small mb-4">شما وارد سیستم شده‌اید. می‌توانید با اطلاعات پروفایل کاربری و سوابق ثبت‌شده خود، فوراً برای این فرصت درخواست بفرستید.</p>
+                                <form action="{% url 'candidate_apply_direct' job.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-premium w-100 py-2.5">ارسال درخواست همکاری سریع</button>
+                                </form>
+                                <a href="{% url 'candidate_dashboard' %}" class="btn btn-link text-decoration-none small mt-3 d-block text-secondary">ویرایش مشخصات و رزومه قبل از ارسال</a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info py-2.5 px-3 rounded-3 text-xs mb-4">
+                            متقاضی گرامی، در صورتی که قبلاً عضو شده‌اید، ابتدا <a href="{% url 'login' %}?next={{ request.path }}" class="fw-bold text-primary text-decoration-none">وارد شوید</a> تا با یک کلیک و بدون نیاز به فرم، درخواست خود را ثبت کنید.
+                        </div>
+                        
+                        <h4 class="font-bold text-secondary mb-1">ثبت‌نام و ارسال رزومه</h4>
+                        <p class="text-muted text-xs mb-4">اطلاعات خود را جهت ثبت درخواست جدید تکمیل کنید. همچنین می‌توانید بعداً با کد ملی خود لاگین کنید.</p>
+
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">نام <span class="text-danger">*</span></label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">نام خانوادگی <span class="text-danger">*</span></label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">کد ملی (۱۰ رقم) <span class="text-danger">*</span></label>
+                                {{ form.national_id }}
+                                {% if form.national_id.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.national_id.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">شماره پرسنلی (برای پرسنل داخلی سازمان)</label>
+                                {{ form.personnel_number }}
+                                {% if form.personnel_number.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.personnel_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">شماره تلفن همراه <span class="text-danger">*</span></label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.phone_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label font-medium text-secondary text-sm">پست الکترونیکی <span class="text-danger">*</span></label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.email.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label font-medium text-secondary text-sm">آپلود فایل رزومه (PDF یا Word) <span class="text-danger">*</span></label>
+                                {{ form.resume }}
+                                {% if form.resume.errors %}
+                                <div class="text-danger text-xs mt-1">{{ form.resume.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-primary-custom w-100 py-2.5 font-semibold">ثبت‌نام و ارسال درخواست</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

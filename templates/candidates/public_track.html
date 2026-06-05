@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}پیگیری وضعیت درخواست‌ها{% endblock %}
+
+{% block extra_head %}
+<style>
+    .track-card {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        max-width: 500px;
+        margin: 2rem auto;
+    }
+    .history-card {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        max-width: 700px;
+        margin: 2rem auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="mb-4">
+        <a href="{% url 'careers_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            بازگشت به فرصت‌های شغلی
+        </a>
+    </div>
+
+    <!-- Tracking Form -->
+    <div class="card track-card p-4 shadow-sm">
+        <h4 class="font-bold text-secondary text-center mb-2">پیگیری وضعیت درخواست‌ها</h4>
+        <p class="text-muted text-xs text-center mb-4">برای مشاهده لاگ ثبت‌نام و وضعیت ارزیابی‌های خود، کد ملی و شماره تماس خود را وارد نمایید.</p>
+
+        {% if error %}
+        <div class="alert alert-danger py-2 px-3 text-xs text-center mb-3">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label font-medium text-secondary text-sm">کد ملی</label>
+                <input type="text" name="national_id" value="{{ national_id|default:'' }}" class="form-control text-center font-semibold" placeholder="مثال: 0012345678" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label font-medium text-secondary text-sm">شماره تلفن همراه</label>
+                <input type="text" name="phone_number" value="{{ phone_number|default:'' }}" class="form-control text-center font-semibold" placeholder="مثال: 09123456789" required>
+            </div>
+            <button type="submit" class="btn btn-primary-custom w-100 py-2 font-semibold">جستجو و نمایش لاگ</button>
+        </form>
+    </div>
+
+    <!-- History / Logs display -->
+    {% if candidate %}
+    <div class="card history-card p-4 shadow-sm mt-4">
+        <div class="border-bottom border-slate-light pb-3 mb-4">
+            <h5 class="font-bold text-secondary m-0">کارنامه و لاگ درخواست‌های: {{ candidate.first_name }} {{ candidate.last_name }}</h5>
+            {% if candidate.personnel_number %}
+            <small class="text-primary font-semibold">شماره پرسنلی: {{ candidate.personnel_number }}</small>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>عنوان فرصت شغلی</th>
+                        <th>تاریخ ثبت درخواست</th>
+                        <th>وضعیت کل</th>
+                        <th>مرحله ارزیابی فعلی</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td class="font-semibold text-secondary">
+                            {{ app.job.title }}
+                            <small class="text-muted d-block text-xxs mt-0.5">کد: {{ app.job.code }} | دپارتمان: {{ app.job.department }}</small>
+                        </td>
+                        <td class="text-sm">{{ app.created_at|to_jalali }}</td>
+                        <td>
+                            {% if app.status == 'IN_PROGRESS' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded text-xs">در حال ارزیابی</span>
+                            {% elif app.status == 'SELECTED' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded text-xs">قبول نهایی</span>
+                            {% elif app.status == 'RESERVE' %}
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1 rounded text-xs">ذخیره</span>
+                            {% elif app.status == 'REJECTED' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded text-xs">مردود شده</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-sm font-medium">
+                            {% if app.status == 'IN_PROGRESS' %}
+                                {% if app.current_stage %}
+                                    <span class="text-primary">{{ app.current_stage.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">شروع فرآیند</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">پایان فرآیند</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">هیچ درخواستی یافت نشد.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

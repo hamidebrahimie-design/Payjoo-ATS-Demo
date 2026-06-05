@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}مدیریت کاربران و دسترسی‌ها{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="font-semibold text-secondary mb-1">مدیریت کاربران و دسترسی‌ها (RBAC)</h3>
+        <p class="text-muted text-sm m-0">تعریف کاربران جدید، مدیریت نقش‌ها و دسترسی‌های دسترسی مبتنی بر نقش (RBAC)</p>
+    </div>
+    <a href="{% url 'user_add' %}" class="btn btn-primary-custom d-flex align-items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        افزودن کاربر جدید
+    </a>
+</div>
+
+<div class="card premium-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">نام کاربری</th>
+                        <th>نام و نام خانوادگی</th>
+                        <th>ایمیل</th>
+                        <th>نقش سیستم</th>
+                        <th>نوع ارزیاب</th>
+                        <th class="pe-4">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody id="user-table-body">
+                    {% for user_obj in users %}
+                    <tr id="user-{{ user_obj.id }}">
+                        <td class="ps-4 font-medium">{{ user_obj.username }}</td>
+                        <td>{{ user_obj.get_full_name|default:user_obj.username }}</td>
+                        <td>{{ user_obj.email }}</td>
+                        <td>
+                            <span class="badge badge-role-{{ user_obj.profile.role|lower }} px-2.5 py-1.5 rounded font-medium">
+                                {{ user_obj.profile.get_role_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user_obj.profile.is_external %}
+                            <span class="text-danger font-medium">خارجی (پنل مصاحبه)</span>
+                            {% else %}
+                            <span class="text-muted">داخلی</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4">
+                            <a href="{% url 'user_edit' user_obj.id %}" class="btn btn-sm btn-outline-primary me-1">ویرایش</a>
+                            <button hx-delete="{% url 'user_delete' user_obj.id %}" 
+                                    hx-target="#user-{{ user_obj.id }}" 
+                                    hx-confirm="آیا از حذف این کاربر مطمئن هستید؟" 
+                                    class="btn btn-sm btn-outline-danger">
+                                حذف
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            هیچ کاربری در سیستم ثبت نشده است.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

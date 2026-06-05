@@ -1,0 +1,48 @@
+{% load jalali_tags %}
+{% if state.is_accessible %}
+<td id="stage-state-{{ state.id }}" hx-get="{% url 'edit_stage_state' state.id %}" hx-trigger="click" class="text-center p-3 cursor-pointer hover-bg-light" style="min-width: 130px; transition: background 0.15s;"
+    title="{% if state.evaluator %}ثبت‌کننده: {{ state.evaluator.get_full_name|default:state.evaluator.username }} در {{ state.updated_at|to_jalali }}&#10;{% endif %}{% if state.interviewer_scores.all %}نمرات مصاحبه‌گران:&#10;{% for iscore in state.interviewer_scores.all %}- {{ iscore.interviewer.get_full_name|default:iscore.interviewer.username }}: {{ iscore.score }} ({{ iscore.get_status_display }}){% if iscore.competency_scores.all %} (شایستگی‌ها: {% for cs in iscore.competency_scores.all %}{{ cs.competency.name }}={{ cs.score }}{% if not forloop.last %}، {% endif %}{% endfor %}){% endif %} در {{ iscore.updated_at|to_jalali }}{% if iscore.notes %} [{{ iscore.notes }}]{% endif %}&#10;{% endfor %}{% endif %}{% if state.notes %}یادداشت عمومی: {{ state.notes }}{% endif %}">
+    <div class="font-bold text-secondary mb-1">
+        {% if state.status == 'PENDING' %}
+            <span class="text-muted">-</span>
+        {% else %}
+            {{ state.score }}
+        {% endif %}
+    </div>
+    <div class="text-xs">
+        {% if state.status == 'PENDING' %}
+            <span class="text-muted text-xs">در انتظار</span>
+        {% elif state.status == 'COMPLETED' %}
+            <span class="text-success font-semibold">قبول</span>
+        {% elif state.status == 'FAILED' %}
+            <span class="text-danger font-semibold">مردود</span>
+        {% endif %}
+    </div>
+    {% if state.score_discrepancy_alert %}
+    <div class="mt-1">
+        <span class="badge bg-danger text-white px-1.5 py-0.5 rounded" style="font-size: 9px;" title="تفاوت نمره مصاحبه‌گران بیش از ۲۰ نمره است!">⚠️ مغایرت نمره</span>
+    </div>
+    {% endif %}
+    {% if state.notes %}
+    <div class="text-muted text-xxs mt-1 border-top border-slate-light pt-1 text-truncate mx-auto" style="max-width: 110px; font-size: 10px;" title="{{ state.notes }}">
+        {{ state.notes }}
+    </div>
+    {% endif %}
+    
+    {% if oob_update %}
+    <!-- Out of band update for final score -->
+    <span id="final-score-{{ application.id }}" hx-swap-oob="true" class="font-bold text-secondary">
+        {{ application.final_score }}
+    </span>
+    {% endif %}
+</td>
+{% else %}
+<td id="stage-state-{{ state.id }}" class="text-center p-3 bg-light text-muted" style="min-width: 130px; opacity: 0.5;" title="ابتدا باید مراحل قبلی تکمیل و تایید شوند.">
+    <div class="mb-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="d-inline-block align-middle text-secondary opacity-50">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+        </svg>
+    </div>
+    <span class="text-xxs text-muted">قفل شده</span>
+</td>
+{% endif %}

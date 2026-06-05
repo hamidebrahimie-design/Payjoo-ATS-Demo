@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}انتساب متقاضی به فرصت شغلی: {{ candidate.first_name }} {{ candidate.last_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'candidate_detail' candidate.id %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        بازگشت به پروفایل
+    </a>
+    <h3 class="font-semibold text-secondary">
+        ثبت درخواست همکاری جدید
+    </h3>
+    <p class="text-muted text-sm m-0">انتساب متقاضی <strong>{{ candidate.first_name }} {{ candidate.last_name }}</strong> به یکی از فرصت‌های شغلی فعال سازمان</p>
+</div>
+
+{% if form.errors %}
+<div class="alert alert-danger mb-4 py-2.5 px-3 text-sm" style="max-width: 600px;">
+    {% for field in form %}
+        {% if field.errors %}
+            <div><strong>{{ field.label }}:</strong> {{ field.errors.0 }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card premium-card" style="max-width: 600px;">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-4">
+                <label class="form-label font-medium text-secondary">نام متقاضی</label>
+                <input type="text" class="form-control bg-light" value="{{ candidate.first_name }} {{ candidate.last_name }} (کد ملی: {{ candidate.national_id }})" readonly>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label font-medium text-secondary">انتخاب فرصت شغلی فعال <span class="text-danger">*</span></label>
+                {{ form.job }}
+                <div class="form-text text-muted text-xs mt-1">فقط فرصت‌های شغلی فعال و غیرمختومه در این لیست نمایش داده می‌شوند.</div>
+                {% if form.job.errors %}
+                <div class="text-danger text-xs mt-1">{{ form.job.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'candidate_detail' candidate.id %}" class="btn btn-outline-secondary px-4 py-2">انصراف</a>
+                <button type="submit" class="btn btn-primary-custom px-4 py-2">ثبت درخواست و شروع فرآیند ارزیابی</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

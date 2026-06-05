@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}ویرایش فرصت شغلی{% else %}افزودن فرصت شغلی جدید{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
+<style>
+    /* Style custom design for kamaDatepicker to match our theme */
+    #bd-root-id_start_date, #bd-root-id_end_date {
+        font-family: 'Vazirmatn', sans-serif !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'job_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        بازگشت به لیست
+    </a>
+    <h3 class="font-semibold text-secondary">
+        {% if object %}ویرایش فرصت شغلی: {{ object.title }}{% else %}افزودن فرصت شغلی جدید{% endif %}
+    </h3>
+    <p class="text-muted text-sm m-0">اطلاعات فرصت شغلی و مراحل فرآیند ارزیابی متقاضیان را مشخص کنید</p>
+</div>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger mb-3 py-2 px-3 text-sm" style="max-width: 780px;">
+    {% for error in form.non_field_errors %}
+        <div>{{ error }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if stages.non_form_errors %}
+<div class="alert alert-danger mb-3 py-2 px-3 text-sm" style="max-width: 780px;">
+    {% for error in stages.non_form_errors %}
+        <div>{{ error }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card premium-card mb-5" style="max-width: 780px;">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Section 1: General Info -->
+            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۱. اطلاعات عمومی فرصت شغلی</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">شماره درخواست</label>
+                    {{ form.request_number }}
+                    {% if form.request_number.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.request_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">کد شغل</label>
+                    {{ form.code }}
+                    {% if form.code.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.code.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label font-medium text-secondary">عنوان شغل</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.title.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">بخش / دپارتمان</label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.department.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">واحد سازمانی</label>
+                    {{ form.unit }}
+                    {% if form.unit.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.unit.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">رده شغلی</label>
+                    {{ form.job_category }}
+                    {% if form.job_category.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.job_category.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">ظرفیت جذب (تعداد)</label>
+                    {{ form.headcount }}
+                    {% if form.headcount.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.headcount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نوع استخدام</label>
+                    {{ form.recruitment_type }}
+                    {% if form.recruitment_type.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.recruitment_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Section 2: Planning -->
+            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۲. برنامه‌ریزی و زمان‌بندی</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">کارشناس جذب مسئول</label>
+                    {{ form.assigned_recruiter }}
+                    {% if form.assigned_recruiter.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.assigned_recruiter.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">الگوی فرآیند استخدامی (Workflow)</label>
+                    {{ form.workflow }}
+                    <small class="text-muted text-xs d-block mt-1">با انتخاب الگو، مراحل فرآیند به صورت خودکار تخصیص می‌یابند.</small>
+                    {% if form.workflow.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.workflow.errors.0 }}</div>
+                    {% endif %}
+                    <div id="workflow-stages-preview" class="mt-2 border rounded p-2.5 bg-light d-none" style="border-color: #cbd5e1 !important; background-color: #f8fafc !important;">
+                        <!-- Workflow stages will be loaded here dynamically -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">وضعیت فرصت شغلی</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">تاریخ شروع</label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.start_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">تاریخ پایان</label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.end_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Section 3: Descriptions -->
+            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۳. شرح شغل، شرایط احراز و یادداشت‌ها</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <label class="form-label font-medium text-secondary">شرح شغل</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label font-medium text-secondary">شرایط احراز</label>
+                    {{ form.requirements }}
+                    {% if form.requirements.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.requirements.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label font-medium text-secondary">یادداشت‌های داخلی و اداری</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.notes.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Section 4: Dynamic Stages -->
+            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۴. مراحل فرآیند ارزیابی متقاضیان</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted text-xs m-0">مراحل ارزیابی را به همراه وزن هر کدام تعریف کنید. مجموع درصدها باید دقیقاً ۱۰۰٪ باشد.</p>
+                <button type="button" id="add-stage-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    افزودن مرحله
+                </button>
+            </div>
+
+            {{ stages.management_form }}
+            
+            <div id="stages-formset-container" class="mb-3">
+                {% for stage_form in stages %}
+                <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-{{ forloop.counter0 }}">
+                    {{ stage_form.id }}
+                    <div class="col-md-6">
+                        <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی</label>
+                        {{ stage_form.name }}
+                        {% if stage_form.name.errors %}
+                        <div class="text-danger text-xs mt-1">{{ stage_form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-xs text-muted mb-1">وزن (٪)</label>
+                        {{ stage_form.weight }}
+                        {% if stage_form.weight.errors %}
+                        <div class="text-danger text-xs mt-1">{{ stage_form.weight.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-xs text-muted mb-1">ترتیب انجام</label>
+                        {{ stage_form.sequence }}
+                        {% if stage_form.sequence.errors %}
+                        <div class="text-danger text-xs mt-1">{{ stage_form.sequence.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        {% if stage_form.instance.pk %}
+                            <div class="form-check d-none">
+                                {{ stage_form.DELETE }}
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="deleteStageRow('{{ forloop.counter0 }}')">
+                                حذف
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('{{ forloop.counter0 }}')">
+                                حذف
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="col-12 mt-1 mb-4">
+                <div class="alert alert-info py-2.5 px-3 text-sm d-flex align-items-center justify-content-between mb-0" id="weight_sum_alert">
+                    <span>مجموع درصد وزن مراحل: <strong id="weight_sum_val">۰</strong>٪</span>
+                    <span class="font-semibold text-xs" id="weight_sum_status">مجموع مقادیر معتبر است.</span>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="{% url 'job_list' %}" class="btn btn-outline-secondary px-4 py-2">انصراف</a>
+                <button type="submit" class="btn btn-primary-custom px-4 py-2">
+                    {% if object %}ذخیره تغییرات{% else %}ایجاد فرصت شغلی{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Template HTML for dynamic row cloning -->
+<div id="stage-form-template" class="d-none">
+    <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-__prefix__">
+        {{ stages.empty_form.id }}
+        <div class="col-md-6">
+            <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی</label>
+            {{ stages.empty_form.name }}
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs text-muted mb-1">وزن (٪)</label>
+            {{ stages.empty_form.weight }}
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs text-muted mb-1">ترتیب انجام</label>
+            {{ stages.empty_form.sequence }}
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('__prefix__')">
+                حذف
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Persian Datepicker
+        kamaDatepicker('id_start_date', {
+            buttonsColor: '#0052cc',
+            markToday: true,
+            gotoToday: true,
+            twodigit: true,
+            closeAfterSelect: true,
+            nextButtonIcon: '>',
+            previousButtonIcon: '<'
+        });
+        kamaDatepicker('id_end_date', {
+            buttonsColor: '#0052cc',
+            markToday: true,
+            gotoToday: true,
+            twodigit: true,
+            closeAfterSelect: true,
+            nextButtonIcon: '>',
+            previousButtonIcon: '<'
+        });
+
+        const container = document.getElementById('stages-formset-container');
+        const template = document.getElementById('stage-form-template').innerHTML;
+        const totalFormsInput = document.getElementById('id_stages-TOTAL_FORMS');
+        const addBtn = document.getElementById('add-stage-btn');
+        
+        const sumVal = document.getElementById('weight_sum_val');
+        const sumStatus = document.getElementById('weight_sum_status');
+        const sumAlert = document.getElementById('weight_sum_alert');
+        
+        function updateSum() {
+            const weightInputs = document.querySelectorAll('.stage-form-row:not(.deleted-stage-row) .stage-weight');
+            let total = 0;
+            weightInputs.forEach(input => {
+                const val = parseInt(input.value) || 0;
+                total += val;
+            });
+            
+            sumVal.textContent = total;
+            if (total === 100) {
+                sumAlert.classList.remove('alert-info', 'alert-danger');
+                sumAlert.classList.add('alert-success');
+                sumStatus.textContent = 'مجموع مقادیر معتبر است (۱۰۰٪).';
+            } else {
+                sumAlert.classList.remove('alert-info', 'alert-success');
+                sumAlert.classList.add('alert-danger');
+                sumStatus.textContent = 'مجموع مقادیر باید دقیقاً ۱۰۰٪ باشد.';
+            }
+        }
+        
+        function attachWeightListeners() {
+            const weightInputs = document.querySelectorAll('.stage-weight');
+            weightInputs.forEach(input => {
+                input.removeEventListener('input', updateSum);
+                input.addEventListener('input', updateSum);
+            });
+        }
+        
+        addBtn.addEventListener('click', function() {
+            const currentCount = parseInt(totalFormsInput.value);
+            let rowHtml = template.replace(/__prefix__/g, currentCount);
+            
+            container.insertAdjacentHTML('beforeend', rowHtml);
+            
+            const newSeqInput = document.getElementById('id_stages-' + currentCount + '-sequence');
+            if (newSeqInput) {
+                newSeqInput.value = currentCount + 1;
+            }
+            
+            totalFormsInput.value = currentCount + 1;
+            
+            attachWeightListeners();
+            updateSum();
+        });
+        
+        window.deleteStageRow = function(index) {
+            const row = document.getElementById('stage-form-' + index);
+            const deleteCheckbox = document.getElementById('id_stages-' + index + '-DELETE');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+            }
+            row.style.display = 'none';
+            row.classList.add('deleted-stage-row');
+            updateSum();
+        };
+        
+        window.removeNewStageRow = function(index) {
+            const row = document.getElementById('stage-form-' + index);
+            const nameInput = document.getElementById('id_stages-' + index + '-name');
+            const weightInput = document.getElementById('id_stages-' + index + '-weight');
+            if (nameInput) nameInput.value = '';
+            if (weightInput) weightInput.value = '';
+            row.style.display = 'none';
+            row.classList.add('deleted-stage-row');
+            updateSum();
+        };
+        
+        // Fetch and show workflow stages preview
+        const workflowSelect = document.getElementById('id_workflow');
+        const previewContainer = document.getElementById('workflow-stages-preview');
+
+        function updateWorkflowPreview() {
+            const workflowId = workflowSelect.value;
+            if (!workflowId) {
+                previewContainer.innerHTML = '';
+                previewContainer.classList.add('d-none');
+                return;
+            }
+
+            // Fetch stages
+            fetch(`/jobs/workflows/${workflowId}/stages/`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error('Failed to fetch stages');
+                })
+                .then(html => {
+                    previewContainer.innerHTML = html;
+                    previewContainer.classList.remove('d-none');
+                })
+                .catch(error => {
+                    console.error('Error fetching workflow stages:', error);
+                    previewContainer.innerHTML = '<span class="text-danger text-xs">خطا در بارگذاری مراحل الگو</span>';
+                    previewContainer.classList.remove('d-none');
+                });
+        }
+
+        if (workflowSelect) {
+            workflowSelect.addEventListener('change', updateWorkflowPreview);
+            updateWorkflowPreview(); // Check initial state (e.g., when editing an existing job)
+        }
+        
+        // Initial setup
+        attachWeightListeners();
+        updateSum();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}فرصت‌های شغلی سازمانی{% endblock %}
+
+{% block extra_head %}
+<style>
+    .public-header {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 12px;
+        color: white;
+        padding: 3rem 2rem;
+        margin-bottom: 2rem;
+    }
+    .dept-tab {
+        cursor: pointer;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: 1px solid #e2e8f0;
+        background-color: white;
+        color: #475569;
+    }
+    .dept-tab.active, .dept-tab:hover {
+        background-color: #0052cc;
+        color: white;
+        border-color: #0052cc;
+    }
+    .job-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background-color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .job-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- Public Header -->
+    <div class="public-header d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="font-semibold mb-2">فرصت‌های همکاری و استخدام</h2>
+            <p class="text-slate-300 m-0 opacity-75">به ما بپیوندید و در ساختن آینده‌ای روشن در کنار هم کار کنیم</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'careers_track' %}" class="btn btn-outline-light px-3 py-2 d-flex align-items-center gap-2 text-xs md:text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                </svg>
+                پیگیری وضعیت درخواست‌ها
+            </a>
+            {% if not user.is_authenticated %}
+                <a href="{% url 'login' %}" class="btn btn-light px-3 py-2 text-xs md:text-sm text-dark font-medium">ورود متقاضیان</a>
+                <a href="{% url 'candidate_signup' %}" class="btn btn-primary-custom px-3 py-2 text-xs md:text-sm">ثبت‌نام آنلاین</a>
+            {% else %}
+                {% if user.profile.role == 'CANDIDATE' %}
+                    <a href="{% url 'candidate_dashboard' %}" class="btn btn-primary-custom px-3 py-2 text-xs md:text-sm">میز کار من</a>
+                {% else %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary-custom px-3 py-2 text-xs md:text-sm">پنل مدیریت</a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Category/Department tabs -->
+    <div class="mb-4">
+        <h5 class="font-semibold text-secondary mb-3">دسته‌بندی مشاغل بر اساس دپارتمان</h5>
+        <div class="d-flex gap-2 overflow-x-auto pb-2">
+            <div class="dept-tab active" onclick="filterDepartment('all')">همه دپارتمان‌ها</div>
+            {% for dept in grouped_jobs.keys %}
+            <div class="dept-tab" onclick="filterDepartment('dept-{{ forloop.counter }}')">{{ dept }}</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Jobs List Container -->
+    <div class="row g-4" id="jobs-container">
+        {% for dept, dept_jobs in grouped_jobs.items %}
+            {% for job in dept_jobs %}
+            <div class="col-md-6 job-item dept-{{ forloop.parentloop.counter }}">
+                <div class="job-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">
+                                {{ dept }}
+                            </span>
+                            <span class="text-muted text-xs font-medium">کد شغل: {{ job.code }}</span>
+                        </div>
+                        <h4 class="font-semibold text-secondary mb-2">{{ job.title }}</h4>
+                        {% if job.unit %}
+                        <div class="text-muted text-sm mb-3">واحد سازمانی: {{ job.unit }}</div>
+                        {% endif %}
+                        <p class="text-muted text-sm text-justify mb-4">
+                            {{ job.description|truncatewords:40|linebreaksbr }}
+                        </p>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-slate-light">
+                        <div class="text-xs text-muted">
+                            <div>نوع استخدام: {{ job.get_recruitment_type_display }}</div>
+                            {% if job.end_date %}
+                            <div class="mt-1">مهلت ارسال: تا {{ job.end_date|to_jalali }}</div>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'careers_apply' job.id %}" class="btn btn-primary-custom d-flex align-items-center gap-1">
+                            مشاهده و ثبت‌نام سریع
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% empty %}
+        <div class="col-12 text-center py-5 text-muted">
+            <h5 class="font-semibold mb-2">در حال حاضر فرصت شغلی فعالی وجود ندارد</h5>
+            <p class="m-0 text-sm">لطفاً در زمان‌های دیگری به پورتال ما سر بزنید.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function filterDepartment(deptClass) {
+        // Toggle active tab style
+        const tabs = document.querySelectorAll('.dept-tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // Filter items
+        const items = document.querySelectorAll('.job-item');
+        items.forEach(item => {
+            if (deptClass === 'all') {
+                item.style.display = 'block';
+            } else {
+                if (item.classList.contains(deptClass)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

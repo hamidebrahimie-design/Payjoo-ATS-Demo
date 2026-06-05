@@ -1,0 +1,26 @@
+<div class="modal-header border-bottom border-slate py-3">
+    <h5 class="modal-title font-semibold text-secondary" id="jobDescriptionModalLabel">شرح شغل: {{ job.title }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body p-4 text-start" style="font-size: 0.95rem; line-height: 1.8;">
+    <div class="mb-3">
+        <strong class="text-secondary">کد شغل:</strong> <span class="badge bg-light text-secondary border">{{ job.code }}</span>
+        <span class="mx-2 text-muted">|</span>
+        <strong class="text-secondary">دپارتمان:</strong> <span>{{ job.department }}</span>
+        {% if job.unit %}
+            <span class="mx-2 text-muted">|</span>
+            <strong class="text-secondary">واحد:</strong> <span>{{ job.unit }}</span>
+        {% endif %}
+        {% if job.job_category %}
+            <span class="mx-2 text-muted">|</span>
+            <strong class="text-secondary">رده شغلی:</strong> <span>{{ job.job_category }}</span>
+        {% endif %}
+    </div>
+    
+    <div class="border-top border-slate-light pt-3">
+        <h6 class="font-semibold text-secondary mb-2">توضیحات و شرایط احراز فرصت شغلی:</h6>
+        <div class="text-muted text-sm whitespace-pre-line">
+            {{ job.description|safe }}
+        </div>
+    </div>
+</div>

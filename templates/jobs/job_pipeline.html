@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}پایپلاین ارزیابی: {{ job.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .stepper-container {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    .hover-bg-light:hover {
+        background-color: #f1f5f9 !important;
+    }
+    .text-xxs {
+        font-size: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if job.has_all_evaluations_completed %}
+<div class="alert alert-success alert-dismissible fade show mb-4 border-2 border-success border-opacity-25 shadow-sm p-4 rounded-3 d-flex align-items-center gap-3" role="alert">
+    <div class="bg-success bg-opacity-10 p-2.5 rounded-circle text-success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+        </svg>
+    </div>
+    <div class="flex-grow-1">
+        <h5 class="alert-heading font-bold mb-1 text-success">ارزیابی تمامی مراحل به پایان رسیده است!</h5>
+        <p class="m-0 text-sm text-secondary">تمام متقاضیان فعال در کلیه مراحل تعیین شده مورد ارزیابی قرار گرفته‌اند. اکنون می‌توانید برای رتبه‌بندی نهایی و تصمیم‌گیری نهایی اقدام نمایید.</p>
+    </div>
+    <div class="ms-auto">
+        <a href="{% url 'job_final_ranking' job.id %}" class="btn btn-success font-semibold px-4 py-2 shadow-xs d-flex align-items-center gap-1">
+            <span>🏆 مشاهده رتبه‌بندی و تصمیم‌گیری نهایی</span>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="mb-4 d-flex justify-content-between align-items-end">
+    <div>
+        <a href="{% url 'job_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            بازگشت به فرصت‌های شغلی
+        </a>
+        <h3 class="font-semibold text-secondary m-0">
+            پایپلاین ارزیابی متقاضیان: {{ job.title }}
+        </h3>
+        <p class="text-muted text-sm m-0">کد شغل: {{ job.code }} | دپارتمان: {{ job.department }} | واحد: {{ job.unit|default:"-" }}{% if job.job_category %} | رده شغلی: {{ job.job_category }}{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'job_print_doc' job.id %}" target="_blank" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 font-semibold">
+            <span>🖨️ چاپ سند آزمون</span>
+        </a>
+        <a href="{% url 'job_final_ranking' job.id %}" class="btn btn-outline-primary d-inline-flex align-items-center gap-1 font-semibold">
+            <span>🏆 مشاهده رتبه‌بندی نهایی</span>
+        </a>
+        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill font-medium d-flex align-items-center">
+            تعداد متقاضیان: {{ applications.count }} نفر
+        </span>
+    </div>
+</div>
+
+<!-- Workflow Stages Stepper info -->
+<div class="card premium-card mb-4">
+    <div class="card-header bg-white border-bottom border-slate py-3">
+        <h6 class="font-semibold text-secondary m-0">مراحل و ضرایب ارزیابی فرآیند</h6>
+    </div>
+    <div class="card-body p-4 bg-light bg-opacity-50">
+        <div class="row g-3 justify-content-center">
+            {% for stage in stages %}
+            <div class="col-md-3 text-center">
+                <div class="p-3 bg-white border border-slate rounded-3 shadow-xs h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <span class="badge bg-primary text-white rounded-circle px-2.5 py-1.5 font-bold mb-2">{{ stage.sequence }}</span>
+                        <h6 class="font-semibold text-secondary mb-1">{{ stage.name }}</h6>
+                        <span class="text-xs text-muted d-block mb-2">وزن مرحله: {{ stage.weight }}٪</span>
+                        
+                        {% if stage.interviewers.all %}
+                            <div class="border-top border-slate-light pt-2 text-start mb-3" style="font-size: 11px;">
+                                <span class="text-xxs font-semibold text-muted d-block mb-1">مصاحبه‌گران:</span>
+                                {% for mapping in stage.interviewers.all %}
+                                    <div class="text-xxs text-secondary d-flex justify-content-between align-items-center mb-1">
+                                        <span>• {{ mapping.user.get_full_name|default:mapping.user.username }}</span>
+                                        <span class="text-muted text-xxs font-bold">({{ mapping.weight }}٪{% if mapping.group_name %} - {{ mapping.group_name }}{% endif %})</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button class="btn btn-xs btn-outline-primary w-100 mt-2" 
+                            hx-get="{% url 'manage_stage_interviewers' stage.id %}" 
+                            hx-target="#interviewer-modal-content" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#interviewerModal">
+                        مدیریت مصاحبه‌گران
+                    </button>
+                </div>
+            </div>
+            {% if not forloop.last %}
+            <div class="col-md-1 d-none d-md-flex align-items-center justify-content-center text-muted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18" />
+                </svg>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="col-12 text-center text-muted py-2">هیچ مرحله ارزیابی برای این شغل تعریف نشده است.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Applicants evaluation board -->
+<div class="card premium-card">
+    <div class="card-header bg-white border-bottom border-slate py-3 d-flex justify-content-between align-items-center">
+        <h5 class="font-semibold text-secondary m-0">لیست متقاضیان و نمرات ارزیابی</h5>
+        <div id="bulk-actions" class="d-none align-items-center gap-2">
+            <span class="text-xs text-muted font-medium"><span id="selected-count">0</span> متقاضی انتخاب شده‌اند</span>
+            <button type="submit" form="bulk-action-form" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+                انتقال به مرحله بعد
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 45px;">
+                            <input type="checkbox" id="select-all" class="form-check-input">
+                        </th>
+                        <th style="min-width: 220px;">مشخصات متقاضی</th>
+                        <th style="min-width: 150px;">وضعیت کلی درخواست</th>
+                        {% for stage in stages %}
+                        <th class="text-center">{{ stage.name }} ({{ stage.weight }}٪)</th>
+                        {% endfor %}
+                        <th class="text-center" style="min-width: 100px;">امتیاز نهایی وزنی</th>
+                        <th class="pe-4 text-end" style="min-width: 120px;">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td class="ps-4 text-center">
+                            {% if app.status == 'IN_PROGRESS' %}
+                            <input type="checkbox" name="application_ids" value="{{ app.id }}" form="bulk-action-form" class="app-checkbox form-check-input">
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'candidate_detail' app.candidate.id %}" target="_blank" class="font-semibold text-secondary text-decoration-none">
+                                {{ app.candidate.first_name }} {{ app.candidate.last_name }}
+                            </a>
+                            <div class="text-muted text-xs mt-0.5">کد ملی: {{ app.candidate.national_id }}</div>
+                            {% if app.candidate.personnel_number %}
+                            <div class="text-primary font-semibold text-xxs mt-0.5">شماره پرسنلی: {{ app.candidate.personnel_number }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                <div id="app-status-badge-{{ app.id }}">
+                                    {% if app.status == 'IN_PROGRESS' %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1.5 rounded text-xs">در حال ارزیابی</span>
+                                    {% elif app.status == 'SELECTED' %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1.5 rounded text-xs">قبول نهایی</span>
+                                    {% elif app.status == 'RESERVE' %}
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1.5 rounded text-xs">ذخیره</span>
+                                    {% elif app.status == 'REJECTED' %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1.5 rounded text-xs">مردود شده</span>
+                                    {% endif %}
+                                </div>
+                                <form hx-post="{% url 'update_application_status' app.id %}" hx-target="#app-status-badge-{{ app.id }}" hx-swap="outerHTML" class="m-0 mt-1">
+                                    {% csrf_token %}
+                                    <select name="status" onchange="this.form.dispatchEvent(new Event('submit'))" class="form-select form-select-sm" style="font-size: 11px; padding: 2px 6px;">
+                                        {% for code, label in status_choices %}
+                                            <option value="{{ code }}" {% if app.status == code %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+                        
+                        {% for stage in stages %}
+                            {% with state=app|get_stage_state:stage %}
+                                {% if state %}
+                                    {% include "candidates/partials/stage_state_view.html" with state=state %}
+                                {% else %}
+                                    <td class="text-center text-muted text-xs">-</td>
+                                {% endif %}
+                            {% endwith %}
+                        {% endfor %}
+
+                        <td class="text-center font-bold fs-6">
+                            <span id="final-score-{{ app.id }}" class="font-bold text-secondary">
+                                {{ app.final_score }}
+                            </span>
+                        </td>
+                        
+                        <td class="pe-4 text-end">
+                            <a href="{% url 'candidate_detail' app.candidate.id %}" class="btn btn-xs btn-outline-info">مشاهده پرونده کامل</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ stages.count|add:5 }}" class="text-center py-5 text-muted">
+                            هیچ متقاضی برای این فرصت شغلی ثبت‌نام نکرده است.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<form id="bulk-action-form" method="post" action="{% url 'bulk_advance_stage' job.id %}" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<div class="alert alert-info mt-4 py-2.5 px-3 text-xs d-flex align-items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 1 1 1.085 1.085l-.04.02-.041.02a.75.75 0 0 1-1.085-1.085l.04-.02Zm0 5.625.041-.02a.75.75 0 1 1 1.085 1.085l-.04.02-.041.02a.75.75 0 0 1-1.085-1.085l.04-.02ZM12 21.75a9.75 9.75 0 1 0 0-19.5 9.75 9.75 0 0 0 0 19.5Z" />
+    </svg>
+    <span><strong>راهنمای ویرایش:</strong> برای ویرایش نمره یا وضعیت ارزیابی در هر مرحله، کافیست بر روی سلول مربوط به آن نمره در جدول کلیک کنید تا فرم ویرایش سریع برای شما فعال گردد.</span>
+</div>
+
+<!-- Modal for managing stage interviewers -->
+<div class="modal fade" id="interviewerModal" tabindex="-1" aria-labelledby="interviewerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="interviewer-modal-content">
+            <!-- Loaded dynamically via HTMX -->
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('select-all');
+        const candidateCheckboxes = document.querySelectorAll('.app-checkbox');
+        const bulkActionsPanel = document.getElementById('bulk-actions');
+        const selectedCountSpan = document.getElementById('selected-count');
+
+        function updateBulkActionsState() {
+            const checkedCount = Array.from(candidateCheckboxes).filter(cb => cb.checked).length;
+            if (checkedCount > 0) {
+                bulkActionsPanel.classList.remove('d-none');
+                bulkActionsPanel.classList.add('d-flex');
+                selectedCountSpan.textContent = checkedCount;
+            } else {
+                bulkActionsPanel.classList.remove('d-flex');
+                bulkActionsPanel.classList.add('d-none');
+            }
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                candidateCheckboxes.forEach(cb => {
+                    cb.checked = selectAllCheckbox.checked;
+                });
+                updateBulkActionsState();
+            });
+        }
+
+        candidateCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const allChecked = Array.from(candidateCheckboxes).every(c => c.checked);
+                const someChecked = Array.from(candidateCheckboxes).some(c => c.checked);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
+                updateBulkActionsState();
+            });
+        });
+    });
+</script>
+{% endblock %}
