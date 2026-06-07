@@ -83,3 +83,18 @@ class UserProfile(SoftDeleteModel):
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"
+
+
+class SMSTemplate(SoftDeleteModel):
+    name = models.CharField(max_length=255, verbose_name="نام قالب")
+    body = models.TextField(verbose_name="متن قالب")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+
+    class Meta:
+        verbose_name = "قالب پیامک"
+        verbose_name_plural = "قالب‌های پیامک"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+

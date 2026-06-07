@@ -1,0 +1,117 @@
+{% if not template_selected %}
+    <div class="glass-card p-5 text-center text-secondary border border-warning" style="background: rgba(255, 193, 7, 0.05);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="text-warning mb-3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        <h5 class="font-bold text-dark">قالب پیامک انتخاب نشده است</h5>
+        <p class="mb-0 text-xs">برای مشاهده پیش‌نمایش متون پیامک و دریافت خروجی اکسل، لطفاً ابتدا یک قالب پیامک انتخاب یا ایجاد کنید.</p>
+    </div>
+{% elif not preview_data %}
+    <div class="glass-card p-5 text-center text-muted">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-3 text-muted">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+        </svg>
+        <h5 class="font-bold text-dark">متقاضی با این فیلترها یافت نشد</h5>
+        <p class="mb-0 text-xs">متقاضی یا درخواست همکاری فعالی که واجد شرایط فیلترهای بالا باشد وجود ندارد.</p>
+    </div>
+{% else %}
+    <form action="{% url 'sms_panel_export' %}" method="post" id="sms-export-form" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="job_id" value="{{ request.GET.job_id|default:'' }}">
+        <input type="hidden" name="stage_id" value="{{ request.GET.stage_id|default:'' }}">
+        <input type="hidden" name="template_id" value="{{ request.GET.template_id|default:'' }}">
+
+        <!-- Top Actions Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-xs font-semibold text-secondary">تعداد متقاضیان واجد شرایط: <span class="badge bg-indigo rounded-pill px-2.5">{{ preview_data|length }} نفر</span></span>
+            <button type="submit" class="btn btn-indigo d-flex align-items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
+                    <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                </svg>
+                دانلود خروجی اکسل جهت ارسال
+            </button>
+        </div>
+
+        <!-- Candidates Table Card -->
+        <div class="glass-card overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-right">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="text-center" style="width: 50px;">
+                                <input class="form-check-input" type="checkbox" id="select-all-candidates" checked onclick="toggleAllCheckboxes(this)">
+                            </th>
+                            <th scope="col" style="min-width: 150px;">متقاضی</th>
+                            <th scope="col" style="min-width: 120px;">فرصت شغلی / مرحله</th>
+                            <th scope="col" style="min-width: 120px;">شماره همراه</th>
+                            <th scope="col" style="min-width: 300px;">متن نهایی پیامک</th>
+                            <th scope="col" class="text-center" style="width: 130px;">طول پیامک</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in preview_data %}
+                            <tr>
+                                <td class="text-center">
+                                    <input class="form-check-input candidate-checkbox" type="checkbox" name="candidate_ids" value="{{ item.candidate.id }}" checked onchange="updateCheckedCount()">
+                                </td>
+                                <td>
+                                    <div class="font-bold text-dark">{{ item.candidate.first_name }} {{ item.candidate.last_name }}</div>
+                                    <div class="text-xs text-muted mt-0.5">کد ملی: {{ item.candidate.national_id }}</div>
+                                </td>
+                                <td>
+                                    {% if item.job %}
+                                        <div class="text-xs font-semibold text-secondary">{{ item.job.title }}</div>
+                                        {% if item.stage %}
+                                            <div class="text-xs text-muted mt-0.5">{{ item.stage.name }} {% if item.stage_state.score %}(نمره: {{ item.stage_state.score }}){% endif %}</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-xs text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <code class="text-dark font-medium">{{ item.candidate.phone_number }}</code>
+                                </td>
+                                <td>
+                                    <div class="text-xs border p-2 bg-light rounded text-secondary" style="max-height: 80px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5;">{{ item.sms_text }}</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary text-xs">{{ item.char_count }} کاراکتر</span>
+                                    <div class="text-xs text-muted mt-1 font-semibold">{{ item.sms_parts }} بخش پیامک</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // Check/Uncheck all helper
+        function toggleAllCheckboxes(masterCheckbox) {
+            const checkboxes = document.querySelectorAll('.candidate-checkbox');
+            checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+            updateCheckedCount();
+        }
+
+        function updateCheckedCount() {
+            const checkedCount = document.querySelectorAll('.candidate-checkbox:checked').length;
+            const totalCount = document.querySelectorAll('.candidate-checkbox').length;
+            const masterCheckbox = document.getElementById('select-all-candidates');
+            
+            if (masterCheckbox) {
+                if (checkedCount === 0) {
+                    masterCheckbox.checked = false;
+                    masterCheckbox.indeterminate = false;
+                } else if (checkedCount === totalCount) {
+                    masterCheckbox.checked = true;
+                    masterCheckbox.indeterminate = false;
+                } else {
+                    masterCheckbox.checked = false;
+                    masterCheckbox.indeterminate = true;
+                }
+            }
+        }
+    </script>
+{% endif %}

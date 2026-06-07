@@ -423,3 +423,632 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         return context
 
 
+import os
+import shutil
+import zipfile
+from django.conf import settings
+from django.utils import timezone
+from django.http import FileResponse, Http404
+
+class SystemBackupView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+    template_name = 'accounts/system_backup.html'
+
+
+class DownloadBackupView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def post(self, request):
+        temp_dir = settings.BASE_DIR / 'scratch_backup'
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Clean older backups in temp_dir first
+        for item in os.listdir(temp_dir):
+            item_path = temp_dir / item
+            try:
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+            except Exception:
+                pass
+        
+        timestamp = timezone.now().strftime('%Y-%m-%d_%H-%M-%S')
+        zip_filename = f"backup_{timestamp}.zip"
+        zip_path = temp_dir / zip_filename
+        
+        db_path = settings.DATABASES['default']['NAME']
+        media_path = settings.MEDIA_ROOT
+        
+        # Copy db to temp copy
+        temp_db_copy = temp_dir / 'db.sqlite3'
+        try:
+            if os.path.exists(db_path):
+                shutil.copy2(db_path, temp_db_copy)
+            else:
+                # Create a dummy/empty sqlite3 database for testing (for in-memory databases)
+                import sqlite3
+                conn = sqlite3.connect(str(temp_db_copy))
+                conn.execute("CREATE TABLE dummy (id INTEGER PRIMARY KEY);")
+                conn.close()
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add database
+                zipf.write(temp_db_copy, arcname='db.sqlite3')
+                
+                # Add media files
+                if os.path.exists(media_path):
+                    for root, dirs, files in os.walk(media_path):
+                        for file in files:
+                            file_full_path = os.path.join(root, file)
+                            # Get path relative to BASE_DIR so we can extract it cleanly
+                            relative_path = os.path.relpath(file_full_path, settings.BASE_DIR)
+                            zipf.write(file_full_path, arcname=relative_path)
+                            
+            # Read zip file in memory
+            with open(zip_path, 'rb') as f:
+                file_data = f.read()
+
+            # Clean up files immediately
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+            if os.path.exists(temp_db_copy):
+                os.remove(temp_db_copy)
+                
+            response = HttpResponse(file_data, content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+            return response
+        except Exception as e:
+            from django.contrib import messages
+            messages.error(request, f"خطا در ایجاد فایل پشتیبان: {str(e)}")
+            return redirect('system_backup')
+
+class RestoreBackupView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def post(self, request):
+        from django.contrib import messages
+        backup_file = request.FILES.get('backup_file')
+        if not backup_file:
+            messages.error(request, "لطفاً یک فایل معتبر انتخاب کنید.")
+            return redirect('system_backup')
+            
+        file_ext = os.path.splitext(backup_file.name)[1].lower()
+        if file_ext not in ['.zip', '.sqlite3']:
+            messages.error(request, "فرمت فایل باید zip یا sqlite3 باشد.")
+            return redirect('system_backup')
+            
+        temp_dir = settings.BASE_DIR / 'scratch_backup'
+        os.makedirs(temp_dir, exist_ok=True)
+        uploaded_file_path = temp_dir / f'uploaded_restore{file_ext}'
+        
+        # Save uploaded file
+        with open(uploaded_file_path, 'wb+') as destination:
+            for chunk in backup_file.chunks():
+                destination.write(chunk)
+                
+        # Perform restore
+        try:
+            if file_ext == '.zip':
+                self.restore_system_zip(uploaded_file_path)
+            else:
+                self.restore_system_sqlite(uploaded_file_path)
+            messages.success(request, "اطلاعات سیستم با موفقیت بازگردانی شد.")
+        except Exception as e:
+            messages.error(request, str(e))
+            
+        # Clean up uploaded file
+        if os.path.exists(uploaded_file_path):
+            os.remove(uploaded_file_path)
+            
+        return redirect('system_backup')
+        
+    def restore_system_zip(self, zip_file_path):
+        import zipfile
+        import os
+        import shutil
+        from django.db import connections, connection
+        from django.conf import settings
+        
+        db_path = settings.DATABASES['default']['NAME']
+        media_path = settings.MEDIA_ROOT
+        
+        is_memory = (str(db_path) == ':memory:')
+        
+        # 1. Validate ZIP file structure
+        with zipfile.ZipFile(zip_file_path, 'r') as zipf:
+            file_list = zipf.namelist()
+            if 'db.sqlite3' not in file_list:
+                raise Exception("فایل پشتیبان معتبر نیست. دیتابیس در فایل یافت نشد.")
+                
+        # 2. Backup current database and media for rollback
+        db_backup = str(db_path) + '.backup' if not is_memory else None
+        media_backup = str(media_path) + '_backup'
+        
+        db_backed_up = False
+        media_backed_up = False
+        
+        try:
+            if not is_memory:
+                if os.path.exists(db_path):
+                    connections.close_all()
+                    shutil.copy2(db_path, db_backup)
+                    db_backed_up = True
+                
+            if os.path.exists(media_path):
+                shutil.copytree(media_path, media_backup)
+                media_backed_up = True
+                
+            # 3. Clean current database and media files
+            if not is_memory:
+                connections.close_all()
+                for ext in ['-wal', '-shm']:
+                    p = str(db_path) + ext
+                    if os.path.exists(p):
+                        os.remove(p)
+                if os.path.exists(db_path):
+                    os.remove(db_path)
+            
+            if os.path.exists(media_path):
+                shutil.rmtree(media_path)
+                
+            # 4. Extract from ZIP
+            with zipfile.ZipFile(zip_file_path, 'r') as zipf:
+                if not is_memory:
+                    db_data = zipf.read('db.sqlite3')
+                    with open(db_path, 'wb') as f:
+                        f.write(db_data)
+                    
+                # Extract media files
+                for member in zipf.infolist():
+                    if member.filename.startswith('media/'):
+                        zipf.extract(member, settings.BASE_DIR)
+                        
+            # 5. Verify database connection works (only for physical files)
+            if not is_memory:
+                connections.close_all()
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                
+            # 6. Success! Remove backups
+            if db_backed_up and db_backup and os.path.exists(db_backup):
+                os.remove(db_backup)
+            if media_backed_up and os.path.exists(media_backup):
+                shutil.rmtree(media_backup)
+                
+        except Exception as e:
+            # Rollback!
+            connections.close_all()
+            
+            # Restore database
+            if db_backed_up and db_backup:
+                if os.path.exists(db_path):
+                    os.remove(db_path)
+                shutil.move(db_backup, db_path)
+                
+            # Restore media
+            if media_backed_up:
+                if os.path.exists(media_path):
+                    shutil.rmtree(media_path)
+                shutil.move(media_backup, media_path)
+                
+            raise Exception(f"خطا در بازگردانی پشتیبان: {str(e)}")
+
+    def restore_system_sqlite(self, sqlite_file_path):
+        import os
+        import shutil
+        from django.db import connections, connection
+        from django.conf import settings
+        
+        db_path = settings.DATABASES['default']['NAME']
+        is_memory = (str(db_path) == ':memory:')
+        
+        # 1. Validate SQLite file
+        try:
+            import sqlite3
+            conn = sqlite3.connect(str(sqlite_file_path))
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            conn.close()
+        except Exception:
+            raise Exception("فایل دیتابیس معتبر نیست یا آسیب دیده است.")
+            
+        # 2. Backup current database for rollback
+        db_backup = str(db_path) + '.backup' if not is_memory else None
+        db_backed_up = False
+        
+        try:
+            if not is_memory:
+                if os.path.exists(db_path):
+                    connections.close_all()
+                    shutil.copy2(db_path, db_backup)
+                    db_backed_up = True
+                    
+            # 3. Clean current database
+            if not is_memory:
+                connections.close_all()
+                for ext in ['-wal', '-shm']:
+                    p = str(db_path) + ext
+                    if os.path.exists(p):
+                        os.remove(p)
+                if os.path.exists(db_path):
+                    os.remove(db_path)
+                    
+            # 4. Copy new database
+            if not is_memory:
+                shutil.copy2(sqlite_file_path, db_path)
+                
+            # 5. Verify database connection works
+            if not is_memory:
+                connections.close_all()
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                
+            # 6. Success! Remove backup
+            if db_backed_up and db_backup and os.path.exists(db_backup):
+                os.remove(db_backup)
+                
+        except Exception as e:
+            # Rollback!
+            connections.close_all()
+            if db_backed_up and db_backup:
+                if os.path.exists(db_path):
+                    os.remove(db_path)
+                shutil.move(db_backup, db_path)
+            raise Exception(f"خطا در بازگردانی دیتابیس: {str(e)}")
+
+
+# ==========================================
+# SMS Panel & Templates Feature (Phase 1)
+# ==========================================
+from django.contrib import messages
+from django.db import models
+from django.db.models import Q
+from apps.accounts.models import SMSTemplate
+
+def render_template_text(template_body, candidate, job=None, stage=None, stage_state=None, application=None):
+    from apps.candidates.models import JobApplication
+    
+    if not application and job:
+        application = candidate.applications.filter(job=job, is_deleted=False).first()
+    if not application:
+        application = candidate.applications.filter(is_deleted=False).order_by('-created_at').first()
+
+    job_title = application.job.title if (application and application.job) else "- "
+
+    if not stage_state and stage and application:
+        stage_state = application.stage_states.filter(stage=stage, is_deleted=False).first()
+    if not stage_state and application:
+        stage_state = application.stage_states.filter(is_deleted=False).order_by('-stage__sequence').first()
+
+    stage_name = stage_state.stage.name if (stage_state and stage_state.stage) else "- "
+
+    if stage_state:
+        score = str(stage_state.score)
+    elif application:
+        score = str(application.final_score)
+    else:
+        score = "- "
+
+    context = {
+        'نام': candidate.first_name or "",
+        'نام_خانوادگی': candidate.last_name or "",
+        'عنوان_شغل': job_title,
+        'نام_مرحله': stage_name,
+        'نمره': score,
+        'کد_ملی': candidate.national_id or "",
+    }
+
+    rendered = template_body
+    for key, val in context.items():
+        placeholder = f"{{{key}}}"
+        rendered = rendered.replace(placeholder, str(val))
+    return rendered
+
+
+class SMSPanelDashboardView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+    template_name = 'accounts/sms_panel.html'
+
+    def get_context_data(self, **kwargs):
+        from apps.jobs.models import JobOpportunity
+        from apps.candidates.models import JobApplication, ApplicationStageState
+
+        context = super().get_context_data(**kwargs)
+        context['templates'] = SMSTemplate.objects.filter(is_deleted=False)
+        context['jobs'] = JobOpportunity.objects.filter(is_deleted=False)
+        context['app_statuses'] = JobApplication.STATUS_CHOICES
+        context['stage_statuses'] = ApplicationStageState.STATUS_CHOICES
+        
+        edit_id = self.request.GET.get('edit_template')
+        if edit_id:
+            try:
+                context['edit_template'] = SMSTemplate.objects.get(id=edit_id, is_deleted=False)
+            except SMSTemplate.DoesNotExist:
+                pass
+        return context
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        name = request.POST.get('name')
+        body = request.POST.get('body')
+        
+        if action == 'create':
+            if name and body:
+                SMSTemplate.objects.create(name=name, body=body)
+                messages.success(request, "قالب پیامک با موفقیت ایجاد شد.")
+            else:
+                messages.error(request, "لطفاً تمامی فیلدها را پر کنید.")
+        elif action == 'edit':
+            template_id = request.POST.get('template_id')
+            if template_id and name and body:
+                try:
+                    tmpl = SMSTemplate.objects.get(id=template_id, is_deleted=False)
+                    tmpl.name = name
+                    tmpl.body = body
+                    tmpl.save()
+                    messages.success(request, "قالب پیامک با موفقیت ویرایش شد.")
+                except SMSTemplate.DoesNotExist:
+                    messages.error(request, "قالب یافت نشد.")
+            else:
+                messages.error(request, "لطفاً تمامی فیلدها را پر کنید.")
+        elif action == 'delete':
+            template_id = request.POST.get('template_id')
+            if template_id:
+                try:
+                    tmpl = SMSTemplate.objects.get(id=template_id, is_deleted=False)
+                    tmpl.delete()
+                    messages.success(request, "قالب پیامک با موفقیت حذف شد.")
+                except SMSTemplate.DoesNotExist:
+                    messages.error(request, "قالب یافت نشد.")
+                    
+        return redirect('sms_panel')
+
+
+class JobStagesOptionsView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def get(self, request):
+        from apps.jobs.models import JobOpportunityStage
+        job_id = request.GET.get('job_id')
+        html = '<option value="">همه مراحل</option>'
+        if job_id:
+            stages = JobOpportunityStage.objects.filter(job_id=job_id, is_deleted=False).order_by('sequence')
+            for stage in stages:
+                html += f'<option value="{stage.id}">{stage.name}</option>'
+        return HttpResponse(html)
+
+
+class SMSCandidatesPreviewView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def get(self, request):
+        from apps.candidates.models import Candidate, JobApplication, ApplicationStageState
+        
+        template_id = request.GET.get('template_id')
+        job_id = request.GET.get('job_id')
+        stage_id = request.GET.get('stage_id')
+        app_status = request.GET.get('app_status')
+        stage_status = request.GET.get('stage_status')
+        search_query = request.GET.get('q')
+
+        # Fetch template
+        template_obj = None
+        if template_id:
+            try:
+                template_obj = SMSTemplate.objects.get(id=template_id, is_deleted=False)
+            except SMSTemplate.DoesNotExist:
+                pass
+
+        # Base queryset is Candidates who have at least one application (or all active candidates)
+        candidates = Candidate.objects.filter(is_deleted=False)
+
+        # Apply job and other application filters
+        if job_id or stage_id or app_status or stage_status:
+            app_query = Q(is_deleted=False)
+            if job_id:
+                app_query &= Q(job_id=job_id)
+            if app_status:
+                app_query &= Q(status=app_status)
+            
+            if stage_id:
+                if stage_status:
+                    app_query &= Q(stage_states__stage_id=stage_id, stage_states__status=stage_status, stage_states__is_deleted=False)
+                else:
+                    app_query &= Q(stage_states__stage_id=stage_id, stage_states__is_deleted=False)
+            elif stage_status:
+                app_query &= Q(stage_states__status=stage_status, stage_states__is_deleted=False)
+
+            candidates = candidates.filter(applications__in=JobApplication.objects.filter(app_query)).distinct()
+        
+        # Text Search
+        if search_query:
+            candidates = candidates.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(national_id__icontains=search_query) |
+                Q(phone_number__icontains=search_query)
+            ).distinct()
+
+        # Render preview messages
+        preview_data = []
+        template_body = template_obj.body if template_obj else ""
+
+        # Prefetch for performance
+        candidates = candidates.prefetch_related('applications__job', 'applications__stage_states__stage')
+
+        for candidate in candidates:
+            job = None
+            stage = None
+            stage_state = None
+            application = None
+
+            if job_id:
+                application = candidate.applications.filter(job_id=job_id, is_deleted=False).first()
+            if not application:
+                application = candidate.applications.filter(is_deleted=False).order_by('-created_at').first()
+
+            if application:
+                job = application.job
+                if stage_id:
+                    stage_state = application.stage_states.filter(stage_id=stage_id, is_deleted=False).first()
+                if not stage_state:
+                    stage_state = application.stage_states.filter(is_deleted=False).order_by('-stage__sequence').first()
+                
+                if stage_state:
+                    stage = stage_state.stage
+
+            # Personalized message
+            sms_text = ""
+            if template_body:
+                sms_text = render_template_text(
+                    template_body,
+                    candidate=candidate,
+                    job=job,
+                    stage=stage,
+                    stage_state=stage_state,
+                    application=application
+                )
+
+            char_count = len(sms_text)
+            if char_count == 0:
+                sms_parts = 0
+            elif char_count <= 70:
+                sms_parts = 1
+            else:
+                import math
+                sms_parts = math.ceil(char_count / 67)
+
+            preview_data.append({
+                'candidate': candidate,
+                'sms_text': sms_text,
+                'char_count': char_count,
+                'sms_parts': sms_parts,
+                'job': job,
+                'stage': stage,
+                'stage_state': stage_state,
+                'application': application,
+            })
+
+        context = {
+            'preview_data': preview_data,
+            'template_selected': bool(template_obj),
+        }
+        return render(request, 'accounts/partials/sms_candidates_preview.html', context)
+
+
+class SMSExportExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def post(self, request):
+        from apps.candidates.models import Candidate
+        
+        template_body = request.POST.get('template_body', '')
+        candidate_ids = request.POST.getlist('candidate_ids')
+        job_id = request.POST.get('job_id')
+        stage_id = request.POST.get('stage_id')
+
+        if not template_body:
+            template_id = request.POST.get('template_id')
+            if template_id:
+                try:
+                    template_body = SMSTemplate.objects.get(id=template_id, is_deleted=False).body
+                except SMSTemplate.DoesNotExist:
+                    pass
+
+        if not template_body:
+            messages.error(request, "قالب پیامک مشخص نشده یا خالی است.")
+            return redirect('sms_panel')
+
+        if not candidate_ids:
+            messages.error(request, "هیچ متقاضی انتخاب نشده است.")
+            return redirect('sms_panel')
+
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "ارسال پیامک"
+
+        ws.views.sheetView[0].showGridLines = True
+        ws.sheet_properties.tabColor = "1072BA"
+        ws.sheet_view.rightToLeft = True
+
+        font_header = Font(name='Vazirmatn', size=11, bold=True, color='FFFFFF')
+        font_body = Font(name='Vazirmatn', size=11)
+        align_right = Alignment(horizontal='right', vertical='center', wrap_text=True)
+        align_center = Alignment(horizontal='center', vertical='center')
+        header_fill = PatternFill(start_color='4F46E5', end_color='4F46E5', fill_type='solid')
+
+        headers = ["شماره همراه", "متن پیامک", "نام متقاضی"]
+        ws.append(headers)
+
+        for col_idx in range(1, 4):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = font_header
+            cell.fill = header_fill
+            cell.alignment = align_center
+
+        candidates = Candidate.objects.filter(id__in=candidate_ids, is_deleted=False).prefetch_related(
+            'applications__job', 'applications__stage_states__stage'
+        )
+        
+        for candidate in candidates:
+            job = None
+            stage = None
+            stage_state = None
+            application = None
+
+            if job_id:
+                application = candidate.applications.filter(job_id=job_id, is_deleted=False).first()
+            if not application:
+                application = candidate.applications.filter(is_deleted=False).order_by('-created_at').first()
+
+            if application:
+                job = application.job
+                if stage_id:
+                    stage_state = application.stage_states.filter(stage_id=stage_id, is_deleted=False).first()
+                if not stage_state:
+                    stage_state = application.stage_states.filter(is_deleted=False).order_by('-stage__sequence').first()
+                if stage_state:
+                    stage = stage_state.stage
+
+            sms_text = render_template_text(
+                template_body,
+                candidate=candidate,
+                job=job,
+                stage=stage,
+                stage_state=stage_state,
+                application=application
+            )
+
+            row = [
+                candidate.phone_number or "",
+                sms_text,
+                f"{candidate.first_name} {candidate.last_name}"
+            ]
+            ws.append(row)
+
+        for row in range(2, ws.max_row + 1):
+            ws.cell(row=row, column=1).alignment = align_center
+            ws.cell(row=row, column=1).font = font_body
+            
+            ws.cell(row=row, column=2).alignment = align_right
+            ws.cell(row=row, column=2).font = font_body
+            
+            ws.cell(row=row, column=3).alignment = align_right
+            ws.cell(row=row, column=3).font = font_body
+
+        ws.column_dimensions['A'].width = 20
+        ws.column_dimensions['B'].width = 60
+        ws.column_dimensions['C'].width = 30
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="sms_export.xlsx"'
+        wb.save(response)
+        return response
+
+
+

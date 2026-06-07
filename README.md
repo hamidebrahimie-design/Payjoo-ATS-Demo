@@ -4,6 +4,8 @@ Payjoo ATS is a modern, responsive, and bilingual (Persian & English) Applicant 
 
 **Note**: This system is specifically designed and optimized for **Internal Job Postings / Internal Recruitment Processes** (اعلان‌های شغلی داخلی) within an organization, supporting attributes like personnel numbers, national IDs, and direct regional manager approvals.
 
+**Note**: This system is specifically designed and optimized for **Internal Job Postings / Internal Recruitment Processes** (اعلان‌های شغلی داخلی) within an organization, supporting attributes like personnel numbers, national IDs, and direct regional manager approvals.
+
 سامانه «پیجو» یک سیستم مدیریت و فرآیند جذب و استخدام مدرن، ریسپانسیو و دوزبانه (فارسی و انگلیسی) است که با استفاده از پایتون، جنگو و HTMX طراحی شده است. این سامانه به کارشناسان جذب و مدیران اجازه می‌دهد فرصت‌های شغلی را ثبت کنند، مراحل ارزیابی پویا با وزن‌های مختلف بسازند، کارشناسان جذب را تخصیص دهند، فرآیند مصاحبه‌ها و نمرات متقاضیان را در پایپلاین دنبال کنند و در نهایت سند آزمون آماده چاپ دریافت نمایند.
 
 **نکته مهم**: این سامانه به طور ویژه برای **اعلان‌های شغلی داخلی (فرآیندهای جذب داخلی از میان پرسنل موجود سازمان)** طراحی و بهینه‌سازی شده است و امکاناتی همچون ثبت کد پرسنلی، تطبیق با کدهای ملی، و گردش امضای تایید مدیران ناحیه را در خود دارد.
@@ -49,8 +51,8 @@ Payjoo ATS is a modern, responsive, and bilingual (Persian & English) Applicant 
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/omid516/Payjoo-ATS.git
-   cd Payjoo-ATS
+   git clone https://github.com/omid516/Payjo-ATS.git
+   cd Payjo-ATS
    ```
 
 2. **Create a Virtual Environment**:
@@ -117,8 +119,8 @@ Payjoo ATS is a modern, responsive, and bilingual (Persian & English) Applicant 
 
 ۱. **کلون کردن پروژه**:
    ```bash
-   git clone https://github.com/omid516/Payjoo-ATS.git
-   cd Payjoo-ATS
+   git clone https://github.com/omid516/Payjo-ATS.git
+   cd Payjo-ATS
    ```
 
 ۲. **ایجاد محیط مجازی پایتون (Virtual Environment)**:

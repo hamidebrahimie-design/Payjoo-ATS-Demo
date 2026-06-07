@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}پشتیبان‌گیری و بازگردانی سیستم | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    }
+    .accent-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .warning-box {
+        background-color: #fffbeb;
+        border-right: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="font-bold text-secondary mb-1">پشتیبان‌گیری و بازگردانی کل سیستم</h3>
+        <p class="text-muted text-sm m-0">تهیه نسخه پشتیبان کامل از دیتابیس و فایل‌های رزومه متقاضیان، یا بازگردانی سیستم به وضعیت قبل</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- بخش تهیه نسخه پشتیبان -->
+    <div class="col-md-6">
+        <div class="card glass-card border-0 h-100 p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-primary bg-opacity-10 text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v6.75m0 0l-3-3m3 3l3-3m-8.25 6h10.5a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 3.75H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">تهیه نسخه پشتیبان (Backup)</h5>
+                    <p class="text-muted text-xs m-0">دانلود یک فایل ZIP فشرده شامل کل اطلاعات دیتابیس و رزومه‌ها</p>
+                </div>
+            </div>
+            
+            <div class="flex-grow-1 text-sm text-secondary mb-4">
+                <p>با کلیک بر روی دکمه زیر، سامانه یک فایل زیپ فشرده شامل موارد زیر را تولید کرده و برای شما دانلود می‌کند:</p>
+                <ul class="ps-3 mb-3">
+                    <li class="mb-1">تمام اطلاعات جداول پایگاه داده (کاربران، متقاضیان، آزمون‌ها، نمرات و لاگ‌ها).</li>
+                    <li class="mb-1">تمام فایل‌های ضمیمه‌شده و رزومه‌های آپلود شده توسط متقاضیان.</li>
+                </ul>
+                <p class="text-muted text-xs">توصیه می‌شود قبل از انجام کارهای حیاتی یا به‌روزرسانی سیستم، یک نسخه پشتیبان دانلود و در جای امن نگهداری کنید.</p>
+            </div>
+            
+            <form action="{% url 'download_backup' %}" method="post" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary-custom w-100 py-2.5 font-bold d-flex align-items-center justify-content-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    دانلود فایل پشتیبان کامل سیستم (.zip)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- بخش بازگردانی نسخه پشتیبان -->
+    <div class="col-md-6">
+        <div class="card glass-card border-0 h-100 p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-danger bg-opacity-10 text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3-3m-3 3l-3-3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">بازگردانی نسخه پشتیبان (Restore)</h5>
+                    <p class="text-muted text-xs m-0">بارگذاری فایل پشتیبان و بازگردانی اطلاعات سیستم به زمان دلخواه</p>
+                </div>
+            </div>
+
+            <div class="warning-box mb-4">
+                <div class="d-flex gap-2">
+                    <span class="text-warning font-bold">⚠️ هشدار بسیار مهم:</span>
+                </div>
+                <p class="text-xs text-secondary m-0 mt-1.5" style="line-height: 1.6;">
+                    عملیات بازگردانی، **تمام اطلاعات جاری سیستم را به طور کامل پاک کرده** و اطلاعات دیتابیس و فایل‌های رزومه فایل زیپ آپلود شده را جایگزین می‌کند. 
+                    حتماً قبل از انجام بازگردانی، **یک نسخه پشتیبان از دیتابیس فعلی خود دانلود کنید** تا در صورت نیاز به بازگشت، داده‌های جاری خود را داشته باشید.
+                </p>
+            </div>
+
+            <form action="{% url 'restore_backup' %}" method="post" enctype="multipart/form-data" class="m-0" id="restore-form">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label font-semibold text-xs text-secondary mb-2">انتخاب فایل پشتیبان معتبر (.zip یا .sqlite3):</label>
+                    <input type="file" name="backup_file" accept=".zip,.sqlite3" class="form-control text-sm" required style="border-radius: 8px;">
+                    <div class="form-text text-xxs text-muted mt-1.5">فایل زیپ کامل پشتیبان (.zip) یا فایل پایگاه داده مستقیم (.sqlite3) قابل قبول هستند. (اگر مک‌بوک شما فایل زیپ دانلود شده را خودکار استخراج کرده، می‌توانید مستقیماً فایل دیتابیس استخراج شده را آپلود کنید.)</div>
+                </div>
+                
+                <button type="submit" class="btn btn-outline-danger w-100 py-2.5 font-bold d-flex align-items-center justify-content-center gap-2" 
+                        onclick="return confirm('آیا از بازگردانی اطلاعات مطمئن هستید؟ این عمل غیرقابل بازگشت است و تمام داده‌های فعلی را حذف می‌کند.');">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    شروع عملیات بازگردانی اطلاعات
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

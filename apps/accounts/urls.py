@@ -1,5 +1,10 @@
 from django.urls import path
-from .views import CustomLoginView, CustomLogoutView, UserListView, UserCreateView, UserUpdateView, UserDeleteView, AuditLogListView
+from .views import (
+    CustomLoginView, CustomLogoutView, UserListView, UserCreateView,
+    UserUpdateView, UserDeleteView, AuditLogListView,
+    SystemBackupView, DownloadBackupView, RestoreBackupView,
+    SMSPanelDashboardView, JobStagesOptionsView, SMSCandidatesPreviewView, SMSExportExcelView
+)
 
 urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
@@ -9,4 +14,12 @@ urlpatterns = [
     path('users/<int:pk>/edit/', UserUpdateView.as_view(), name='user_edit'),
     path('users/<int:pk>/delete/', UserDeleteView.as_view(), name='user_delete'),
     path('audit-logs/', AuditLogListView.as_view(), name='audit_log_list'),
+    path('system-backup/', SystemBackupView.as_view(), name='system_backup'),
+    path('system-backup/download/', DownloadBackupView.as_view(), name='download_backup'),
+    path('system-backup/restore/', RestoreBackupView.as_view(), name='restore_backup'),
+    path('sms-panel/', SMSPanelDashboardView.as_view(), name='sms_panel'),
+    path('sms-panel/stages/', JobStagesOptionsView.as_view(), name='sms_panel_stages'),
+    path('sms-panel/preview/', SMSCandidatesPreviewView.as_view(), name='sms_panel_preview'),
+    path('sms-panel/export/', SMSExportExcelView.as_view(), name='sms_panel_export'),
 ]
+

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.core.exceptions import PermissionDenied
-from apps.accounts.models import UserProfile
+from apps.accounts.models import UserProfile, SMSTemplate
 from apps.core.models import AuditLog
 
 class UserRoleAndPermissionTests(TestCase):
@@ -313,3 +313,256 @@ class UserRoleAndPermissionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         logs = response.context['logs']
         self.assertTrue(any(l.id == log_update.id for l in logs))
+
+
+class SystemBackupAndRestoreTests(TestCase):
+    def setUp(self):
+        # Create admin and non-admin users
+        self.admin_user = User.objects.create_user(
+            username='admin_test_backup',
+            password='testpassword123',
+            email='admin@test.com'
+        )
+        self.admin_user.profile.role = UserProfile.ROLE_ADMIN
+        self.admin_user.profile.save()
+
+        self.interviewer_user = User.objects.create_user(
+            username='interviewer_test_backup',
+            password='testpassword123',
+            email='interviewer@test.com'
+        )
+        self.interviewer_user.profile.role = UserProfile.ROLE_INTERVIEWER
+        self.interviewer_user.profile.save()
+
+    def test_backup_restore_view_rbac(self):
+        """تست کنترل دسترسی نقش‌ها به صفحات پشتیبان‌گیری و بازگردانی"""
+        urls = [
+            reverse('system_backup'),
+            reverse('download_backup'),
+            reverse('restore_backup')
+        ]
+        
+        # Test non-admin user
+        self.client.login(username='interviewer_test_backup', password='testpassword123')
+        for url in urls:
+            if url == reverse('system_backup'):
+                response = self.client.get(url)
+            else:
+                response = self.client.post(url)
+            self.assertEqual(response.status_code, 403)
+
+        # Test admin user
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        response = self.client.get(reverse('system_backup'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_backup_generation(self):
+        """تست تهیه نسخه پشتیبان و تولید فایل ZIP حاوی دیتابیس"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        response = self.client.post(reverse('download_backup'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/zip')
+        self.assertTrue(response['Content-Disposition'].startswith('attachment; filename='))
+        
+        # Read response content as ZIP
+        import zipfile
+        import io
+        zip_content = io.BytesIO(response.content)
+        with zipfile.ZipFile(zip_content, 'r') as zipf:
+            file_list = zipf.namelist()
+            self.assertIn('db.sqlite3', file_list)
+
+    def test_invalid_restore_zip(self):
+        """تست بازگردانی فایل نامعتبر (فایل زیپ بدون db.sqlite3)"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        # Create an empty zip file in memory
+        import zipfile
+        import io
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+            zipf.writestr('dummy.txt', 'This is a test file')
+            
+        zip_buffer.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            "invalid_backup.zip",
+            zip_buffer.read(),
+            content_type="application/zip"
+        )
+        
+        response = self.client.post(reverse('restore_backup'), {'backup_file': uploaded_file})
+        self.assertEqual(response.status_code, 302)  # Redirects back to system_backup
+        
+        # Verify error message is in session
+        response = self.client.get(reverse('system_backup'))
+        messages = list(response.context['messages'])
+        self.assertTrue(any("فایل پشتیبان معتبر نیست" in str(m) for m in messages))
+
+    def test_invalid_restore_sqlite(self):
+        """تست بازگردانی فایل دیتابیس نامعتبر"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        uploaded_file = SimpleUploadedFile(
+            "invalid_db.sqlite3",
+            b"not a database content",
+            content_type="application/octet-stream"
+        )
+        
+        response = self.client.post(reverse('restore_backup'), {'backup_file': uploaded_file})
+        self.assertEqual(response.status_code, 302)
+        
+        response = self.client.get(reverse('system_backup'))
+        messages = list(response.context['messages'])
+        self.assertTrue(any("معتبر نیست یا آسیب دیده است" in str(m) for m in messages))
+
+
+class SMSTemplateAndPanelTests(TestCase):
+    def setUp(self):
+        # Create admin and non-admin users
+        self.admin_user = User.objects.create_user(
+            username='admin_test_sms',
+            password='testpassword123',
+            email='admin@test.com'
+        )
+        self.admin_user.profile.role = UserProfile.ROLE_ADMIN
+        self.admin_user.profile.save()
+
+        self.interviewer_user = User.objects.create_user(
+            username='interviewer_test_sms',
+            password='testpassword123',
+            email='interviewer@test.com'
+        )
+        self.interviewer_user.profile.role = UserProfile.ROLE_INTERVIEWER
+        self.interviewer_user.profile.save()
+
+        # Create template
+        self.template = SMSTemplate.objects.create(
+            name="الگوی دعوت",
+            body="سلام {نام} {نام_خانوادگی}. شما برای شغل {عنوان_شغل} در مرحله {نام_مرحله} نمره {نمره} گرفتید. کد ملی شما {کد_ملی} است."
+        )
+
+        # Create job opportunity
+        from apps.jobs.models import JobOpportunity, WorkflowTemplate, WorkflowStageTemplate
+        self.workflow = WorkflowTemplate.objects.create(name='فرآیند پیامک')
+        self.stage = WorkflowStageTemplate.objects.create(workflow=self.workflow, name='آزمون اول', default_weight=100, sequence=1)
+        
+        self.job = JobOpportunity.objects.create(
+            request_number='REQ-SMS-101', title='کارشناس سیستم', code='SYS-101',
+            department='فناوری', workflow=self.workflow, status=JobOpportunity.STATUS_PUBLISHED
+        )
+
+        # Create candidates
+        from apps.candidates.models import Candidate, JobApplication
+        self.cand = Candidate.objects.create(
+            first_name='حمید', last_name='رضایی', email='hamid@example.com',
+            phone_number='09121111111', national_id='1111111111'
+        )
+        self.app = JobApplication.objects.create(job=self.job, candidate=self.cand)
+
+    def test_sms_panel_rbac(self):
+        """تست کنترل دسترسی نقش‌ها به پنل مدیریت پیامک‌ها"""
+        urls = [
+            reverse('sms_panel'),
+            reverse('sms_panel_stages'),
+            reverse('sms_panel_preview'),
+            reverse('sms_panel_export')
+        ]
+        
+        # Test non-admin user
+        self.client.login(username='interviewer_test_sms', password='testpassword123')
+        for url in urls:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+            
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 403)
+
+        # Test admin user
+        self.client.login(username='admin_test_sms', password='testpassword123')
+        response = self.client.get(reverse('sms_panel'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_sms_template_crud(self):
+        """تست ساخت، ویرایش و حذف قالب پیامک"""
+        self.client.login(username='admin_test_sms', password='testpassword123')
+
+        # 1. Create
+        response = self.client.post(reverse('sms_panel'), {
+            'action': 'create',
+            'name': 'جدید',
+            'body': 'سلام {نام}'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(SMSTemplate.objects.filter(name='جدید').exists())
+
+        # 2. Edit
+        tmpl = SMSTemplate.objects.create(name='قالب موقت', body='تست')
+        response = self.client.post(reverse('sms_panel'), {
+            'action': 'edit',
+            'template_id': tmpl.id,
+            'name': 'قالب اصلاح‌شده',
+            'body': 'متن اصلاح‌شده'
+        })
+        self.assertEqual(response.status_code, 302)
+        tmpl.refresh_from_db()
+        self.assertEqual(tmpl.name, 'قالب اصلاح‌شده')
+
+        # 3. Delete
+        response = self.client.post(reverse('sms_panel'), {
+            'action': 'delete',
+            'template_id': tmpl.id
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(SMSTemplate.all_objects.get(id=tmpl.id).is_deleted)
+
+    def test_sms_live_preview_and_substitution(self):
+        """تست رندر پیش‌نویس متن پیامک و جایگذاری فیلدها"""
+        self.client.login(username='admin_test_sms', password='testpassword123')
+        
+        # Set stage state score
+        state = self.app.stage_states.first()
+        state.score = 85.5
+        state.status = 'COMPLETED'
+        state.save()
+
+        url = reverse('sms_panel_preview')
+        response = self.client.get(url, {
+            'template_id': self.template.id,
+            'job_id': self.job.id,
+            'stage_id': state.stage.id
+        })
+        self.assertEqual(response.status_code, 200)
+        
+        # Check rendered message text in HTML
+        content = response.content.decode('utf-8')
+        expected_text = "سلام حمید رضایی. شما برای شغل کارشناس سیستم در مرحله آزمون اول نمره 85.5 گرفتید. کد ملی شما 1111111111 است."
+        self.assertIn(expected_text, content)
+
+    def test_sms_export_excel(self):
+        """تست تولید خروجی فایل اکسل با سرستون‌های فارسی"""
+        self.client.login(username='admin_test_sms', password='testpassword123')
+        
+        response = self.client.post(reverse('sms_panel_export'), {
+            'template_id': self.template.id,
+            'candidate_ids': [self.cand.id],
+            'job_id': self.job.id
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        
+        # Verify content with openpyxl
+        import openpyxl
+        import io
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        ws = wb.active
+        self.assertEqual(ws.cell(row=1, column=1).value, "شماره همراه")
+        self.assertEqual(ws.cell(row=1, column=2).value, "متن پیامک")
+        self.assertEqual(ws.cell(row=1, column=3).value, "نام متقاضی")
+        
+        # Verify row data
+        self.assertEqual(ws.cell(row=2, column=1).value, "09121111111")
+        self.assertIn("حمید رضایی", ws.cell(row=2, column=2).value)
+        self.assertEqual(ws.cell(row=2, column=3).value, "حمید رضایی")

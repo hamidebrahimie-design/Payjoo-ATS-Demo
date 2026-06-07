@@ -283,12 +283,17 @@ class AssignCandidateToJobView(LoginRequiredMixin, RoleRequiredMixin, View):
         with transaction.atomic():
             JobApplication.objects.create(job=job, candidate=candidate)
             
+        view_param = request.GET.get('view')
+        redirect_url = reverse('candidate_list')
+        if view_param:
+            redirect_url += f'?view={view_param}'
+
         if request.headers.get('HX-Request'):
             response = HttpResponse("موفقیت‌آمیز")
-            response['HX-Redirect'] = reverse('candidate_list')
+            response['HX-Redirect'] = redirect_url
             return response
             
-        return redirect('candidate_list')
+        return redirect(redirect_url)
 
 
 class CandidateDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
@@ -314,8 +319,13 @@ class CandidateCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     model = Candidate
     form_class = CandidateForm
     template_name = 'candidates/candidate_form.html'
-    success_url = reverse_lazy('candidate_list')
     allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get_success_url(self):
+        view_param = self.request.GET.get('view')
+        if view_param:
+            return reverse('candidate_list') + f'?view={view_param}'
+        return reverse('candidate_list')
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
@@ -2193,12 +2203,17 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
         from apps.candidates.models import Candidate, JobApplication, CandidateEducation, CandidateSkill
         from apps.jobs.models import JobOpportunity
 
+        view_param = request.GET.get('view')
+        redirect_url = reverse('candidate_list')
+        if view_param:
+            redirect_url += f'?view={view_param}'
+
         excel_file = request.FILES.get('excel_file')
         job_id = request.POST.get('job_id')
 
         if not excel_file:
             messages.error(request, "لطفاً یک فایل اکسل انتخاب کنید.")
-            return redirect('candidate_list')
+            return redirect(redirect_url)
 
         # Read Excel using openpyxl
         try:
@@ -2206,12 +2221,12 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
             ws = wb.active
         except Exception as e:
             messages.error(request, f"خطا در خواندن فایل اکسل: {str(e)}")
-            return redirect('candidate_list')
+            return redirect(redirect_url)
 
         rows = list(ws.iter_rows(values_only=True))
         if not rows or len(rows) < 2:
             messages.error(request, "فایل اکسل خالی است یا فاقد داده‌های معتبر می‌باشد.")
-            return redirect('candidate_list')
+            return redirect(redirect_url)
 
         # First row is headers
         headers = rows[0]
@@ -2222,7 +2237,7 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
         for header in expected_headers:
             if header not in headers:
                 messages.error(request, f"ستون حیاتی '{header}' در سربرگ‌های فایل اکسل یافت نشد. لطفاً از فایل نمونه استفاده کنید.")
-                return redirect('candidate_list')
+                return redirect(redirect_url)
 
         # Map headers to indices
         header_map = {name: index for index, name in enumerate(headers)}
@@ -2400,7 +2415,7 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
             err_msg = "برخی ردیف‌ها با خطا مواجه شدند:<br>" + "<br>".join(errors)
             messages.error(request, err_msg)
 
-        return redirect('candidate_list')
+        return redirect(redirect_url)
 
 
 from django.contrib.auth.views import PasswordChangeView
