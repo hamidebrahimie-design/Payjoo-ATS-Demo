@@ -163,6 +163,7 @@ class ApplicationStageState(SoftDeleteModel):
     evaluator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluated_stages', verbose_name="ثبت‌کننده نمره")
     notes = models.TextField(blank=True, verbose_name="توضیحات ارزیاب")
     score_discrepancy_alert = models.BooleanField(default=False, verbose_name="هشدار اختلاف فاحش نمرات")
+    is_conditional_pass = models.BooleanField(default=False, verbose_name="قبول ارفاقی / ارجاع مشروط")
     evaluation_date = models.DateField(null=True, blank=True, verbose_name="تاریخ ارزیابی")
 
     class Meta:
@@ -176,12 +177,12 @@ class ApplicationStageState(SoftDeleteModel):
 
     @property
     def is_accessible(self):
-        # The stage state is accessible (editable) if all prior stages (by sequence) are COMPLETED.
+        # The stage state is accessible (editable) if all prior stages (by sequence) are COMPLETED or is_conditional_pass.
         prior_states = self.application.stage_states.filter(
             stage__sequence__lt=self.stage.sequence,
             is_deleted=False
         )
-        return all(state.status == ApplicationStageState.STATUS_COMPLETED for state in prior_states)
+        return all(state.status == ApplicationStageState.STATUS_COMPLETED or state.is_conditional_pass for state in prior_states)
 
     @property
     def has_failed_prior_stages(self):
@@ -191,7 +192,7 @@ class ApplicationStageState(SoftDeleteModel):
             stage__sequence__lt=self.stage.sequence,
             is_deleted=False
         )
-        return any(state.status == self.STATUS_FAILED for state in prior_states)
+        return any(state.status == self.STATUS_FAILED and not state.is_conditional_pass for state in prior_states)
 
     def save(self, *args, **kwargs):
         # Calculate score and status based on individual interviewer scores if assigned
@@ -254,9 +255,9 @@ class ApplicationStageState(SoftDeleteModel):
         # Calculate final weighted score for the application
         app = self.application
         
-        # Auto-advance current_stage if the stage status is completed and the application is still IN_PROGRESS
+        # Auto-advance current_stage if the stage status is completed or conditionally passed, and the application is still IN_PROGRESS
         update_fields = ['final_score']
-        if self.status == self.STATUS_COMPLETED and app.status == JobApplication.STATUS_IN_PROGRESS:
+        if (self.status == self.STATUS_COMPLETED or self.is_conditional_pass) and app.status == JobApplication.STATUS_IN_PROGRESS:
             if app.current_stage and app.current_stage.sequence <= self.stage.sequence:
                 next_stage = app.job.stages.filter(
                     is_deleted=False,

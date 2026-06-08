@@ -425,7 +425,7 @@ class SystemBackupAndRestoreTests(TestCase):
         response = self.client.get(reverse('system_backup'))
         self.assertEqual(response.status_code, 200)
         self.assertIn('current_version', response.context)
-        self.assertEqual(response.context['current_version'], '1.1.0')
+        self.assertEqual(response.context['current_version'], '1.2.0')
 
     @patch('urllib.request.urlopen')
     def test_update_check_up_to_date(self, mock_urlopen):
@@ -433,7 +433,7 @@ class SystemBackupAndRestoreTests(TestCase):
         self.client.login(username='admin_test_backup', password='testpassword123')
         
         mock_response = MagicMock()
-        mock_response.read.return_value = b"1.1.0\n"
+        mock_response.read.return_value = b"1.2.0\n"
         mock_urlopen.return_value.__enter__.return_value = mock_response
         
         response = self.client.get(reverse('system_update_check'))
@@ -446,7 +446,7 @@ class SystemBackupAndRestoreTests(TestCase):
         self.client.login(username='admin_test_backup', password='testpassword123')
         
         mock_response = MagicMock()
-        mock_response.read.return_value = b"1.2.0\n"
+        mock_response.read.return_value = b"1.3.0\n"
         mock_urlopen.return_value.__enter__.return_value = mock_response
         
         response = self.client.get(reverse('system_update_check'))

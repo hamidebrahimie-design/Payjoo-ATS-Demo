@@ -486,6 +486,7 @@ class UpdateApplicationStageStateView(LoginRequiredMixin, RoleRequiredMixin, Vie
         score_val = request.POST.get('score', '0')
         status_val = request.POST.get('status', ApplicationStageState.STATUS_PENDING)
         notes_val = request.POST.get('notes', '')
+        is_conditional_pass_val = request.POST.get('is_conditional_pass') == 'true' or request.POST.get('is_conditional_pass') == 'on'
 
         try:
             state.score = float(score_val)
@@ -494,6 +495,7 @@ class UpdateApplicationStageStateView(LoginRequiredMixin, RoleRequiredMixin, Vie
 
         state.status = status_val
         state.notes = notes_val
+        state.is_conditional_pass = is_conditional_pass_val
         state.evaluator = request.user
         state.save()
 
@@ -1087,6 +1089,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                     application=OuterRef('application'),
                     stage__sequence__lt=OuterRef('stage__sequence'),
                     status=ApplicationStageState.STATUS_FAILED,
+                    is_conditional_pass=False,
                     is_deleted=False
                 )
                 pending_states_qs = pending_states_qs.annotate(
@@ -1186,6 +1189,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                         status_val = request.POST.get(f'status_{sid}', ApplicationStageState.STATUS_PENDING)
                         notes_val = request.POST.get(f'notes_{sid}', '')
                         date_val = request.POST.get(f'date_{sid}', '').strip()
+                        is_conditional_pass_val = request.POST.get(f'is_conditional_pass_{sid}') in ['true', 'on']
                         
                         try:
                             state.score = float(score_val)
@@ -1194,6 +1198,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                             
                         state.status = status_val
                         state.notes = notes_val
+                        state.is_conditional_pass = is_conditional_pass_val
                         state.evaluator = request.user
                         
                         if date_val:
@@ -1218,6 +1223,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                     application=OuterRef('application'),
                     stage__sequence__lt=OuterRef('stage__sequence'),
                     status=ApplicationStageState.STATUS_FAILED,
+                    is_conditional_pass=False,
                     is_deleted=False
                 )
                 pending_states_qs = pending_states_qs.annotate(
@@ -1869,7 +1875,7 @@ class BulkAdvanceStageView(LoginRequiredMixin, RoleRequiredMixin, View):
                 app = JobApplication.objects.filter(pk=app_id, job=job, status=JobApplication.STATUS_IN_PROGRESS, is_deleted=False).first()
                 if app and app.current_stage:
                     current_state = app.stage_states.filter(stage=app.current_stage, is_deleted=False).first()
-                    if current_state and current_state.status == ApplicationStageState.STATUS_COMPLETED:
+                    if current_state and (current_state.status == ApplicationStageState.STATUS_COMPLETED or current_state.is_conditional_pass):
                         next_stage = job.stages.filter(
                             is_deleted=False, 
                             sequence__gt=app.current_stage.sequence
@@ -1968,6 +1974,7 @@ class ExportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
             application=OuterRef('application'),
             stage__sequence__lt=OuterRef('stage__sequence'),
             status=ApplicationStageState.STATUS_FAILED,
+            is_conditional_pass=False,
             is_deleted=False
         )
         pending_states_qs = pending_states_qs.annotate(

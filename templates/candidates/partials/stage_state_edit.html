@@ -12,6 +12,10 @@
                 <option value="FAILED" {% if state.status == 'FAILED' %}selected{% endif %}>مردود شده</option>
             </select>
         </div>
+        <div class="mb-1 form-check d-flex align-items-center gap-1.5 ps-0">
+            <input type="checkbox" name="is_conditional_pass" id="is_conditional_pass_{{ state.id }}" class="form-check-input" {% if state.is_conditional_pass %}checked{% endif %} style="width: 12px; height: 12px; margin: 0;">
+            <label for="is_conditional_pass_{{ state.id }}" class="text-danger text-xxs font-semibold cursor-pointer mb-0" style="font-size: 9px; line-height: 1;">ارجاع مشروط (مردود)</label>
+        </div>
         <div class="mb-1.5">
             <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">یادداشت ارزیاب</label>
             <textarea name="notes" class="form-control form-control-sm" rows="1" placeholder="توضیحات..." style="font-size: 10px; padding: 2px 4px;">{{ state.notes }}</textarea>

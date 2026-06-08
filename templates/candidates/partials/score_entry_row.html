@@ -57,6 +57,15 @@
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">قبول</span>
                 {% elif state.status == 'FAILED' %}
                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">مردود</span>
+                    {% if state.is_conditional_pass %}
+                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded text-xxs font-semibold d-block mt-1" style="font-size: 9px;">قبول ارفاقی / مشروط</span>
+                    {% endif %}
+                    {% if state.is_accessible %}
+                        <div class="mt-1.5 d-flex align-items-center justify-content-center gap-1">
+                            <input type="checkbox" name="is_conditional_pass_{{ state.id }}" id="is_conditional_pass_{{ state.id }}" class="form-check-input" {% if state.is_conditional_pass %}checked{% endif %} style="width: 12px; height: 12px; margin: 0;">
+                            <label for="is_conditional_pass_{{ state.id }}" class="text-danger text-xxs font-semibold cursor-pointer mb-0" style="font-size: 9px; line-height: 1;">ارجاع مشروط</label>
+                        </div>
+                    {% endif %}
                 {% else %}
                     {% if state.has_failed_prior_stages %}
                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">مردود (در مراحل قبلی)</span>
@@ -67,11 +76,15 @@
             </div>
         {% else %}
             {% if state.is_accessible %}
-                <select name="status_{{ state.id }}" class="form-select form-select-sm font-semibold" style="border-radius: 6px; font-size: 12px;">
+                <select name="status_{{ state.id }}" class="form-select form-select-sm font-semibold mb-1" style="border-radius: 6px; font-size: 12px;">
                     <option value="PENDING" {% if state.status == 'PENDING' %}selected{% endif %}>در انتظار ارزیابی</option>
                     <option value="COMPLETED" {% if state.status == 'COMPLETED' %}selected{% endif %}>قبول شده در این مرحله</option>
                     <option value="FAILED" {% if state.status == 'FAILED' %}selected{% endif %}>مردود شده در این مرحله</option>
                 </select>
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                    <input type="checkbox" name="is_conditional_pass_{{ state.id }}" id="is_conditional_pass_{{ state.id }}" class="form-check-input" {% if state.is_conditional_pass %}checked{% endif %} style="width: 12px; height: 12px; margin: 0;">
+                    <label for="is_conditional_pass_{{ state.id }}" class="text-danger text-xxs font-semibold cursor-pointer mb-0" style="font-size: 9px; line-height: 1;">ارجاع مشروط</label>
+                </div>
             {% else %}
                 <select class="form-select form-select-sm font-semibold bg-light text-muted" style="border-radius: 6px; font-size: 12px; opacity: 0.65;" disabled>
                     {% if state.has_failed_prior_stages %}

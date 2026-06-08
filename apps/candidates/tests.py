@@ -1965,4 +1965,99 @@ class CandidateModuleTests(TestCase):
         login_success = self.client.login(username='9876543210', password='09123334444')
         self.assertTrue(login_success)
 
+    def test_conditional_stage_promotion_logic(self):
+        """تست منطق ارجاع مشروط متقاضیان و دسترسی به مراحل بعدی"""
+        candidate = Candidate.objects.create(
+            first_name='حمید',
+            last_name='رضایی',
+            email='hamid.r@example.com',
+            phone_number='09121112233',
+            national_id='1111112233'
+        )
+        app = JobApplication.objects.create(job=self.job, candidate=candidate)
+        stages = list(self.job.stages.filter(is_deleted=False).order_by('sequence'))
+        state1 = app.stage_states.get(stage=stages[0])
+        state2 = app.stage_states.get(stage=stages[1])
+
+        # 1. By default, stage 2 is not accessible
+        self.assertTrue(state1.is_accessible)
+        self.assertFalse(state2.is_accessible)
+        self.assertFalse(state2.has_failed_prior_stages)
+
+        # 2. Candidate fails stage 1, stage 2 remains inaccessible, has_failed_prior_stages becomes True
+        state1.status = ApplicationStageState.STATUS_FAILED
+        state1.score = 40.0
+        state1.save()
+        
+        state2.refresh_from_db()
+        self.assertFalse(state2.is_accessible)
+        self.assertTrue(state2.has_failed_prior_stages)
+
+        # 3. Enable conditional pass on stage 1 -> stage 2 becomes accessible, has_failed_prior_stages becomes False, and candidate's current_stage advances to stage 2
+        state1.is_conditional_pass = True
+        state1.save()
+
+        state2.refresh_from_db()
+        app.refresh_from_db()
+        self.assertTrue(state2.is_accessible)
+        self.assertFalse(state2.has_failed_prior_stages)
+        self.assertEqual(app.current_stage, stages[1])
+
+    def test_conditional_stage_promotion_views(self):
+        """تست نماهای به‌روزرسانی و ثبت نمره با قبولی ارفاقی/ارجاع مشروط"""
+        self.client.login(username='recruiter_user', password='password123')
+        
+        candidate = Candidate.objects.create(
+            first_name='سارا',
+            last_name='کریمی',
+            email='sara.k@example.com',
+            phone_number='09121112244',
+            national_id='1111112244'
+        )
+        app = JobApplication.objects.create(job=self.job, candidate=candidate)
+        stages = list(self.job.stages.filter(is_deleted=False).order_by('sequence'))
+        state1 = app.stage_states.get(stage=stages[0])
+
+        # 1. Test single update view POST
+        url = reverse('update_stage_state', kwargs={'pk': state1.id})
+        post_data = {
+            'score': '45.0',
+            'status': 'FAILED',
+            'notes': 'رد مشروط تک متقاضی',
+            'is_conditional_pass': 'on'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 200)
+
+        state1.refresh_from_db()
+        app.refresh_from_db()
+        self.assertTrue(state1.is_conditional_pass)
+        self.assertEqual(state1.status, 'FAILED')
+        self.assertEqual(app.current_stage, stages[1])
+
+        # Reset to check bulk save
+        state1.is_conditional_pass = False
+        state1.status = 'PENDING'
+        state1.save()
+        app.current_stage = stages[0]
+        app.save()
+
+        # 2. Test bulk score entry POST
+        bulk_url = reverse('candidate_score_entry')
+        bulk_post_data = {
+            'job_id': self.job.id,
+            f'score_{state1.id}': '40.0',
+            f'status_{state1.id}': 'FAILED',
+            f'notes_{state1.id}': 'رد مشروط گروهی',
+            f'is_conditional_pass_{state1.id}': 'on',
+        }
+        response = self.client.post(bulk_url, bulk_post_data)
+        self.assertEqual(response.status_code, 200)
+
+        state1.refresh_from_db()
+        app.refresh_from_db()
+        self.assertTrue(state1.is_conditional_pass)
+        self.assertEqual(state1.status, 'FAILED')
+        self.assertEqual(app.current_stage, stages[1])
+
 
