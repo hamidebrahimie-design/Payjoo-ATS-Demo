@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'apps.candidates',
     'apps.exams',
     'apps.interviews',
+    'apps.recruitment_planning',
 ]
 
 MIDDLEWARE = [

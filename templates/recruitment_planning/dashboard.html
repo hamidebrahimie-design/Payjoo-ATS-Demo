@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}داشبورد برنامه‌ریزی جذب | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    .kpi-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+    }
+    .progress-ring {
+        transition: stroke-dashoffset 0.35s;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    .gantt-row {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .gantt-bar-container {
+        position: relative;
+        background: #f1f5f9;
+        height: 28px;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .gantt-bar-segment {
+        position: absolute;
+        height: 100%;
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        border-right: 1px solid rgba(255,255,255,0.2);
+    }
+    .bg-screening { background-color: #6366f1; } /* Indigo */
+    .bg-exam { background-color: #0ea5e9; } /* Sky */
+    .bg-interview { background-color: #f59e0b; } /* Amber */
+    .bg-assessment { background-color: #ec4899; } /* Pink */
+    .bg-other { background-color: #64748b; } /* Slate */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h3 class="font-bold text-secondary mb-1">برنامه‌ریزی و ظرفیت‌سنجی جذب</h3>
+        <p class="text-muted text-sm m-0">مدیریت تقویم استخدام، کنترل تعهدات SLA مراحل و بررسی ظرفیت ماهانه ارزیاب‌ها</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'planning_config' %}" class="btn btn-outline-secondary font-bold text-xs d-flex align-items-center gap-1.5 py-2 px-3" style="border-radius: 8px;">
+            ⚙️ تنظیمات SLA و ظرفیت‌ها
+        </a>
+    </div>
+</div>
+
+<!-- کارت‌های خلاصه وضعیت KPI -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 p-4 shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted text-xs font-semibold">برنامه‌های فعال</span>
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-2 py-1 text-xxs font-bold">ACTIVE</span>
+            </div>
+            <h2 class="font-bold text-secondary m-0">{{ active_plans.count }} <small class="text-xs text-muted font-normal">فرصت شغلی</small></h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 p-4 shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted text-xs font-semibold">خارج از SLA (دارای تأخیر)</span>
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-1 text-xxs font-bold">DELAYED</span>
+            </div>
+            <h2 class="font-bold text-danger m-0">{{ delayed_count }} <small class="text-xs text-muted font-normal">فرصت شغلی</small></h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 p-4 shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted text-xs font-semibold">برنامه‌های پیش‌نویس</span>
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-2 py-1 text-xxs font-bold">DRAFT</span>
+            </div>
+            <h2 class="font-bold text-secondary m-0">{{ draft_plans.count }} <small class="text-xs text-muted font-normal">برنامه</small></h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 p-4 shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted text-xs font-semibold">تاریخ امروز (شمسی)</span>
+                <span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-10 px-2 py-1 text-xxs font-bold">TODAY</span>
+            </div>
+            <h4 class="font-bold text-secondary m-0 mt-1.5">{{ today_jalali }}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- بخش پایش ظرفیت‌های ماه جاری -->
+    <div class="col-lg-8">
+        <div class="card kpi-card border-0 p-4 h-100 shadow-xs">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="font-bold text-secondary m-0">پایش ظرفیت مراحل ارزیابی در ماه جاری ({{ current_month_name }})</h5>
+            </div>
+            
+            <div class="row g-3">
+                {% for stat in capacity_stats %}
+                <div class="col-md-6 mb-3">
+                    <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="font-semibold text-xs text-secondary">{{ stat.label }}</span>
+                            <span class="text-xxs text-muted font-bold">{{ stat.consumed }} / {{ stat.limit }} متقاضی</span>
+                        </div>
+                        <div class="progress" style="height: 10px; border-radius: 5px;">
+                            <div class="progress-bar {% if stat.percentage > 90 %}bg-danger{% elif stat.percentage > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ stat.percentage }}%; border-radius: 5px;" 
+                                 aria-valuenow="{{ stat.percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 10px;">
+                            <span class="text-muted">ظرفیت باقیمانده: <strong>{{ stat.remaining }} نفر</strong></span>
+                            <span class="font-bold {% if stat.percentage > 90 %}text-danger{% else %}text-secondary{% endif %}">{{ stat.percentage }}٪ مصرف شده</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- فرصت‌های شغلی بدون برنامه زمانبندی -->
+    <div class="col-lg-4">
+        <div class="card kpi-card border-0 p-4 h-100 shadow-xs d-flex flex-column justify-content-between">
+            <div>
+                <h5 class="font-bold text-secondary mb-1">مشاغل بدون برنامه‌ریزی</h5>
+                <p class="text-muted text-xxs mb-3">فرصت‌های شغلی فعالی که هنوز برنامه زمانبندی ارزیابی کاندیداهای آن‌ها ثبت نشده است.</p>
+                
+                <div class="overflow-y-auto pe-1" style="max-height: 230px;">
+                    {% for job in unplanned_jobs %}
+                    <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded border border-slate-light" style="border-radius: 8px;">
+                        <div>
+                            <span class="font-semibold text-xs text-secondary d-block">{{ job.title }}</span>
+                            <small class="text-muted text-xxs">کد: {{ job.code }} | تعداد جذب: {{ job.headcount }}</small>
+                        </div>
+                        <a href="{% url 'job_planning' job.id %}" class="btn btn-xs btn-primary font-bold px-2 py-1" style="font-size: 10px; border-radius: 6px;">
+                            📅 برنامه‌ریزی
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted text-xs py-4">همه فرصت‌های شغلی فعال برنامه‌ریزی شده‌اند.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- جدول برنامه‌های فعال و پیش‌بینی زمانبندی -->
+<div class="card kpi-card border-0 shadow-xs">
+    <div class="card-header bg-white border-bottom border-slate py-3">
+        <h5 class="font-bold text-secondary m-0">برنامه‌های استخدام فعال و تقویم فرآیندها</h5>
+    </div>
+    <div class="card-body p-4">
+        {% for plan in active_plans %}
+        <div class="gantt-row">
+            <div class="row align-items-center mb-3">
+                <div class="col-lg-4">
+                    <h6 class="font-bold text-secondary m-0">
+                        {{ plan.job.title }} 
+                        <span class="text-xs text-muted font-normal">({{ plan.job.code }})</span>
+                    </h6>
+                    <div class="d-flex align-items-center gap-3 mt-1.5" style="font-size: 11px;">
+                        <span>تعداد موردنیاز: <strong class="text-primary">{{ plan.job.headcount }} نفر</strong></span>
+                        <span>شروع: <strong>{{ plan.start_date|to_jalali }}</strong></span>
+                        <span>پایان پیش‌بینی‌شده: <strong class="text-success">{{ plan.predicted_end_date|to_jalali }}</strong></span>
+                    </div>
+                </div>
+                <div class="col-lg-8 text-lg-end mt-2 mt-lg-0">
+                    <a href="{% url 'job_planning' plan.job.id %}" class="btn btn-xs btn-outline-secondary font-bold px-3 py-1.5" style="border-radius: 6px; font-size: 11px;">
+                        📝 ویرایش زمانبندی
+                    </a>
+                    <a href="{% url 'job_pipeline' plan.job.id %}" class="btn btn-xs btn-outline-primary font-bold px-3 py-1.5 ms-1" style="border-radius: 6px; font-size: 11px;">
+                        📊 ورود به پایپلاین ارزیابی
+                    </a>
+                </div>
+            </div>
+            
+            <!-- تایم‌لاین بصری مراحل -->
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <div class="gantt-bar-container">
+                        {% with plans_list=plan.stage_plans.all %}
+                        {% for s_plan in plans_list %}
+                            <!-- تقسیم مساوی پهنای مراحل برای نمایش شکیل -->
+                            <div class="gantt-bar-segment 
+                                {% if s_plan.stage_type == 'SCREENING' %}bg-screening
+                                {% elif s_plan.stage_type == 'EXAM' %}bg-exam
+                                {% elif s_plan.stage_type == 'INTERVIEW' %}bg-interview
+                                {% elif s_plan.stage_type == 'ASSESSMENT' %}bg-assessment
+                                {% else %}bg-other{% endif %}"
+                                 style="left: calc({{ forloop.counter0 }} * (100% / {{ plans_list|length }})); width: calc(100% / {{ plans_list|length }});"
+                                 title="مرحله: {{ s_plan.stage.name }} | شروع: {{ s_plan.planned_start_date|to_jalali }} | پایان: {{ s_plan.planned_end_date|to_jalali }} ({{ s_plan.sla_days }} روز کاری)">
+                                {{ s_plan.stage.name }} ({{ s_plan.planned_start_date|to_jalali }} تا {{ s_plan.planned_end_date|to_jalali }})
+                            </div>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5">
+            <p class="m-0">هیچ برنامه زمانبندی استخدام فعالی در سیستم ثبت نشده است.</p>
+            <p class="text-xs mt-1">فرصت‌های شغلی را از جدول سمت راست بالای صفحه برنامه‌ریزی کنید.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

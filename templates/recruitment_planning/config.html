@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}تنظیمات برنامه‌ریزی جذب | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    .config-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'planning_dashboard' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 mb-2" style="border-radius: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        بازگشت به داشبورد برنامه‌ریزی
+    </a>
+    <h3 class="font-bold text-secondary mb-1">تنظیمات الگوریتم برنامه‌ریزی و ظرفیت‌ها</h3>
+    <p class="text-muted text-sm m-0">تعیین پارامترهای پیش‌فرض محاسبه تقویم کاری، SLA اختصاصی و مدیریت روزهای تعطیل سال</p>
+</div>
+
+<div class="row g-4">
+    <!-- ستون تنظیمات SLA و ظرفیت انواع مراحل -->
+    <div class="col-lg-7">
+        <div class="card config-card border-0 p-4 shadow-xs">
+            <h5 class="font-bold text-secondary mb-4">تنظیمات پیش‌فرض انواع مراحل</h5>
+            
+            <form action="{% url 'planning_config' %}" method="post" class="m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_configs">
+                
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>نوع مرحله</th>
+                                <th style="width: 140px;">SLA پیش‌فرض (روز کاری)</th>
+                                <th style="width: 140px;">ظرفیت پذیرش ماهانه (نفر)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in configs %}
+                            <tr>
+                                <td class="font-semibold text-xs text-secondary">
+                                    {{ c.get_stage_type_display }}
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                           name="sla_{{ c.stage_type }}" 
+                                           value="{{ c.default_sla_days }}" 
+                                           min="1" 
+                                           class="form-control form-control-sm text-center font-bold" 
+                                           style="border-radius: 6px;"
+                                           required>
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                           name="capacity_{{ c.stage_type }}" 
+                                           value="{{ c.monthly_capacity }}" 
+                                           min="1" 
+                                           class="form-control form-control-sm text-center font-bold" 
+                                           style="border-radius: 6px;"
+                                           required>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-start mt-4">
+                    <button type="submit" class="btn btn-primary font-bold px-4 py-2" style="border-radius: 8px;">
+                        ذخیره تنظیمات پارامترها
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ستون مدیریت تعطیلات رسمی -->
+    <div class="col-lg-5">
+        <div class="card config-card border-0 p-4 shadow-xs">
+            <h5 class="font-bold text-secondary mb-3">مدیریت روزهای تعطیل رسمی</h5>
+            <p class="text-muted text-xxs mb-3">تعطیلات زیر در زمان محاسبه تاریخ پایان برنامه‌ریزی هر مرحله جذب رد خواهند شد.</p>
+            
+            <!-- فرم افزودن تعطیلی -->
+            <form action="{% url 'planning_config' %}" method="post" class="p-3 bg-light rounded-3 mb-4" style="border-radius: 10px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_holiday">
+                
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label class="form-label text-xxs font-semibold text-secondary mb-1">مناسبت تعطیلی:</label>
+                        <input type="text" name="title" class="form-control form-control-sm" placeholder="عید نوروز" required style="border-radius: 6px;">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label text-xxs font-semibold text-secondary mb-1">تاریخ روز تعطیل (شمسی):</label>
+                        <input type="text" name="date" class="form-control form-control-sm text-center jalali-datepicker-input font-bold" placeholder="۱۴۰۵/۰۱/۰۱" required autocomplete="off" style="border-radius: 6px;">
+                    </div>
+                </div>
+                
+                <div class="text-start mt-3">
+                    <button type="submit" class="btn btn-xs btn-primary font-bold px-3 py-1.5" style="border-radius: 6px;">
+                        ➕ افزودن تعطیلی جدید
+                    </button>
+                </div>
+            </form>
+
+            <!-- لیست تعطیلات ثبت شده -->
+            <div class="overflow-y-auto pe-1" style="max-height: 250px;">
+                <table class="table align-middle table-sm">
+                    <thead>
+                        <tr>
+                            <th>مناسبت</th>
+                            <th class="text-center">تاریخ</th>
+                            <th class="text-end">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in holidays %}
+                        <tr>
+                            <td class="text-xs text-secondary">{{ h.title }}</td>
+                            <td class="text-xs font-bold text-secondary text-center">{{ h.date|to_jalali }}</td>
+                            <td class="text-end">
+                                <form action="{% url 'planning_config' %}" method="post" class="m-0 d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_holiday">
+                                    <input type="hidden" name="holiday_id" value="{{ h.id }}">
+                                    <button type="submit" class="btn btn-xs btn-outline-danger p-1" style="border-radius: 6px;" onclick="return confirm('آیا از حذف این تعطیلی مطمئن هستید؟');">
+                                        ❌ حذف
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted text-xs py-4">هیچ تعطیلی رسمی ثبت نشده است.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

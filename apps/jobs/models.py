@@ -3,6 +3,14 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from apps.core.models import SoftDeleteModel
 
+STAGE_TYPE_CHOICES = [
+    ('SCREENING', 'غربالگری'),
+    ('EXAM', 'آزمون'),
+    ('INTERVIEW', 'مصاحبه'),
+    ('ASSESSMENT', 'کانون ارزیابی'),
+    ('OTHER', 'سایر'),
+]
+
 class WorkflowTemplate(SoftDeleteModel):
     name = models.CharField(max_length=100, unique=True, verbose_name="نام الگو")
     description = models.TextField(blank=True, verbose_name="توضیحات الگو")
@@ -21,6 +29,7 @@ class WorkflowStageTemplate(SoftDeleteModel):
     name = models.CharField(max_length=100, verbose_name="نام مرحله پیش‌فرض")
     default_weight = models.PositiveIntegerField(default=0, verbose_name="وزن پیش‌فرض (٪)")
     sequence = models.PositiveIntegerField(default=1, verbose_name="ترتیب")
+    stage_type = models.CharField(max_length=20, choices=STAGE_TYPE_CHOICES, default='OTHER', verbose_name="نوع مرحله")
 
     class Meta:
         verbose_name = "مرحله پیش‌فرض فرآیند"
@@ -201,7 +210,8 @@ class JobOpportunity(SoftDeleteModel):
                     job=self,
                     name=st.name,
                     weight=st.default_weight,
-                    sequence=st.sequence
+                    sequence=st.sequence,
+                    stage_type=st.stage_type
                 )
 
 
@@ -211,6 +221,7 @@ class JobOpportunityStage(SoftDeleteModel):
     weight = models.PositiveIntegerField(default=0, verbose_name="وزن (٪)")
     sequence = models.PositiveIntegerField(default=1, verbose_name="ترتیب")
     passing_score = models.FloatField(default=60.0, verbose_name="کف نمره قبولی")
+    stage_type = models.CharField(max_length=20, choices=STAGE_TYPE_CHOICES, default='OTHER', verbose_name="نوع مرحله")
 
     class Meta:
         verbose_name = "مرحله ارزیابی فرصت شغلی"
