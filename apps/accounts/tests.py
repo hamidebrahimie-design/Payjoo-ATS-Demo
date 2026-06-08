@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.core.exceptions import PermissionDenied
 from apps.accounts.models import UserProfile, SMSTemplate
 from apps.core.models import AuditLog
+from unittest.mock import patch, MagicMock
 
 class UserRoleAndPermissionTests(TestCase):
     def setUp(self):
@@ -418,6 +419,81 @@ class SystemBackupAndRestoreTests(TestCase):
         messages = list(response.context['messages'])
         self.assertTrue(any("معتبر نیست یا آسیب دیده است" in str(m) for m in messages))
 
+    def test_system_backup_view_context_version(self):
+        """تست وجود متغیر نسخه جاری در کانتکست صفحه پشتیبان‌گیری"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        response = self.client.get(reverse('system_backup'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('current_version', response.context)
+        self.assertEqual(response.context['current_version'], '1.1.0')
+
+    @patch('urllib.request.urlopen')
+    def test_update_check_up_to_date(self, mock_urlopen):
+        """تست بررسی به‌روزرسانی در صورتی که سیستم به‌روز باشد"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        mock_response = MagicMock()
+        mock_response.read.return_value = b"1.1.0\n"
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        response = self.client.get(reverse('system_update_check'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("سامانه شما کاملاً به‌روز است", response.content.decode('utf-8'))
+
+    @patch('urllib.request.urlopen')
+    def test_update_check_new_version(self, mock_urlopen):
+        """تست بررسی به‌روزرسانی در صورتی که نسخه جدید موجود باشد"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        mock_response = MagicMock()
+        mock_response.read.return_value = b"1.2.0\n"
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        response = self.client.get(reverse('system_update_check'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("نسخه جدید در دسترس است", response.content.decode('utf-8'))
+
+    @patch('urllib.request.urlopen')
+    def test_update_check_failed(self, mock_urlopen):
+        """تست رفتار سیستم در صورت ناموفق بودن ارتباط با گیت‌هاب"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        mock_urlopen.side_effect = Exception("Network fail")
+        
+        response = self.client.get(reverse('system_update_check'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("خطا در ارتباط با سرور به‌روزرسانی", response.content.decode('utf-8'))
+
+    @patch('os.path.exists')
+    def test_update_run_no_git(self, mock_exists):
+        """تست عدم اجرای به‌روزرسانی در صورتی که پوشه .git موجود نباشد"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        mock_exists.return_value = False
+        
+        response = self.client.post(reverse('system_update_run'))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("پروژه با Git راه‌اندازی نشده است", response.content.decode('utf-8'))
+
+    @patch('os.path.exists')
+    @patch('subprocess.run')
+    def test_update_run_success(self, mock_run, mock_exists):
+        """تست اجرای موفق به‌روزرسانی کدهای سیستم"""
+        self.client.login(username='admin_test_backup', password='testpassword123')
+        
+        mock_exists.return_value = True
+        
+        mock_res_git = MagicMock()
+        mock_res_git.returncode = 0
+        mock_res_migrate = MagicMock()
+        mock_res_migrate.returncode = 0
+        
+        mock_run.side_effect = [mock_res_git, mock_res_migrate]
+        
+        response = self.client.post(reverse('system_update_run'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("به‌روزرسانی شد. سرور در حال راه‌اندازی مجدد است", response.content.decode('utf-8'))
+
 
 class SMSTemplateAndPanelTests(TestCase):
     def setUp(self):
@@ -492,7 +568,7 @@ class SMSTemplateAndPanelTests(TestCase):
         # 1. Create
         response = self.client.post(reverse('sms_panel'), {
             'action': 'create',
-            'name': 'جدید',
+            'template_name': 'جدید',
             'body': 'سلام {نام}'
         })
         self.assertEqual(response.status_code, 302)
@@ -503,7 +579,7 @@ class SMSTemplateAndPanelTests(TestCase):
         response = self.client.post(reverse('sms_panel'), {
             'action': 'edit',
             'template_id': tmpl.id,
-            'name': 'قالب اصلاح‌شده',
+            'template_name': 'قالب اصلاح‌شده',
             'body': 'متن اصلاح‌شده'
         })
         self.assertEqual(response.status_code, 302)
@@ -540,6 +616,64 @@ class SMSTemplateAndPanelTests(TestCase):
         content = response.content.decode('utf-8')
         expected_text = "سلام حمید رضایی. شما برای شغل کارشناس سیستم در مرحله آزمون اول نمره 85.5 گرفتید. کد ملی شما 1111111111 است."
         self.assertIn(expected_text, content)
+
+    def test_sms_live_preview_stage_filtering(self):
+        """تست فیلتر شدن متقاضیان بر اساس مرحله فعلی آن‌ها در پیش‌نمایش"""
+        self.client.login(username='admin_test_sms', password='testpassword123')
+
+        # Create a second stage for the job
+        from apps.jobs.models import JobOpportunityStage
+        from apps.candidates.models import Candidate, JobApplication
+        
+        stage2 = JobOpportunityStage.objects.create(
+            job=self.job,
+            name="مصاحبه فنی دوم",
+            weight=0,
+            sequence=2
+        )
+
+        # Create second candidate and set their current stage to stage2
+        cand2 = Candidate.objects.create(
+            first_name='سعید',
+            last_name='احمدی',
+            email='saeed@example.com',
+            phone_number='09122222222',
+            national_id='2222222222'
+        )
+        app2 = JobApplication.objects.create(job=self.job, candidate=cand2)
+        app2.current_stage = stage2
+        app2.save()
+
+        # The first candidate (self.cand) has current_stage = self.job.stages.first() (sequence 1)
+        first_stage = self.job.stages.all().order_by('sequence').first()
+
+        url = reverse('sms_panel_preview')
+
+        # 1. Filter by first stage
+        response = self.client.get(url, {
+            'template_id': self.template.id,
+            'job_id': self.job.id,
+            'stage_id': first_stage.id
+        })
+        self.assertEqual(response.status_code, 200)
+        preview_data = response.context['preview_data']
+        # Should only contain first candidate, not the second
+        candidate_ids = [item['candidate'].id for item in preview_data]
+        self.assertIn(self.cand.id, candidate_ids)
+        self.assertNotIn(cand2.id, candidate_ids)
+
+        # 2. Filter by second stage
+        response = self.client.get(url, {
+            'template_id': self.template.id,
+            'job_id': self.job.id,
+            'stage_id': stage2.id
+        })
+        self.assertEqual(response.status_code, 200)
+        preview_data = response.context['preview_data']
+        # Should only contain second candidate, not the first
+        candidate_ids = [item['candidate'].id for item in preview_data]
+        self.assertIn(cand2.id, candidate_ids)
+        self.assertNotIn(self.cand.id, candidate_ids)
 
     def test_sms_export_excel(self):
         """تست تولید خروجی فایل اکسل با سرستون‌های فارسی"""

@@ -134,9 +134,9 @@
 
                         <div class="mb-3">
                             <label for="template_name" class="form-label font-medium text-secondary">نام قالب</label>
-                            <input type="text" class="form-control" id="template_name" name="name"
+                            <input type="text" class="form-control" id="template_name" name="template_name"
                                 placeholder="مثلاً: دعوت به مصاحبه " required
-                                value="{{ edit_template.name|default:'' }}">
+                                value="{{ edit_template.name|default:'' }}" autocomplete="off">
                         </div>
 
                         <div class="mb-3">
@@ -192,8 +192,7 @@
                         {% for tmpl in templates %}
                         <div class="list-group-item px-0 py-2.5 border-bottom d-flex flex-column gap-1">
                             <div class="d-flex justify-content-between align-items-start w-100">
-                                <h6 class="mb-0 font-semibold text-dark text-truncate" style="max-width: 170px;">{{
-                                    tmpl.name }}</h6>
+                                <h6 class="mb-0 font-semibold text-dark text-truncate" style="max-width: 170px;">{{ tmpl.name }}</h6>
                                 <div class="d-flex gap-1">
                                     <a href="?edit_template={{ tmpl.id }}"
                                         class="btn btn-xs btn-outline-primary py-0.5 px-2"

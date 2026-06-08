@@ -42,7 +42,7 @@
 
 <div class="row g-4">
     <!-- بخش تهیه نسخه پشتیبان -->
-    <div class="col-md-6">
+    <div class="col-lg-4 col-md-6">
         <div class="card glass-card border-0 h-100 p-4">
             <div class="d-flex align-items-center gap-3 mb-4">
                 <div class="accent-icon bg-primary bg-opacity-10 text-primary">
@@ -78,7 +78,7 @@
     </div>
 
     <!-- بخش بازگردانی نسخه پشتیبان -->
-    <div class="col-md-6">
+    <div class="col-lg-4 col-md-6">
         <div class="card glass-card border-0 h-100 p-4">
             <div class="d-flex align-items-center gap-3 mb-4">
                 <div class="accent-icon bg-danger bg-opacity-10 text-danger">
@@ -118,6 +118,35 @@
                     شروع عملیات بازگردانی اطلاعات
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- بخش به‌روزرسانی سیستم -->
+    <div class="col-lg-4 col-md-12">
+        <div class="card glass-card border-0 h-100 p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-warning bg-opacity-10 text-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">به‌روزرسانی سامانه (Update)</h5>
+                    <p class="text-muted text-xs m-0">دریافت آخرین نسخه نرم‌افزار مستقیم از مخزن گیت‌هاب</p>
+                </div>
+            </div>
+
+            <div class="flex-grow-1 text-sm text-secondary">
+                <div id="update-status-container" 
+                     hx-get="{% url 'system_update_check' %}" 
+                     hx-trigger="load" 
+                     class="h-100">
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="spinner-border text-primary spinner-border-sm mb-2" role="status" id="update-spinner"></div>
+                        <span class="text-xs text-muted">در حال بررسی نسخه‌های جدید...</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

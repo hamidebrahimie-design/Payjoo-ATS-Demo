@@ -1,0 +1,73 @@
+{% if error_msg %}
+    <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="text-danger mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+        <span class="text-xs font-semibold text-danger mb-3">{{ error_msg }}</span>
+        <button class="btn btn-sm btn-outline-secondary px-3" 
+                hx-get="{% url 'system_update_check' %}" 
+                hx-target="#update-status-container" 
+                hx-indicator="#update-spinner"
+                style="border-radius: 8px; font-size: 11px;">
+            تلاش مجدد
+        </button>
+    </div>
+{% else %}
+    <div class="d-flex flex-column justify-content-between h-100">
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-xs text-muted">نسخه فعلی:</span>
+                <span class="badge bg-secondary text-xs font-bold">{{ local_version }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-xs text-muted">آخرین نسخه گیت‌هاب:</span>
+                <span class="badge bg-dark text-xs font-bold">{{ remote_version }}</span>
+            </div>
+            
+            <div class="mt-4 pt-3 border-top">
+                {% if update_available %}
+                    <div class="alert alert-warning border-0 p-2.5 rounded d-flex align-items-center gap-2 mb-0" style="background-color: #fffbeb;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="text-warning flex-shrink-0" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <span class="text-xxs text-secondary font-semibold">نسخه جدید در دسترس است! لطفا سیستم را به‌روزرسانی کنید.</span>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success border-0 p-2.5 rounded d-flex align-items-center gap-2 mb-0" style="background-color: #f0fdf4;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="text-success flex-shrink-0" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-xxs text-success font-semibold">سامانه شما کاملاً به‌روز است.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if update_available %}
+            <form hx-post="{% url 'system_update_run' %}" 
+                  hx-target="#update-status-container" 
+                  hx-indicator="#update-spinner" 
+                  hx-confirm="آیا از به‌روزرسانی خودکار سیستم اطمینان دارید؟ این فرآیند فایل‌های کد را دانلود کرده و پایگاه داده را به‌روزرسانی می‌کند."
+                  class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning w-100 py-2.5 font-bold text-xs d-flex align-items-center justify-content-center gap-2" style="border-radius: 10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    شروع به‌روزرسانی خودکار سیستم
+                </button>
+            </form>
+        {% else %}
+            <button class="btn btn-outline-secondary w-100 py-2.5 font-bold text-xs d-flex align-items-center justify-content-center gap-2" 
+                    hx-get="{% url 'system_update_check' %}" 
+                    hx-target="#update-status-container" 
+                    hx-indicator="#update-spinner"
+                    style="border-radius: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                بررسی مجدد برای نسخه‌های جدید
+            </button>
+        {% endif %}
+    </div>
+{% endif %}

@@ -434,6 +434,11 @@ class SystemBackupView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     allowed_roles = [UserProfile.ROLE_ADMIN]
     template_name = 'accounts/system_backup.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_version'] = getattr(settings, 'APP_VERSION', '1.0.0')
+        return context
+
 
 class DownloadBackupView(LoginRequiredMixin, RoleRequiredMixin, View):
     allowed_roles = [UserProfile.ROLE_ADMIN]
@@ -696,6 +701,99 @@ class RestoreBackupView(LoginRequiredMixin, RoleRequiredMixin, View):
             raise Exception(f"خطا در بازگردانی دیتابیس: {str(e)}")
 
 
+import urllib.request
+import sys
+import subprocess
+
+class SystemUpdateCheckView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def get(self, request):
+        local_version = getattr(settings, 'APP_VERSION', '1.0.0')
+        remote_version = None
+        error_msg = None
+        
+        try:
+            url = 'https://raw.githubusercontent.com/omid516/Payjo-ATS/main/version.txt'
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                remote_version = response.read().decode('utf-8').strip()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                remote_version = local_version
+            else:
+                error_msg = f"خطای سرور گیت‌هاب ({e.code})"
+        except Exception:
+            error_msg = "خطا در ارتباط با سرور به‌روزرسانی"
+
+        update_available = False
+        if remote_version and not error_msg:
+            def parse_version(v_str):
+                try:
+                    return tuple(int(x) for x in v_str.strip().split('.'))
+                except ValueError:
+                    return (0, 0, 0)
+            update_available = parse_version(remote_version) > parse_version(local_version)
+
+        context = {
+            'local_version': local_version,
+            'remote_version': remote_version,
+            'update_available': update_available,
+            'error_msg': error_msg,
+        }
+        return render(request, 'accounts/partials/update_status.html', context)
+
+
+class SystemUpdateRunView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+
+    def post(self, request):
+        git_dir = settings.BASE_DIR / '.git'
+        if not os.path.exists(git_dir):
+            return HttpResponse(
+                '<div class="alert alert-danger font-semibold text-xs text-right mb-0">خطا: پروژه با Git راه‌اندازی نشده است. به‌روزرسانی خودکار ناممکن است.</div>',
+                status=400
+            )
+
+        try:
+            pull_res = subprocess.run(
+                ['git', 'pull', 'origin', 'main'],
+                cwd=settings.BASE_DIR,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if pull_res.returncode != 0:
+                return HttpResponse(
+                    f'<div class="alert alert-danger font-semibold text-xs text-right mb-0">خطا در pull از گیت‌هاب:<br><pre dir="ltr" class="text-left mt-2 mb-0">{pull_res.stderr}</pre></div>',
+                    status=500
+                )
+
+            migrate_res = subprocess.run(
+                [sys.executable, 'manage.py', 'migrate'],
+                cwd=settings.BASE_DIR,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if migrate_res.returncode != 0:
+                return HttpResponse(
+                    f'<div class="alert alert-warning font-semibold text-xs text-right mb-0">کد با موفقیت دریافت شد، اما اعمال مهاجرت‌ها با خطا مواجه شد:<br><pre dir="ltr" class="text-left mt-2 mb-0">{migrate_res.stderr}</pre></div>',
+                    status=200
+                )
+
+            return HttpResponse(
+                '<div class="alert alert-success font-semibold text-xs text-right mb-0">سیستم با موفقیت به آخرین نسخه به‌روزرسانی شد. سرور در حال راه‌اندازی مجدد است...</div>',
+                status=200
+            )
+
+        except Exception as e:
+            return HttpResponse(
+                f'<div class="alert alert-danger font-semibold text-xs text-right mb-0">خطای غیرمنتظره در حین به‌روزرسانی: {str(e)}</div>',
+                status=500
+            )
+
+
 # ==========================================
 # SMS Panel & Templates Feature (Phase 1)
 # ==========================================
@@ -768,7 +866,7 @@ class SMSPanelDashboardView(LoginRequiredMixin, RoleRequiredMixin, TemplateView)
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
-        name = request.POST.get('name')
+        name = request.POST.get('template_name') or request.POST.get('name')
         body = request.POST.get('body')
         
         if action == 'create':
@@ -853,7 +951,7 @@ class SMSCandidatesPreviewView(LoginRequiredMixin, RoleRequiredMixin, View):
                 if stage_status:
                     app_query &= Q(stage_states__stage_id=stage_id, stage_states__status=stage_status, stage_states__is_deleted=False)
                 else:
-                    app_query &= Q(stage_states__stage_id=stage_id, stage_states__is_deleted=False)
+                    app_query &= Q(current_stage_id=stage_id)
             elif stage_status:
                 app_query &= Q(stage_states__status=stage_status, stage_states__is_deleted=False)
 
@@ -890,6 +988,8 @@ class SMSCandidatesPreviewView(LoginRequiredMixin, RoleRequiredMixin, View):
                 job = application.job
                 if stage_id:
                     stage_state = application.stage_states.filter(stage_id=stage_id, is_deleted=False).first()
+                else:
+                    stage_state = application.stage_states.filter(stage=application.current_stage, is_deleted=False).first()
                 if not stage_state:
                     stage_state = application.stage_states.filter(is_deleted=False).order_by('-stage__sequence').first()
                 
@@ -1008,6 +1108,8 @@ class SMSExportExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                 job = application.job
                 if stage_id:
                     stage_state = application.stage_states.filter(stage_id=stage_id, is_deleted=False).first()
+                else:
+                    stage_state = application.stage_states.filter(stage=application.current_stage, is_deleted=False).first()
                 if not stage_state:
                     stage_state = application.stage_states.filter(is_deleted=False).order_by('-stage__sequence').first()
                 if stage_state:

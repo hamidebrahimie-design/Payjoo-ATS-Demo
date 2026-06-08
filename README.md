@@ -119,8 +119,8 @@ Payjoo ATS is a modern, responsive, and bilingual (Persian & English) Applicant 
 
 ۱. **کلون کردن پروژه**:
    ```bash
-   git clone https://github.com/omid516/Payjo-ATS.git
-   cd Payjo-ATS
+   git clone https://github.com/omid516/Payjoo-ATS.git
+   cd Payjoo-ATS
    ```
 
 ۲. **ایجاد محیط مجازی پایتون (Virtual Environment)**:

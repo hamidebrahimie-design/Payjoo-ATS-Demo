@@ -3,6 +3,7 @@ from .views import (
     CustomLoginView, CustomLogoutView, UserListView, UserCreateView,
     UserUpdateView, UserDeleteView, AuditLogListView,
     SystemBackupView, DownloadBackupView, RestoreBackupView,
+    SystemUpdateCheckView, SystemUpdateRunView,
     SMSPanelDashboardView, JobStagesOptionsView, SMSCandidatesPreviewView, SMSExportExcelView
 )
 
@@ -17,6 +18,8 @@ urlpatterns = [
     path('system-backup/', SystemBackupView.as_view(), name='system_backup'),
     path('system-backup/download/', DownloadBackupView.as_view(), name='download_backup'),
     path('system-backup/restore/', RestoreBackupView.as_view(), name='restore_backup'),
+    path('system-backup/update-check/', SystemUpdateCheckView.as_view(), name='system_update_check'),
+    path('system-backup/update-run/', SystemUpdateRunView.as_view(), name='system_update_run'),
     path('sms-panel/', SMSPanelDashboardView.as_view(), name='sms_panel'),
     path('sms-panel/stages/', JobStagesOptionsView.as_view(), name='sms_panel_stages'),
     path('sms-panel/preview/', SMSCandidatesPreviewView.as_view(), name='sms_panel_preview'),
