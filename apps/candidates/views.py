@@ -2442,3 +2442,44 @@ class CandidatePasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         from django.contrib import messages
         messages.success(self.request, "رمز عبور شما با موفقیت تغییر یافت.")
         return super().form_valid(form)
+
+
+class CandidateResumePrintView(LoginRequiredMixin, RoleRequiredMixin, View):
+    """نمایش رزومه چاپ‌آماده بر اساس اطلاعات موجود در سامانه"""
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request, pk):
+        candidate = get_object_or_404(Candidate, pk=pk, is_deleted=False)
+        context = {
+            'candidate': candidate,
+            'education_list': candidate.education.filter(is_deleted=False).order_by('-graduation_year'),
+            'experience_list': candidate.experience.filter(is_deleted=False).order_by('-start_date'),
+            'language_list': candidate.languages.filter(is_deleted=False),
+            'skill_list': candidate.skills.filter(is_deleted=False),
+            'certificate_list': candidate.certificates.filter(is_deleted=False).order_by('-issue_date'),
+            'applications': candidate.applications.filter(is_deleted=False).select_related('job', 'current_stage'),
+        }
+        return render(request, 'candidates/candidate_resume_print.html', context)
+
+
+class CandidateTranscriptPrintView(LoginRequiredMixin, RoleRequiredMixin, View):
+    """کارنامه آزمون / ارزیابی یک درخواست شغلی خاص"""
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request, pk):
+        application = get_object_or_404(
+            JobApplication,
+            pk=pk,
+            is_deleted=False
+        )
+        stage_states = application.stage_states.filter(
+            is_deleted=False
+        ).select_related('stage', 'evaluator').order_by('stage__sequence')
+        context = {
+            'application': application,
+            'candidate': application.candidate,
+            'job': application.job,
+            'stage_states': stage_states,
+        }
+        return render(request, 'candidates/candidate_transcript_print.html', context)
+

@@ -44,7 +44,9 @@ from .views import (
     DownloadCandidateTemplateView,
     ImportCandidatesView,
     ImportScoreEntryExcelView,
-    CandidatePasswordChangeView
+    CandidatePasswordChangeView,
+    CandidateResumePrintView,
+    CandidateTranscriptPrintView
 )
 
 urlpatterns = [
@@ -54,8 +56,10 @@ urlpatterns = [
     path('import/excel/', ImportCandidatesView.as_view(), name='candidate_import_excel'),
     path('import/template/', DownloadCandidateTemplateView.as_view(), name='candidate_import_template'),
     path('<int:pk>/', CandidateDetailView.as_view(), name='candidate_detail'),
+    path('<int:pk>/resume/print/', CandidateResumePrintView.as_view(), name='candidate_resume_print'),
     path('<int:pk>/edit/', CandidateUpdateView.as_view(), name='candidate_edit'),
     path('<int:pk>/delete/', CandidateDeleteView.as_view(), name='candidate_delete'),
+    path('application/<int:pk>/transcript/print/', CandidateTranscriptPrintView.as_view(), name='candidate_transcript_print'),
     
     path('score-entry/', ScoreEntryListView.as_view(), name='candidate_score_entry'),
     path('score-entry/export/excel/', ExportScoreEntryExcelView.as_view(), name='score_entry_export_excel'),
