@@ -145,14 +145,20 @@ class RecruitmentPlanningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'پیش‌بینی اتمام فرآیند جذب')
 
-        # 3. Save schedule plan
+        # 3. Save schedule plan (Standard request - redirects with 302)
         post_data['action'] = 'save'
         response = self.client.post(url, post_data)
-        # Should redirect to dashboard (or return JS script redirecting)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('window.location.href', response.content.decode('utf-8'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('planning_dashboard'))
 
         # Check plan is saved in DB
+        self.assertTrue(JobRecruitmentPlan.objects.filter(job=self.job1, status='ACTIVE').exists())
+
+        # Test HTMX save (HTMX request - returns 200 with HX-Redirect header)
+        JobRecruitmentPlan.objects.filter(job=self.job1).delete()
+        response_htmx = self.client.post(url, post_data, HTTP_HX_REQUEST='true')
+        self.assertEqual(response_htmx.status_code, 200)
+        self.assertEqual(response_htmx['HX-Redirect'], reverse('planning_dashboard'))
         self.assertTrue(JobRecruitmentPlan.objects.filter(job=self.job1, status='ACTIVE').exists())
 
         # 4. Access and Save configs view
@@ -172,3 +178,155 @@ class RecruitmentPlanningTests(TestCase):
         self.config_screening.refresh_from_db()
         self.assertEqual(self.config_screening.default_sla_days, 6)
         self.assertEqual(self.config_screening.monthly_capacity, 60)
+
+    def test_planning_export_excel(self):
+        """تست خروجی اکسل برنامه‌های جذب"""
+        self.client.login(username='admin_planning', password='testpassword123')
+        
+        # Save a plan first
+        url = reverse('job_planning', kwargs={'job_id': self.job1.id})
+        post_data = {
+            'action': 'save',
+            'start_date': '1405/02/01'
+        }
+        self.client.post(url, post_data)
+        
+        # Test export view
+        export_url = reverse('planning_export_excel')
+        response = self.client.get(export_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.assertTrue(len(response.content) > 0)
+
+        # Parse Excel bytes and verify that the planned job is present in the sheet
+        import io
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        sheet = wb.active
+        
+        row_values = list(sheet.iter_rows(values_only=True))
+        found = False
+        for row in row_values:
+            if self.job1.title in row or self.job1.code in row:
+                found = True
+                break
+        self.assertTrue(found, "The planned job details were not found in the Excel export rows.")
+
+    def test_planning_calendar_view(self):
+        """تست دسترسی به نمای تقویم شمسی ماهانه"""
+        self.client.login(username='admin_planning', password='testpassword123')
+        calendar_url = reverse('planning_calendar')
+        response = self.client.get(calendar_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'تقویم برنامه‌ریزی جذب')
+        self.assertContains(response, 'شنبه')
+        self.assertContains(response, 'جمعه')
+
+    def test_weekly_agenda_excel_export(self):
+        """تست خروجی اکسل دستور کار هفتگی"""
+        self.client.login(username='admin_planning', password='testpassword123')
+        
+        # Save a plan so that we have events scheduled for the next week
+        # (Start date: 1405/03/18 which corresponds to 2026-06-08)
+        planning_url = reverse('job_planning', kwargs={'job_id': self.job1.id})
+        post_data = {
+            'action': 'save',
+            'start_date': '1405/03/18'
+        }
+        self.client.post(planning_url, post_data)
+        
+        export_url = reverse('planning_agenda_export_excel')
+        response = self.client.get(export_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        
+        import io
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        sheet = wb.active
+        
+        row_values = list(sheet.iter_rows(values_only=True))
+        # Headings verify
+        self.assertIn("تاریخ شمسی", row_values[0])
+        self.assertIn("روز هفته", row_values[0])
+        self.assertIn("نوع رویداد", row_values[0])
+        
+        # Find if our saved job's stage plan is exported
+        found = False
+        for row in row_values:
+            if self.job1.title in row:
+                found = True
+                break
+        self.assertTrue(found, "The weekly agenda job events were not found in the Excel export.")
+
+    def test_weekly_agenda_print_view(self):
+        """تست نمای چاپی شکیل دستور کار هفتگی"""
+        self.client.login(username='admin_planning', password='testpassword123')
+        print_url = reverse('planning_agenda_print')
+        response = self.client.get(print_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'گزارش دستور کار و برنامه‌های جذب هفته آینده')
+        self.assertContains(response, 'چاپ گزارش / ذخیره PDF')
+
+    def test_job_creation_redirect_flow(self):
+        """تست هدایت خودکار ایجاد شغل به برنامه‌ریزی و سپس سند آزمون"""
+        self.client.login(username='admin_planning', password='testpassword123')
+        
+        job_add_url = reverse('job_add')
+        form_data = {
+            'request_number': 'REQ-TEST-NEW-01',
+            'title': 'کارشناس امنیت شبکه',
+            'code': 'SEC-01',
+            'department': 'فناوری اطلاعات',
+            'headcount': '2',
+            'recruitment_type': 'EXTERNAL',
+            'status': 'PLANNING',
+            'start_date': '1405/03/18',
+            'end_date': '1405/04/18',
+            'description': 'شرح وظایف کارشناس امنیت',
+            'stages-TOTAL_FORMS': '1',
+            'stages-INITIAL_FORMS': '0',
+            'stages-MIN_NUM_FORMS': '0',
+            'stages-MAX_NUM_FORMS': '1000',
+            'stages-0-name': 'غربالگری اولیه',
+            'stages-0-weight': '100',
+            'stages-0-sequence': '1',
+            'stages-0-stage_type': 'SCREENING',
+        }
+        
+        response = self.client.post(job_add_url, form_data)
+        
+        # Check that it redirected to the job planning page with ?next=print_doc
+        new_job = JobOpportunity.objects.get(code='SEC-01')
+        expected_redirect_url = reverse('job_planning', kwargs={'job_id': new_job.id}) + '?next=print_doc'
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(expected_redirect_url, response.url)
+        
+        # Load the job planning view with ?next=print_doc
+        plan_page_url = reverse('job_planning', kwargs={'job_id': new_job.id}) + '?next=print_doc'
+        response_plan_page = self.client.get(plan_page_url)
+        self.assertEqual(response_plan_page.status_code, 200)
+        
+        # Verify the skip link is present
+        skip_url = reverse('job_print_doc', kwargs={'pk': new_job.id})
+        self.assertContains(response_plan_page, 'رد کردن و مشاهده سند آزمون')
+        self.assertContains(response_plan_page, skip_url)
+        
+        # Submit the planning form with next=print_doc
+        post_data = {
+            'action': 'save',
+            'start_date': '1405/03/18',
+            'next': 'print_doc'
+        }
+        
+        # Standard request
+        response_save = self.client.post(plan_page_url, post_data)
+        self.assertEqual(response_save.status_code, 302)
+        self.assertEqual(response_save.url, reverse('job_print_doc', kwargs={'pk': new_job.id}))
+        
+        # HTMX request
+        response_save_htmx = self.client.post(plan_page_url, post_data, HTTP_HX_REQUEST='true')
+        self.assertEqual(response_save_htmx.status_code, 200)
+        self.assertEqual(response_save_htmx['HX-Redirect'], reverse('job_print_doc', kwargs={'pk': new_job.id}))
+
+

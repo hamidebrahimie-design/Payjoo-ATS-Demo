@@ -23,11 +23,38 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
     def get(self, request):
         today = datetime.date.today()
         j_today = jdatetime.date.fromgregorian(date=today)
-        current_month_name = j_today.strftime("%B %Y")
-        month_key = f"{j_today.year:04d}/{j_today.month:02d}"
         
-        # Get start/end dates of current Jalali month
-        g_start, g_end = get_jalali_month_range(j_today.year, j_today.month)
+        # Read year and month from query parameters, fallback to current Jalali date
+        try:
+            year = int(request.GET.get('year', j_today.year))
+            month = int(request.GET.get('month', j_today.month))
+        except (ValueError, TypeError):
+            year = j_today.year
+            month = j_today.month
+            
+        JALALI_MONTH_NAMES = [
+            "", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+            "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+        ]
+        
+        # Format month name in Farsi
+        current_month_name = f"{JALALI_MONTH_NAMES[month]} {year}"
+        
+        # Calculate prev and next months
+        prev_month = month - 1
+        prev_year = year
+        if prev_month < 1:
+            prev_month = 12
+            prev_year -= 1
+            
+        next_month = month + 1
+        next_year = year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+            
+        # Get start/end dates of requested Jalali month
+        g_start, g_end = get_jalali_month_range(year, month)
 
         # Active plans
         active_plans = JobRecruitmentPlan.objects.filter(status=JobRecruitmentPlan.STATUS_ACTIVE, is_deleted=False)
@@ -99,6 +126,58 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
             recruitment_plan__isnull=False
         )
 
+        # Agenda for the next 7 days
+        agenda_events = []
+        for i in range(7):
+            target_date = today + datetime.timedelta(days=i)
+            j_date = jdatetime.date.fromgregorian(date=target_date)
+            date_label = f"{JALALI_MONTH_NAMES[j_date.month]} {j_date.day}"
+            if i == 0:
+                day_name = "امروز"
+            elif i == 1:
+                day_name = "فردا"
+            else:
+                # Get day of week in Farsi (weekday() Monday=0 to Sunday=6)
+                weekdays = ["دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه", "شنبه", "یک‌شنبه"]
+                day_name = weekdays[target_date.weekday()]
+
+            starts = JobStagePlan.objects.filter(
+                planned_start_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            ends = JobStagePlan.objects.filter(
+                planned_end_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            events = []
+            for sp in starts:
+                events.append({
+                    'type': 'START',
+                    'job_title': sp.plan.job.title,
+                    'stage_name': sp.stage.name,
+                    'badge_color': 'success',
+                })
+            for sp in ends:
+                events.append({
+                    'type': 'END',
+                    'job_title': sp.plan.job.title,
+                    'stage_name': sp.stage.name,
+                    'badge_color': 'danger',
+                })
+
+            if events:
+                agenda_events.append({
+                    'date': target_date,
+                    'jalali_str': f"{day_name} ({date_label})",
+                    'events': events
+                })
+
         context = {
             'active_plans': active_plans,
             'draft_plans': draft_plans,
@@ -107,7 +186,14 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
             'capacity_stats': capacity_stats,
             'unplanned_jobs': unplanned_jobs,
             'current_month_name': current_month_name,
-            'today_jalali': to_jalali_string(today)
+            'today_jalali': to_jalali_string(today),
+            'prev_year': prev_year,
+            'prev_month': prev_month,
+            'next_year': next_year,
+            'next_month': next_month,
+            'selected_year': year,
+            'selected_month': month,
+            'agenda_events': agenda_events,
         }
         return render(request, 'recruitment_planning/dashboard.html', context)
 
@@ -155,20 +241,21 @@ class JobPlanningView(LoginRequiredMixin, RoleRequiredMixin, View):
             return HttpResponse('<div class="alert alert-danger text-xs font-bold text-right mb-0">خطا: این فرصت شغلی هیچ مرحله ارزیابی تعریف‌شده‌ای ندارد.</div>', status=400)
 
         with transaction.atomic():
-            plan, created = JobRecruitmentPlan.objects.get_or_create(
-                job=job,
-                defaults={
-                    'start_date': start_date,
-                    'predicted_end_date': schedule[-1]['planned_end_date'],
-                    'status': JobRecruitmentPlan.STATUS_ACTIVE
-                }
-            )
-            if not created:
+            # Look up including soft-deleted plans to avoid UNIQUE constraint violations
+            plan = JobRecruitmentPlan.all_objects.filter(job=job).first()
+            if plan:
                 plan.start_date = start_date
                 plan.predicted_end_date = schedule[-1]['planned_end_date']
                 plan.status = JobRecruitmentPlan.STATUS_ACTIVE
                 plan.is_deleted = False
                 plan.save()
+            else:
+                plan = JobRecruitmentPlan.objects.create(
+                    job=job,
+                    start_date=start_date,
+                    predicted_end_date=schedule[-1]['planned_end_date'],
+                    status=JobRecruitmentPlan.STATUS_ACTIVE
+                )
 
             # Clean and rebuild stage plans
             plan.stage_plans.all().delete()
@@ -183,9 +270,17 @@ class JobPlanningView(LoginRequiredMixin, RoleRequiredMixin, View):
                     capacity_shifted=s['capacity_shifted']
                 )
 
-        return HttpResponse(
-            f'<script>window.location.href = "{reverse("planning_dashboard")}";</script>'
-        )
+        next_param = request.GET.get('next') or request.POST.get('next')
+        if next_param == 'print_doc':
+            redirect_url = reverse('job_print_doc', kwargs={'pk': job.pk})
+        else:
+            redirect_url = next_param if next_param else reverse("planning_dashboard")
+
+        if request.headers.get('HX-Request'):
+            response = HttpResponse()
+            response['HX-Redirect'] = redirect_url
+            return response
+        return redirect(redirect_url)
 
 
 class PlanningConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
@@ -256,3 +351,297 @@ class PlanningConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
             return redirect('planning_config')
 
         return redirect('planning_config')
+
+
+class ExportPlanningExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request):
+        plans = JobRecruitmentPlan.objects.filter(is_deleted=False).prefetch_related(
+            'job', 'stage_plans', 'stage_plans__stage'
+        ).order_by('-created_at')
+
+        headers = [
+            "شناسه فرصت شغلی", "عنوان شغل", "کد شغل", "دپارتمان", "ظرفیت جذب (Headcount)",
+            "تاریخ شروع فرآیند", "تاریخ پیش‌بینی شده اتمام", "وضعیت برنامه", "مراحل و زمان‌بندی جذب"
+        ]
+
+        rows = []
+        for plan in plans:
+            stage_plans = plan.stage_plans.filter(is_deleted=False).order_by('stage__sequence')
+            stages_list = []
+            for sp in stage_plans:
+                stages_list.append(
+                    f"{sp.stage.name} ({to_jalali_string(sp.planned_start_date)} تا {to_jalali_string(sp.planned_end_date)} - SLA: {sp.sla_days} روز)"
+                )
+            stages_str = " ➔ ".join(stages_list)
+
+            rows.append([
+                plan.job.id,
+                plan.job.title,
+                plan.job.code or "",
+                plan.job.department or "",
+                plan.job.headcount,
+                to_jalali_string(plan.start_date),
+                to_jalali_string(plan.predicted_end_date),
+                plan.get_status_display(),
+                stages_str
+            ])
+
+        from apps.core.utils import export_to_excel_response
+        return export_to_excel_response("recruitment_planning_report.xlsx", headers, rows)
+
+
+class PlanningCalendarView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request):
+        today = datetime.date.today()
+        j_today = jdatetime.date.fromgregorian(date=today)
+        
+        try:
+            year = int(request.GET.get('year', j_today.year))
+            month = int(request.GET.get('month', j_today.month))
+        except (ValueError, TypeError):
+            year = j_today.year
+            month = j_today.month
+
+        JALALI_MONTH_NAMES = [
+            "", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+            "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+        ]
+        
+        current_month_name = f"{JALALI_MONTH_NAMES[month]} {year}"
+        
+        # Calculate prev and next months
+        prev_month = month - 1
+        prev_year = year
+        if prev_month < 1:
+            prev_month = 12
+            prev_year -= 1
+            
+        next_month = month + 1
+        next_year = year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+            
+        g_start, g_end = get_jalali_month_range(year, month)
+        
+        # Fetch active stage plans in this range
+        stage_plans = JobStagePlan.objects.filter(
+            plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+            plan__is_deleted=False,
+            is_deleted=False,
+            planned_start_date__lte=g_end,
+            planned_end_date__gte=g_start
+        ).select_related('plan__job', 'stage')
+        
+        # Fetch holidays in this range
+        holidays = Holiday.objects.filter(
+            is_deleted=False,
+            date__range=(g_start, g_end)
+        )
+        holiday_dict = {h.date: h.title for h in holidays}
+        
+        # Build month grid
+        if month <= 6:
+            num_days = 31
+        elif month <= 11:
+            num_days = 30
+        else:
+            try:
+                jdatetime.date(year, 12, 30)
+                num_days = 30
+            except ValueError:
+                num_days = 29
+                
+        days = []
+        first_day_date = jdatetime.date(year, month, 1)
+        start_weekday = first_day_date.weekday()
+        
+        # Pad beginning
+        for _ in range(start_weekday):
+            days.append(None)
+            
+        # Add actual days
+        for day in range(1, num_days + 1):
+            g_date = jdatetime.date(year, month, day).togregorian()
+            is_holiday = (g_date.weekday() == 4) or (g_date in holiday_dict)
+            holiday_title = "جمعه" if g_date.weekday() == 4 else holiday_dict.get(g_date, "")
+            
+            day_events = []
+            for sp in stage_plans:
+                if sp.planned_start_date == g_date:
+                    day_events.append({
+                        'type': 'START',
+                        'label': f"شروع {sp.stage.name}",
+                        'job_title': sp.plan.job.title,
+                        'color': 'success',
+                        'job_id': sp.plan.job.id,
+                    })
+                if sp.planned_end_date == g_date:
+                    day_events.append({
+                        'type': 'END',
+                        'label': f"پایان {sp.stage.name}",
+                        'job_title': sp.plan.job.title,
+                        'color': 'danger',
+                        'job_id': sp.plan.job.id,
+                    })
+            
+            days.append({
+                'day': day,
+                'date': g_date,
+                'is_today': g_date == today,
+                'is_holiday': is_holiday,
+                'holiday_title': holiday_title,
+                'events': day_events
+            })
+            
+        # Pad end
+        while len(days) % 7 != 0:
+            days.append(None)
+            
+        # Group into weeks
+        weeks = [days[i:i+7] for i in range(0, len(days), 7)]
+        
+        context = {
+            'current_month_name': current_month_name,
+            'prev_year': prev_year,
+            'prev_month': prev_month,
+            'next_year': next_year,
+            'next_month': next_month,
+            'selected_year': year,
+            'selected_month': month,
+            'weeks': weeks,
+            'today_jalali': to_jalali_string(today),
+        }
+        return render(request, 'recruitment_planning/calendar.html', context)
+
+
+class ExportWeeklyAgendaExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request):
+        today = datetime.date.today()
+        
+        headers = [
+            "تاریخ شمسی", "روز هفته", "نوع رویداد", "عنوان شغل", "مرحله ارزیابی", "نوع مرحله"
+        ]
+        
+        rows = []
+        for i in range(7):
+            target_date = today + datetime.timedelta(days=i)
+            j_date = jdatetime.date.fromgregorian(date=target_date)
+            date_label = f"{j_date.year:04d}/{j_date.month:02d}/{j_date.day:02d}"
+            
+            weekdays = ["دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه", "شنبه", "یک‌شنبه"]
+            day_name = weekdays[target_date.weekday()]
+            
+            starts = JobStagePlan.objects.filter(
+                planned_start_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            ends = JobStagePlan.objects.filter(
+                planned_end_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            for sp in starts:
+                rows.append([
+                    date_label,
+                    day_name,
+                    "شروع مرحله",
+                    sp.plan.job.title,
+                    sp.stage.name,
+                    sp.get_stage_type_display()
+                ])
+                
+            for sp in ends:
+                rows.append([
+                    date_label,
+                    day_name,
+                    "پایان مرحله",
+                    sp.plan.job.title,
+                    sp.stage.name,
+                    sp.get_stage_type_display()
+                ])
+
+        from apps.core.utils import export_to_excel_response
+        return export_to_excel_response("weekly_agenda_report.xlsx", headers, rows)
+
+
+class WeeklyAgendaPrintView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request):
+        today = datetime.date.today()
+        
+        JALALI_MONTH_NAMES = [
+            "", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+            "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+        ]
+        
+        start_jalali = to_jalali_string(today)
+        end_date = today + datetime.timedelta(days=6)
+        end_jalali = to_jalali_string(end_date)
+        
+        agenda_events = []
+        for i in range(7):
+            target_date = today + datetime.timedelta(days=i)
+            j_date = jdatetime.date.fromgregorian(date=target_date)
+            date_label = f"{JALALI_MONTH_NAMES[j_date.month]} {j_date.day}"
+            
+            weekdays = ["دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه", "شنبه", "یک‌شنبه"]
+            day_name = weekdays[target_date.weekday()]
+            
+            starts = JobStagePlan.objects.filter(
+                planned_start_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            ends = JobStagePlan.objects.filter(
+                planned_end_date=target_date,
+                plan__status=JobRecruitmentPlan.STATUS_ACTIVE,
+                plan__is_deleted=False,
+                is_deleted=False
+            ).select_related('plan__job', 'stage')
+
+            events = []
+            for sp in starts:
+                events.append({
+                    'type': 'START',
+                    'job_title': sp.plan.job.title,
+                    'stage_name': sp.stage.name,
+                    'stage_type_display': sp.get_stage_type_display(),
+                })
+            for sp in ends:
+                events.append({
+                    'type': 'END',
+                    'job_title': sp.plan.job.title,
+                    'stage_name': sp.stage.name,
+                    'stage_type_display': sp.get_stage_type_display(),
+                })
+
+            if events:
+                agenda_events.append({
+                    'date': target_date,
+                    'jalali_str': f"{day_name} ({date_label})",
+                    'events': events
+                })
+                
+        context = {
+            'agenda_events': agenda_events,
+            'start_jalali': start_jalali,
+            'end_jalali': end_jalali,
+            'today_jalali': to_jalali_string(today),
+        }
+        return render(request, 'recruitment_planning/agenda_print.html', context)
+

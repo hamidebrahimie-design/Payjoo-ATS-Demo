@@ -3,6 +3,7 @@
 {% block title %}تنظیمات برنامه‌ریزی جذب | سامانه پیجو{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
 <style>
     .config-card {
         background: rgba(255, 255, 255, 0.9);
@@ -10,6 +11,9 @@
         border: 1px solid rgba(226, 232, 240, 0.8);
         border-radius: 16px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+    #bd-root-id_holiday_date {
+        font-family: 'Vazirmatn', sans-serif !important;
     }
 </style>
 {% endblock %}
@@ -102,7 +106,7 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label text-xxs font-semibold text-secondary mb-1">تاریخ روز تعطیل (شمسی):</label>
-                        <input type="text" name="date" class="form-control form-control-sm text-center jalali-datepicker-input font-bold" placeholder="۱۴۰۵/۰۱/۰۱" required autocomplete="off" style="border-radius: 6px;">
+                        <input type="text" name="date" id="id_holiday_date" class="form-control form-control-sm text-center jalali-datepicker-input font-bold" placeholder="۱۴۰۵/۰۱/۰۱" required autocomplete="off" style="border-radius: 6px;">
                     </div>
                 </div>
                 
@@ -150,4 +154,22 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        kamaDatepicker('id_holiday_date', {
+            buttonsColor: '#0052cc',
+            markToday: true,
+            gotoToday: true,
+            twodigit: true,
+            closeAfterSelect: true,
+            nextButtonIcon: '>',
+            previousButtonIcon: '<'
+        });
+    });
+</script>
 {% endblock %}

@@ -3,6 +3,7 @@
 {% block title %}برنامه‌ریزی زمانبندی: {{ job.title }} | سامانه پیجو{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
 <style>
     .planning-card {
         background: rgba(255, 255, 255, 0.9);
@@ -11,16 +12,23 @@
         border-radius: 16px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
     }
+    #bd-root-start_date {
+        font-family: 'Vazirmatn', sans-serif !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="mb-4">
-    <a href="{% url 'planning_dashboard' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 mb-2" style="border-radius: 6px;">
+    <a href="{% if request.GET.next == 'print_doc' %}{% url 'job_print_doc' job.id %}{% else %}{% url 'planning_dashboard' %}{% endif %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 mb-2" style="border-radius: 6px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
         </svg>
-        بازگشت به داشبورد برنامه‌ریزی
+        {% if request.GET.next == 'print_doc' %}
+            رد کردن و مشاهده سند آزمون
+        {% else %}
+            بازگشت به داشبورد برنامه‌ریزی
+        {% endif %}
     </a>
     <h3 class="font-bold text-secondary mb-1">تنظیم برنامه زمانبندی جذب</h3>
     <p class="text-muted text-sm m-0">شغل: {{ job.title }} | کد: {{ job.code }} | دپارتمان: {{ job.department }} | رده شغلی: {{ job.job_category|default:"-" }}</p>
@@ -32,7 +40,7 @@
         <div class="card planning-card border-0 p-4 shadow-xs">
             <h5 class="font-bold text-secondary mb-3">تنظیم تاریخ شروع</h5>
             
-            <form hx-post="{% url 'job_planning' job.id %}" 
+            <form hx-post="{% url 'job_planning' job.id %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" 
                   hx-target="#schedule-preview-container" 
                   hx-trigger="submit, change delay:400ms from:#start_date" 
                   class="m-0" 
@@ -98,11 +106,36 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
 <script>
     function submitSaveForm() {
         document.getElementById('form-action').value = 'save';
-        document.getElementById('planning-form').submit();
+        htmx.trigger('#planning-form', 'submit');
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        kamaDatepicker('start_date', {
+            buttonsColor: '#0052cc',
+            markToday: true,
+            gotoToday: true,
+            twodigit: true,
+            closeAfterSelect: true,
+            nextButtonIcon: '>',
+            previousButtonIcon: '<'
+        });
+
+        $(document).on('click', '#bd-root-start_date', function() {
+            setTimeout(function() {
+                const input = document.getElementById('start_date');
+                if (input) {
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 50);
+        });
+    });
 </script>
 {% endblock %}

@@ -46,7 +46,7 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
-        border-right: 1px solid rgba(255,255,255,0.2);
+        border-left: 1px solid rgba(255,255,255,0.2);
     }
     .bg-screening { background-color: #6366f1; } /* Indigo */
     .bg-exam { background-color: #0ea5e9; } /* Sky */
@@ -63,6 +63,12 @@
         <p class="text-muted text-sm m-0">مدیریت تقویم استخدام، کنترل تعهدات SLA مراحل و بررسی ظرفیت ماهانه ارزیاب‌ها</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{% url 'planning_calendar' %}" class="btn btn-outline-primary font-bold text-xs d-flex align-items-center gap-1.5 py-2 px-3" style="border-radius: 8px;">
+            📅 تقویم برنامه‌ریزی جذب
+        </a>
+        <a href="{% url 'planning_export_excel' %}" class="btn btn-outline-success font-bold text-xs d-flex align-items-center gap-1.5 py-2 px-3" style="border-radius: 8px;">
+            📥 خروجی اکسل برنامه‌ها
+        </a>
         <a href="{% url 'planning_config' %}" class="btn btn-outline-secondary font-bold text-xs d-flex align-items-center gap-1.5 py-2 px-3" style="border-radius: 8px;">
             ⚙️ تنظیمات SLA و ظرفیت‌ها
         </a>
@@ -112,9 +118,30 @@
 <div class="row g-4 mb-4">
     <!-- بخش پایش ظرفیت‌های ماه جاری -->
     <div class="col-lg-8">
-        <div class="card kpi-card border-0 p-4 h-100 shadow-xs">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="font-bold text-secondary m-0">پایش ظرفیت مراحل ارزیابی در ماه جاری ({{ current_month_name }})</h5>
+        <div class="card kpi-card border-0 p-4 h-100 shadow-xs" id="capacity-gauges-card">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h5 class="font-bold text-secondary m-0">پایش ظرفیت مراحل ارزیابی در ماه ({{ current_month_name }})</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-xs btn-outline-secondary font-bold px-2 py-1" 
+                            style="border-radius: 6px; font-size: 10px;"
+                            hx-get="{% url 'planning_dashboard' %}?year={{ prev_year }}&month={{ prev_month }}" 
+                            hx-target="#capacity-gauges-card" 
+                            hx-select="#capacity-gauges-card"
+                            hx-swap="outerHTML">
+                        ◀ ماه قبل
+                    </button>
+                    <span class="badge bg-light text-secondary border px-2 py-1.5 font-bold" style="font-size: 10.5px; border-radius: 6px;">
+                        {{ current_month_name }}
+                    </span>
+                    <button class="btn btn-xs btn-outline-secondary font-bold px-2 py-1" 
+                            style="border-radius: 6px; font-size: 10px;"
+                            hx-get="{% url 'planning_dashboard' %}?year={{ next_year }}&month={{ next_month }}" 
+                            hx-target="#capacity-gauges-card" 
+                            hx-select="#capacity-gauges-card"
+                            hx-swap="outerHTML">
+                        ماه بعد ▶
+                    </button>
+                </div>
             </div>
             
             <div class="row g-3">
@@ -144,28 +171,68 @@
         </div>
     </div>
 
-    <!-- فرصت‌های شغلی بدون برنامه زمانبندی -->
+    <!-- ستون سمت چپ: دستور کار و مشاغل بدون برنامه -->
     <div class="col-lg-4">
-        <div class="card kpi-card border-0 p-4 h-100 shadow-xs d-flex flex-column justify-content-between">
-            <div>
-                <h5 class="font-bold text-secondary mb-1">مشاغل بدون برنامه‌ریزی</h5>
-                <p class="text-muted text-xxs mb-3">فرصت‌های شغلی فعالی که هنوز برنامه زمانبندی ارزیابی کاندیداهای آن‌ها ثبت نشده است.</p>
-                
-                <div class="overflow-y-auto pe-1" style="max-height: 230px;">
-                    {% for job in unplanned_jobs %}
-                    <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded border border-slate-light" style="border-radius: 8px;">
-                        <div>
-                            <span class="font-semibold text-xs text-secondary d-block">{{ job.title }}</span>
-                            <small class="text-muted text-xxs">کد: {{ job.code }} | تعداد جذب: {{ job.headcount }}</small>
+        <!-- کارت برنامه زمانبندی هفته آینده -->
+        <div class="card kpi-card border-0 p-4 shadow-xs mb-4">
+            <h5 class="font-bold text-secondary mb-1">📅 دستور کار ۷ روز آینده</h5>
+            <p class="text-muted text-xxs mb-2">شروع و پایان مراحل ارزیابی بر اساس برنامه‌ریزی‌های فعال در یک هفته پیش‌رو</p>
+            
+            <div class="d-flex gap-2 mb-3">
+                <a href="{% url 'planning_agenda_export_excel' %}" class="btn btn-xs btn-outline-success font-bold px-2 py-1" style="border-radius: 6px; font-size: 10px;">
+                    📥 خروجی اکسل هفتگی
+                </a>
+                <a href="{% url 'planning_agenda_print' %}" target="_blank" class="btn btn-xs btn-outline-primary font-bold px-2 py-1" style="border-radius: 6px; font-size: 10px;">
+                    🖨 چاپ / PDF هفتگی
+                </a>
+            </div>
+            
+            <div class="overflow-y-auto pe-1" style="max-height: 230px;">
+                {% for day in agenda_events %}
+                <div class="mb-3">
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1 text-xxs font-bold d-inline-block mb-2 rounded" style="border-radius: 6px;">
+                        {{ day.jalali_str }}
+                    </span>
+                    <div class="border-start border-slate-light ps-3 ms-2">
+                        {% for event in day.events %}
+                        <div class="p-2 mb-2 bg-light rounded-3 d-flex align-items-start gap-2" style="border-radius: 8px; font-size: 11px;">
+                            <span class="badge bg-{{ event.badge_color }} bg-opacity-10 text-{{ event.badge_color }} px-1.5 py-0.5 text-xxs font-bold mt-0.5">
+                                {% if event.type == 'START' %}شروع{% else %}پایان{% endif %}
+                            </span>
+                            <div class="text-secondary" style="line-height: 1.4;">
+                                مرحله <strong class="text-dark">{{ event.stage_name }}</strong> برای شغل <strong>{{ event.job_title }}</strong>
+                            </div>
                         </div>
-                        <a href="{% url 'job_planning' job.id %}" class="btn btn-xs btn-primary font-bold px-2 py-1" style="font-size: 10px; border-radius: 6px;">
-                            📅 برنامه‌ریزی
-                        </a>
+                        {% endfor %}
                     </div>
-                    {% empty %}
-                    <div class="text-center text-muted text-xs py-4">همه فرصت‌های شغلی فعال برنامه‌ریزی شده‌اند.</div>
-                    {% endfor %}
                 </div>
+                {% empty %}
+                <div class="text-center text-muted text-xs py-5">
+                    <p class="m-0">هیچ رویدادی برای ۷ روز آینده زمانبندی نشده است.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- فرصت‌های شغلی بدون برنامه زمانبندی -->
+        <div class="card kpi-card border-0 p-4 shadow-xs">
+            <h5 class="font-bold text-secondary mb-1">مشاغل بدون برنامه‌ریزی</h5>
+            <p class="text-muted text-xxs mb-3">فرصت‌های شغلی فعالی که هنوز برنامه زمانبندی جذب آن‌ها ثبت نشده است.</p>
+            
+            <div class="overflow-y-auto pe-1" style="max-height: 230px;">
+                {% for job in unplanned_jobs %}
+                <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded border border-slate-light" style="border-radius: 8px;">
+                    <div>
+                        <span class="font-semibold text-xs text-secondary d-block">{{ job.title }}</span>
+                        <small class="text-muted text-xxs">کد: {{ job.code }} | تعداد جذب: {{ job.headcount }}</small>
+                    </div>
+                    <a href="{% url 'job_planning' job.id %}" class="btn btn-xs btn-primary font-bold px-2 py-1" style="font-size: 10px; border-radius: 6px;">
+                        📅 برنامه‌ریزی
+                    </a>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted text-xs py-4">همه فرصت‌های شغلی فعال برنامه‌ریزی شده‌اند.</div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -214,7 +281,7 @@
                                 {% elif s_plan.stage_type == 'INTERVIEW' %}bg-interview
                                 {% elif s_plan.stage_type == 'ASSESSMENT' %}bg-assessment
                                 {% else %}bg-other{% endif %}"
-                                 style="left: calc({{ forloop.counter0 }} * (100% / {{ plans_list|length }})); width: calc(100% / {{ plans_list|length }});"
+                                 style="right: calc({{ forloop.counter0 }} * (100% / {{ plans_list|length }})); width: calc(100% / {{ plans_list|length }});"
                                  title="مرحله: {{ s_plan.stage.name }} | شروع: {{ s_plan.planned_start_date|to_jalali }} | پایان: {{ s_plan.planned_end_date|to_jalali }} ({{ s_plan.sla_days }} روز کاری)">
                                 {{ s_plan.stage.name }} ({{ s_plan.planned_start_date|to_jalali }} تا {{ s_plan.planned_end_date|to_jalali }})
                             </div>

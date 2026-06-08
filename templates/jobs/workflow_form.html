@@ -74,11 +74,18 @@
                     {% for stage_form in stages %}
                     <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-{{ forloop.counter0 }}">
                         {{ stage_form.id }}
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی پیش‌فرض</label>
                             {{ stage_form.name }}
                             {% if stage_form.name.errors %}
                             <div class="text-danger text-xs mt-1">{{ stage_form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-xs text-muted mb-1">نوع مرحله</label>
+                            {{ stage_form.stage_type }}
+                            {% if stage_form.stage_type.errors %}
+                            <div class="text-danger text-xs mt-1">{{ stage_form.stage_type.errors.0 }}</div>
                             {% endif %}
                         </div>
                         <div class="col-md-2">
@@ -88,8 +95,8 @@
                             <div class="text-danger text-xs mt-1">{{ stage_form.default_weight.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label text-xs text-muted mb-1">ترتیب انجام</label>
+                        <div class="col-md-1">
+                            <label class="form-label text-xs text-muted mb-1">ترتیب</label>
                             {{ stage_form.sequence }}
                             {% if stage_form.sequence.errors %}
                             <div class="text-danger text-xs mt-1">{{ stage_form.sequence.errors.0 }}</div>
@@ -135,16 +142,20 @@
 <div id="stage-form-template" class="d-none">
     <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-__prefix__">
         {{ stages.empty_form.id }}
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی پیش‌فرض</label>
             {{ stages.empty_form.name }}
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs text-muted mb-1">نوع مرحله</label>
+            {{ stages.empty_form.stage_type }}
         </div>
         <div class="col-md-2">
             <label class="form-label text-xs text-muted mb-1">وزن پیش‌فرض (٪)</label>
             {{ stages.empty_form.default_weight }}
         </div>
-        <div class="col-md-2">
-            <label class="form-label text-xs text-muted mb-1">ترتیب انجام</label>
+        <div class="col-md-1">
+            <label class="form-label text-xs text-muted mb-1">ترتیب</label>
             {{ stages.empty_form.sequence }}
         </div>
         <div class="col-md-2 d-flex align-items-end">

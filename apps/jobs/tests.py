@@ -235,3 +235,51 @@ class JobOpportunityAndWorkflowTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         job_from_form = form.save()
         self.assertEqual(job_from_form.job_category, 'کارشناس مسئول')
+
+    def test_job_print_doc_view(self):
+        """تست نمایش صفحه چاپ سند آزمون به همراه جزئیات برنامه‌ریزی جذب"""
+        job = JobOpportunity.objects.create(
+            request_number='REQ-1402-991',
+            title='مدیر مالی',
+            code='FIN-991',
+            department='مالی',
+            description='مدیریت امور مالی'
+        )
+        stage = JobOpportunityStage.objects.create(
+            job=job,
+            name='غربالگری اولیه',
+            weight=100,
+            sequence=1,
+            stage_type='SCREENING'
+        )
+
+        self.client.login(username='recruiter_test', password='password123')
+        
+        # Scenario 1: Without recruitment plan
+        url = reverse('job_print_doc', kwargs={'pk': job.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'تاریخ شروع جذب (برنامه‌ریزی)')
+
+        # Scenario 2: With recruitment plan
+        from apps.recruitment_planning.models import JobRecruitmentPlan, JobStagePlan
+        plan = JobRecruitmentPlan.objects.create(
+            job=job,
+            start_date=date(2026, 6, 8),
+            predicted_end_date=date(2026, 6, 15),
+            status=JobRecruitmentPlan.STATUS_ACTIVE
+        )
+        JobStagePlan.objects.create(
+            plan=plan,
+            stage=stage,
+            stage_type='SCREENING',
+            planned_start_date=date(2026, 6, 8),
+            planned_end_date=date(2026, 6, 13),
+            sla_days=5
+        )
+
+        response_with_plan = self.client.get(url)
+        self.assertEqual(response_with_plan.status_code, 200)
+        self.assertContains(response_with_plan, 'تاریخ شروع جذب (برنامه‌ریزی)')
+        self.assertContains(response_with_plan, '1405/03/18') # 2026-06-08 is 1405-03-18
+        self.assertContains(response_with_plan, '1405/03/23') # 2026-06-13 is 1405-03-23

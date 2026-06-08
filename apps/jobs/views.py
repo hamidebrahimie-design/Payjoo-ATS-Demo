@@ -43,7 +43,7 @@ class JobOpportunityCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView
 
     def get_success_url(self):
         from django.urls import reverse
-        return reverse('job_print_doc', kwargs={'pk': self.object.pk})
+        return reverse('job_planning', kwargs={'job_id': self.object.pk}) + '?next=print_doc'
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)

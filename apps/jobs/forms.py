@@ -104,18 +104,31 @@ class BaseJobOpportunityStageFormSet(BaseInlineFormSet):
             raise ValidationError(f"مجموع وزن مراحل ارزیابی باید دقیقاً ۱۰۰٪ باشد. در حال حاضر مجموع: {total_weight}٪")
 
 
+class JobOpportunityStageForm(forms.ModelForm):
+    class Meta:
+        model = JobOpportunityStage
+        fields = ['name', 'stage_type', 'weight', 'sequence']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control stage-name', 'placeholder': 'مثال: آزمون کتبی'}),
+            'stage_type': forms.Select(attrs={'class': 'form-select stage-type'}),
+            'weight': forms.NumberInput(attrs={'class': 'form-control stage-weight', 'min': 0, 'max': 100, 'placeholder': 'درصد'}),
+            'sequence': forms.NumberInput(attrs={'class': 'form-control stage-sequence', 'min': 1, 'placeholder': 'ترتیب'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['stage_type'].required = False
+        if not self.instance.pk and not self.initial.get('stage_type'):
+            self.initial['stage_type'] = 'OTHER'
+
+
 JobOpportunityFormSet = inlineformset_factory(
     JobOpportunity,
     JobOpportunityStage,
     formset=BaseJobOpportunityStageFormSet,
-    fields=['name', 'weight', 'sequence'],
+    form=JobOpportunityStageForm,
     extra=1,
-    can_delete=True,
-    widgets={
-        'name': forms.TextInput(attrs={'class': 'form-control stage-name', 'placeholder': 'مثال: آزمون کتبی'}),
-        'weight': forms.NumberInput(attrs={'class': 'form-control stage-weight', 'min': 0, 'max': 100, 'placeholder': 'درصد'}),
-        'sequence': forms.NumberInput(attrs={'class': 'form-control stage-sequence', 'min': 1, 'placeholder': 'ترتیب'}),
-    }
+    can_delete=True
 )
 
 
@@ -157,16 +170,29 @@ class BaseWorkflowStageTemplateFormSet(BaseInlineFormSet):
             raise ValidationError(f"مجموع وزن مراحل پیش‌فرض الگو باید دقیقاً ۱۰۰٪ باشد. در حال حاضر مجموع: {total_weight}٪")
 
 
+class WorkflowStageTemplateForm(forms.ModelForm):
+    class Meta:
+        model = WorkflowStageTemplate
+        fields = ['name', 'stage_type', 'default_weight', 'sequence']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control stage-name', 'placeholder': 'مثال: مصاحبه فنی'}),
+            'stage_type': forms.Select(attrs={'class': 'form-select stage-type'}),
+            'default_weight': forms.NumberInput(attrs={'class': 'form-control stage-weight', 'min': 0, 'max': 100, 'placeholder': 'درصد'}),
+            'sequence': forms.NumberInput(attrs={'class': 'form-control stage-sequence', 'min': 1, 'placeholder': 'ترتیب'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['stage_type'].required = False
+        if not self.instance.pk and not self.initial.get('stage_type'):
+            self.initial['stage_type'] = 'OTHER'
+
+
 WorkflowStageTemplateFormSet = inlineformset_factory(
     WorkflowTemplate,
     WorkflowStageTemplate,
     formset=BaseWorkflowStageTemplateFormSet,
-    fields=['name', 'default_weight', 'sequence'],
+    form=WorkflowStageTemplateForm,
     extra=1,
-    can_delete=True,
-    widgets={
-        'name': forms.TextInput(attrs={'class': 'form-control stage-name', 'placeholder': 'مثال: مصاحبه فنی'}),
-        'default_weight': forms.NumberInput(attrs={'class': 'form-control stage-weight', 'min': 0, 'max': 100, 'placeholder': 'درصد'}),
-        'sequence': forms.NumberInput(attrs={'class': 'form-control stage-sequence', 'min': 1, 'placeholder': 'ترتیب'}),
-    }
+    can_delete=True
 )
