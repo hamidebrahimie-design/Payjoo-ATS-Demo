@@ -142,5 +142,5 @@ try:
     with open(BASE_DIR / 'version.txt', 'r') as _f:
         APP_VERSION = _f.read().strip()
 except Exception:
-    APP_VERSION = '1.3.1'
+    APP_VERSION = '1.3.3'
 

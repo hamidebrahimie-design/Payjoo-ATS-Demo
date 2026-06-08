@@ -436,7 +436,11 @@ class SystemBackupView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_version'] = getattr(settings, 'APP_VERSION', '1.0.0')
+        try:
+            with open(settings.BASE_DIR / 'version.txt', 'r') as _f:
+                context['current_version'] = _f.read().strip()
+        except Exception:
+            context['current_version'] = getattr(settings, 'APP_VERSION', '1.0.0')
         return context
 
 
@@ -709,7 +713,15 @@ class SystemUpdateCheckView(LoginRequiredMixin, RoleRequiredMixin, View):
     allowed_roles = [UserProfile.ROLE_ADMIN]
 
     def get(self, request):
-        local_version = getattr(settings, 'APP_VERSION', '1.0.0')
+        # خواندن مستقیم از فایل به جای settings کش‌شده
+        def _read_local_version():
+            try:
+                with open(settings.BASE_DIR / 'version.txt', 'r') as _f:
+                    return _f.read().strip()
+            except Exception:
+                return getattr(settings, 'APP_VERSION', '1.0.0')
+
+        local_version = _read_local_version()
         remote_version = None
         error_msg = None
         
@@ -887,7 +899,12 @@ class SystemUpdateRunView(LoginRequiredMixin, RoleRequiredMixin, View):
 class SystemHealthCheckView(View):
     def get(self, request):
         from django.http import JsonResponse
-        return JsonResponse({'status': 'ok', 'version': getattr(settings, 'APP_VERSION', '1.0.0')})
+        try:
+            with open(settings.BASE_DIR / 'version.txt', 'r') as _f:
+                ver = _f.read().strip()
+        except Exception:
+            ver = getattr(settings, 'APP_VERSION', '1.0.0')
+        return JsonResponse({'status': 'ok', 'version': ver})
 
 
 class SystemRestartView(LoginRequiredMixin, RoleRequiredMixin, View):
