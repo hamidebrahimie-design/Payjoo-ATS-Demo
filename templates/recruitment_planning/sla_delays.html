@@ -163,10 +163,10 @@
         <div class="col-md-2">
             <select name="priority" class="form-select bg-light text-xs" style="border-radius: 8px;">
                 <option value="">همه اولویت‌ها</option>
-                <option value="CRITICAL" {% if selected_priority == 'CRITICAL' %}selected{% endif %}>بحرانی (تأخیر > ۱۰ روز)</option>
-                <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>بالا (تأخیر ۵ تا ۱۰ روز)</option>
-                <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>متوسط (تأخیر ۱ تا ۵ روز)</option>
-                <option value="ON_TRACK" {% if selected_priority == 'ON_TRACK' %}selected{% endif %}>عادی (بدون تأخیر)</option>
+                <option value="CRITICAL" {% if selected_priority == 'CRITICAL' %}selected{% endif %}>بیشتر از ۳۰ روز</option>
+                <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>۱۰ تا ۳۰ روز</option>
+                <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>زیر ۱۰ روز</option>
+                <option value="ON_TRACK" {% if selected_priority == 'ON_TRACK' %}selected{% endif %}>بدون تاخیر</option>
             </select>
         </div>
         <div class="col-md-2 d-flex gap-2">

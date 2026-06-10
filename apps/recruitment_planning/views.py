@@ -861,18 +861,17 @@ class SlaDelaysDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
                 
                 # اولویت تأخیر
                 priority = 'ON_TRACK'
-                priority_label = 'در جریان / عادی'
+                priority_label = 'بدون تاخیر'
                 if is_delayed:
-                    if overdue_days > 10:
+                    if overdue_days > 30:
                         priority = 'CRITICAL'
-                        priority_label = 'بحرانی'
-                    elif overdue_days > 5:
+                        priority_label = 'بیشتر از ۳۰ روز'
+                    elif overdue_days >= 10:
                         priority = 'HIGH'
-                        priority_label = 'بالا'
-                      # overdue_days <= 5 and > 0
+                        priority_label = '۱۰ تا ۳۰ روز'
                     else:
                         priority = 'MEDIUM'
-                        priority_label = 'متوسط'
+                        priority_label = 'زیر ۱۰ روز'
                         
                 # ساخت داده کاندیدا
                 cand_data = {
