@@ -254,9 +254,25 @@ class ApplicationStageState(SoftDeleteModel):
         
         # Calculate final weighted score for the application
         app = self.application
-        
-        # Auto-advance current_stage if the stage status is completed or conditionally passed, and the application is still IN_PROGRESS
         update_fields = ['final_score']
+        
+        # 1. Update application status based on stage status
+        if self.status == self.STATUS_FAILED and not self.is_conditional_pass:
+            if app.status != JobApplication.STATUS_REJECTED:
+                app.status = JobApplication.STATUS_REJECTED
+                update_fields.append('status')
+        elif (self.status == self.STATUS_COMPLETED or self.is_conditional_pass) and app.status == JobApplication.STATUS_REJECTED:
+            # Revert to IN_PROGRESS if no other stages are failed
+            other_failed = app.stage_states.filter(
+                status=self.STATUS_FAILED,
+                is_conditional_pass=False,
+                is_deleted=False
+            ).exclude(pk=self.pk).exists()
+            if not other_failed:
+                app.status = JobApplication.STATUS_IN_PROGRESS
+                update_fields.append('status')
+
+        # 2. Auto-advance current_stage if the stage status is completed or conditionally passed, and the application is still IN_PROGRESS
         if (self.status == self.STATUS_COMPLETED or self.is_conditional_pass) and app.status == JobApplication.STATUS_IN_PROGRESS:
             if not app.current_stage or app.current_stage.sequence <= self.stage.sequence:
                 next_stage = app.job.stages.filter(
