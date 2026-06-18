@@ -2360,4 +2360,40 @@ class CandidateModuleTests(TestCase):
         self.assertEqual(response_excel['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         self.assertTrue(response_excel['Content-Disposition'].startswith('attachment;'))
 
+    def test_active_job_without_candidates_integrity_check(self):
+        """تست پایش سلامت داده‌ها برای فرصت‌های شغلی فعال فاقد متقاضی"""
+        from apps.jobs.models import JobOpportunity
+        from apps.candidates.integrity_engine import IntegrityScanner
+
+        # 1. Update status of the existing job to SCREENING (active evaluation stage)
+        self.job.status = JobOpportunity.STATUS_SCREENING
+        self.job.save()
+
+        # Clean existing applications for this job if any
+        self.job.applications.filter(is_deleted=False).update(is_deleted=True)
+
+        # 2. Run scan
+        scan_results = IntegrityScanner.run_scan(force=True)
+        
+        # Check if the job is flagged in the scan results
+        active_job_issues = [
+            issue for issue in scan_results['import_issues']
+            if issue['code'] == 'active_job_no_candidates' and issue['job_id'] == self.job.id
+        ]
+        self.assertEqual(len(active_job_issues), 1)
+        self.assertEqual(active_job_issues[0]['job_code'], self.job.code)
+        
+        # 3. Access Data Integrity Dashboard page as ADMIN
+        admin_user = User.objects.create_user(username='admin_test_user', password='password123')
+        admin_user.profile.role = UserProfile.ROLE_ADMIN
+        admin_user.profile.save()
+        
+        self.client.login(username='admin_test_user', password='password123')
+        url = reverse('data_integrity_dashboard')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'فرصت‌های شغلی فعال فاقد متقاضی')
+        self.assertContains(response, self.job.title)
+
+
 

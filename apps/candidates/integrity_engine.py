@@ -549,6 +549,61 @@ class StageCompletedWithoutPlanDateCheck(BaseIntegrityCheck):
         return False, "این مغایرت باید با ثبت تاریخ ارزیابی مرحله در بالای پایپلاین برطرف گردد."
 
 
+# 9. Active Job Opportunity Without Candidates Check (Category: import, Flag Only)
+class ActiveJobWithoutCandidatesCheck(BaseIntegrityCheck):
+    code = "active_job_no_candidates"
+    name = "فرصت شغلی فعال فاقد متقاضی"
+    description = "فرصت‌های شغلی که وضعیت آن‌ها در یکی از مراحل ارزیابی است ولی هیچ متقاضی برای آن‌ها ثبت نشده است."
+    category = "import"
+    is_auto_fixable = False
+
+    def scan(self):
+        discrepancies = []
+        from apps.jobs.models import JobOpportunity
+        target_statuses = [
+            JobOpportunity.STATUS_SCREENING,
+            JobOpportunity.STATUS_EXAM,
+            JobOpportunity.STATUS_SKILL_TEST,
+            JobOpportunity.STATUS_INTERVIEW,
+            JobOpportunity.STATUS_ASSESSMENT,
+        ]
+        
+        jobs = JobOpportunity.objects.filter(
+            status__in=target_statuses,
+            is_deleted=False
+        )
+        
+        for job in jobs:
+            candidate_count = job.applications.filter(is_deleted=False).count()
+            if candidate_count == 0:
+                issue_id = f"job_no_cand_{job.id}"
+                discrepancies.append({
+                    'id': issue_id,
+                    'code': self.code,
+                    'entity_id': job.id,
+                    'candidate_name': None,
+                    'national_id': None,
+                    'candidate_id': None,
+                    'job_title': job.title,
+                    'job_code': job.code,
+                    'job_id': job.id,
+                    'details': f"وضعیت فرصت شغلی در مرحله «{job.get_status_display()}» است، اما هیچ متقاضی برای آن ثبت نشده است.",
+                    'is_auto_fixable': self.is_auto_fixable,
+                    'actions': [
+                        {
+                            'key': 'flag_only',
+                            'label': 'نیاز به تعریف متقاضی یا ایمپورت از اکسل',
+                            'type': 'flag'
+                        }
+                    ]
+                })
+        return discrepancies
+
+    @staticmethod
+    def resolve(job_id, action_key, choice_val=None, user=None):
+        return False, "این مغایرت باید با اضافه کردن متقاضی یا ایمپورت سوابق اکسل برطرف گردد."
+
+
 # Integrity Scanner Manager
 class IntegrityScanner:
     _checks = [
@@ -559,7 +614,8 @@ class IntegrityScanner:
         LogicalDateAnomalyCheck(),
         StatusSyncCompletedCheck(),
         CompletedStageWithoutDateCheck(),
-        StageCompletedWithoutPlanDateCheck()
+        StageCompletedWithoutPlanDateCheck(),
+        ActiveJobWithoutCandidatesCheck()
     ]
 
     @classmethod
