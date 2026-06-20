@@ -76,6 +76,29 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         UserProfile.ROLE_READ_ONLY_AUDITOR,
     ]
 
+    def dispatch(self, request, *args, **kwargs):
+        from django.urls import reverse
+        from django.shortcuts import redirect
+
+        # 1. Clear filters if explicitly requested
+        if 'clear' in request.GET:
+            request.session.pop('jobs_filter_params', None)
+            return redirect('job_list')
+
+        # 2. Check if request has any query parameters
+        has_params = any(k for k in request.GET.keys())
+
+        if has_params:
+            # Save query params to session
+            request.session['jobs_filter_params'] = request.GET.urlencode()
+        else:
+            # Restore saved query params from session if available
+            saved_params = request.session.get('jobs_filter_params')
+            if saved_params:
+                return redirect(f"{reverse('job_list')}?{saved_params}")
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         from django.db.models import Count, Q
         queryset = JobOpportunity.objects.filter(is_deleted=False)
@@ -266,6 +289,34 @@ class JobOpportunityUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView
             return self.form_invalid(form)
 
 
+class JobOpportunityDeleteConfirmView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_RECRUITMENT_DIRECTOR,
+        UserProfile.ROLE_RECRUITMENT_SPECIALIST,
+        UserProfile.ROLE_JOB_CLASSIFICATION_USER,
+    ]
+
+    def get(self, request, pk):
+        job = get_object_or_404(JobOpportunity, pk=pk)
+        applications = job.applications.filter(is_deleted=False)
+        candidate_count = applications.count()
+        
+        exclusive_candidates_count = 0
+        for app in applications:
+            candidate = app.candidate
+            other_apps_count = candidate.applications.filter(is_deleted=False).exclude(job=job).count()
+            if other_apps_count == 0:
+                exclusive_candidates_count += 1
+                
+        context = {
+            'job': job,
+            'candidate_count': candidate_count,
+            'exclusive_candidates_count': exclusive_candidates_count,
+        }
+        return render(request, 'jobs/job_delete_confirm.html', context)
+
+
 class JobOpportunityDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
     allowed_roles = [
         UserProfile.ROLE_ADMIN,
@@ -275,9 +326,40 @@ class JobOpportunityDeleteView(LoginRequiredMixin, RoleRequiredMixin, View):
     ]
 
     def delete(self, request, pk):
+        return self._do_delete(request, pk, cleanup_option='keep')
+
+    def post(self, request, pk):
+        cleanup_option = request.POST.get('cleanup_option', 'keep')
+        return self._do_delete(request, pk, cleanup_option=cleanup_option)
+
+    def _do_delete(self, request, pk, cleanup_option):
+        from django.db import transaction
+        from django.utils import timezone
+        
         job = get_object_or_404(JobOpportunity, pk=pk)
-        job.delete()  # Soft delete
-        return HttpResponse("")
+        
+        with transaction.atomic():
+            # Soft delete applications and handle candidates
+            applications = job.applications.filter(is_deleted=False)
+            for app in applications:
+                candidate = app.candidate
+                other_apps_count = candidate.applications.filter(is_deleted=False).exclude(job=job).count()
+                
+                if other_apps_count == 0 and cleanup_option == 'delete_exclusive':
+                    candidate.delete()
+                    
+                app.delete()
+                app.stage_states.filter(is_deleted=False).update(is_deleted=True, deleted_at=timezone.now())
+                
+            # Soft delete stages
+            job.stages.filter(is_deleted=False).update(is_deleted=True, deleted_at=timezone.now())
+            
+            # Soft delete the job opportunity itself
+            job.delete()
+            
+        response = HttpResponse("")
+        response["HX-Trigger"] = "close-modal"
+        return response
 
 
 class WorkflowTemplateListView(LoginRequiredMixin, RoleRequiredMixin, ListView):

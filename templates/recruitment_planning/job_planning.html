@@ -153,6 +153,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize process start date picker
         kamaDatepicker('start_date', {
             buttonsColor: '#0052cc',
             markToday: true,
@@ -162,14 +163,24 @@
             nextButtonIcon: '>',
             previousButtonIcon: '<'
         });
+        // Allow manual typing
+        $('#start_date').removeAttr('readonly');
 
-        $(document).on('click', '#bd-root-start_date', function() {
-            setTimeout(function() {
-                const input = document.getElementById('start_date');
-                if (input) {
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }, 50);
+        // If start date changes, clear previous stage date overrides so they recalculate
+        $(document).on('change', '#start_date', function() {
+            $('.stage-datepicker').val('');
+        });
+
+        // Dispatch change event ONLY when a day is actually selected in the calendar
+        $(document).on('click', '#bd-main-start_date', function(e) {
+            if ($(e.target).closest('.bd-table td').length > 0) {
+                setTimeout(function() {
+                    const input = document.getElementById('start_date');
+                    if (input) {
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }, 50);
+            }
         });
 
         // Initialize datepickers for steps in schedule preview
@@ -187,27 +198,31 @@
                         previousButtonIcon: '<'
                     });
                     $(this).data('kama-init', true);
+                    // Allow manual typing
+                    $(this).removeAttr('readonly');
                 }
             });
         }
 
-        // Initialize on HTMX load/swap
+        // Initialize on HTMX load/swap for both standalone and modal previews
         document.body.addEventListener('htmx:afterSwap', function(evt) {
-            if (evt.detail.target.id === 'schedule-preview-container') {
+            if (evt.detail.target.id === 'schedule-preview-container' || evt.detail.target.id === 'schedule-preview-container-modal') {
                 initializeDatepickers();
             }
         });
 
-        // Handle dynamically created datepicker click selections to fire HTMX submit
-        $(document).on('click', '[id^="bd-root-date_"]', function() {
-            const rootId = $(this).attr('id');
-            const inputId = rootId.replace('bd-root-', '');
-            setTimeout(function() {
-                const input = document.getElementById(inputId);
-                if (input) {
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }, 50);
+        // Handle dynamically created datepicker day clicks to trigger HTMX submit (exclude month/year navigation clicks)
+        $(document).on('click', '[id^="bd-main-date_"]', function(e) {
+            if ($(e.target).closest('.bd-table td').length > 0) {
+                const mainId = $(this).attr('id');
+                const inputId = mainId.replace('bd-main-', '');
+                setTimeout(function() {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }, 50);
+            }
         });
     });
 </script>

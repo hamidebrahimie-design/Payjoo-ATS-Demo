@@ -2562,20 +2562,17 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
                 errors.append(f"ردیف {idx} ({first_name} {last_name}): فرمت ایمیل نامعتبر است.")
                 continue
 
-            # Check duplicate national_id in DB
-            if Candidate.objects.filter(national_id=national_id, is_deleted=False).exists():
-                errors.append(f"ردیف {idx} ({first_name} {last_name}): متقاضی با کد ملی {national_id} از قبل در سیستم وجود دارد.")
-                continue
-
-            # Check duplicate user in DB
-            if User.objects.filter(username=national_id).exists():
-                errors.append(f"ردیف {idx} ({first_name} {last_name}): کاربر سیستم با کد ملی {national_id} از قبل در سیستم وجود دارد.")
-                continue
+            # Determine if candidate already exists (including soft-deleted)
+            existing_candidate = Candidate.all_objects.filter(national_id=national_id).first()
 
             # Check duplicate personnel number (if provided)
-            if personnel_number and Candidate.objects.filter(personnel_number=personnel_number, is_deleted=False).exists():
-                errors.append(f"ردیف {idx} ({first_name} {last_name}): متقاضی با شماره پرسنلی {personnel_number} از قبل وجود دارد.")
-                continue
+            if personnel_number:
+                p_num_taken = Candidate.objects.filter(personnel_number=personnel_number, is_deleted=False)
+                if existing_candidate:
+                    p_num_taken = p_num_taken.exclude(pk=existing_candidate.pk)
+                if p_num_taken.exists():
+                    errors.append(f"ردیف {idx} ({first_name} {last_name}): متقاضی با شماره پرسنلی {personnel_number} از قبل وجود دارد.")
+                    continue
 
             # Map Persian degree string to DB choices keys
             degree_choice = None
@@ -2590,62 +2587,118 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
                 elif "کارشناسی" in val or "bachelor" in val or "لیسانس" in val:
                     degree_choice = 'BACHELOR'
 
-            # Create candidate
+            # Create or update candidate
             try:
+                from django.db import transaction
                 with transaction.atomic():
-                    # Create Django User
-                    user = User.objects.create_user(
-                        username=national_id,
-                        email=email,
-                        password=phone_number,
-                        first_name=first_name,
-                        last_name=last_name
-                    )
-                    
-                    # Update UserProfile role to CANDIDATE
-                    profile = user.profile
-                    profile.role = UserProfile.ROLE_CANDIDATE
-                    profile.phone_number = phone_number
-                    profile.save()
+                    if existing_candidate:
+                        # Restore if soft-deleted
+                        if existing_candidate.is_deleted:
+                            existing_candidate.is_deleted = False
+                            existing_candidate.deleted_at = None
+                        
+                        # Update candidate fields
+                        existing_candidate.first_name = first_name or existing_candidate.first_name
+                        existing_candidate.last_name = last_name or existing_candidate.last_name
+                        existing_candidate.email = email or existing_candidate.email
+                        existing_candidate.phone_number = phone_number or existing_candidate.phone_number
+                        if personnel_number:
+                            existing_candidate.personnel_number = personnel_number
+                        existing_candidate.save()
+                        
+                        # Update associated User and Profile
+                        user = existing_candidate.user
+                        if user:
+                            user.first_name = first_name or user.first_name
+                            user.last_name = last_name or user.last_name
+                            user.email = email or user.email
+                            user.save()
+                            
+                            profile = user.profile
+                            profile.role = UserProfile.ROLE_CANDIDATE
+                            profile.phone_number = phone_number or profile.phone_number
+                            profile.save()
+                            
+                        candidate = existing_candidate
+                    else:
+                        # Create new Django User
+                        user = User.objects.filter(username=national_id).first()
+                        if not user:
+                            user = User.objects.create_user(
+                                username=national_id,
+                                email=email,
+                                password=phone_number,
+                                first_name=first_name,
+                                last_name=last_name
+                            )
+                        
+                        # Update UserProfile role to CANDIDATE
+                        profile = user.profile
+                        profile.role = UserProfile.ROLE_CANDIDATE
+                        profile.phone_number = phone_number
+                        profile.save()
 
-                    # Create Candidate
-                    candidate = Candidate.objects.create(
-                        user=user,
-                        first_name=first_name,
-                        last_name=last_name,
-                        national_id=national_id,
-                        email=email,
-                        phone_number=phone_number,
-                        personnel_number=personnel_number if personnel_number else None
-                    )
+                        # Create Candidate
+                        candidate = Candidate.objects.create(
+                            user=user,
+                            first_name=first_name,
+                            last_name=last_name,
+                            national_id=national_id,
+                            email=email,
+                            phone_number=phone_number,
+                            personnel_number=personnel_number if personnel_number else None
+                        )
                     
                     # Create education record if degree and major are specified
                     if degree_choice and major_str:
-                        CandidateEducation.objects.create(
+                        # Only create education if it doesn't already exist for this candidate
+                        edu_exists = CandidateEducation.objects.filter(
                             candidate=candidate,
                             degree=degree_choice,
                             major=major_str,
-                            university="ثبت نشده",
-                            gpa=0.0,
-                            graduation_year=1400
-                        )
+                            is_deleted=False
+                        ).exists()
+                        if not edu_exists:
+                            CandidateEducation.objects.create(
+                                candidate=candidate,
+                                degree=degree_choice,
+                                major=major_str,
+                                university="ثبت نشده",
+                                gpa=0.0,
+                                graduation_year=1400
+                            )
 
                     # Create skill records if specified
                     if skills_str:
                         skills_list = [s.strip() for s in re.split(r'[,،]', skills_str) if s.strip()]
                         for s_name in skills_list:
-                            CandidateSkill.objects.create(
+                            skill_exists = CandidateSkill.objects.filter(
                                 candidate=candidate,
                                 name=s_name,
-                                level='INTERMEDIATE'
-                            )
+                                is_deleted=False
+                            ).exists()
+                            if not skill_exists:
+                                CandidateSkill.objects.create(
+                                    candidate=candidate,
+                                    name=s_name,
+                                    level='INTERMEDIATE'
+                                )
 
-                    # If target job is specified, create JobApplication
+                    # If target job is specified, create or restore JobApplication
                     if target_job:
-                        JobApplication.objects.create(
-                            job=target_job,
-                            candidate=candidate
-                        )
+                        application = JobApplication.all_objects.filter(job=target_job, candidate=candidate).first()
+                        if application:
+                            if application.is_deleted:
+                                application.is_deleted = False
+                                application.deleted_at = None
+                                application.status = JobApplication.STATUS_IN_PROGRESS
+                                application.save()
+                        else:
+                            JobApplication.objects.create(
+                                job=target_job,
+                                candidate=candidate,
+                                status=JobApplication.STATUS_IN_PROGRESS
+                            )
                 success_count += 1
             except Exception as ex:
                 errors.append(f"ردیف {idx} ({first_name} {last_name}): خطا در ثبت داده‌ها: {str(ex)}")

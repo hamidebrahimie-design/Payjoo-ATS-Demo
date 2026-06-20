@@ -641,7 +641,7 @@ def execute_final_import(import_session, conflict_strategy, user):
         sc_first = sc_list[0]
         
         # دریافت یا ایجاد متقاضی
-        candidate = Candidate.objects.filter(national_id=nid, is_deleted=False).first()
+        candidate = Candidate.all_objects.filter(national_id=nid).first()
         if not candidate:
             log_info(f"در حال ایجاد متقاضی جدید: {sc_first.first_name} {sc_first.last_name} ({nid})", sc_first.sheet_name, sc_first.row_index)
             candidate = Candidate.objects.create(
@@ -652,7 +652,13 @@ def execute_final_import(import_session, conflict_strategy, user):
                 email=sc_first.email
             )
         else:
-            log_info(f"متقاضی '{candidate.first_name} {candidate.last_name}' با کد ملی '{nid}' از قبل وجود دارد. استفاده مجدد.", sc_first.sheet_name, sc_first.row_index)
+            if candidate.is_deleted:
+                candidate.is_deleted = False
+                candidate.deleted_at = None
+                log_info(f"متقاضی حذف‌شده '{candidate.first_name} {candidate.last_name}' با کد ملی '{nid}' بازیابی شد.", sc_first.sheet_name, sc_first.row_index)
+            else:
+                log_info(f"متقاضی '{candidate.first_name} {candidate.last_name}' با کد ملی '{nid}' از قبل وجود دارد. استفاده مجدد.", sc_first.sheet_name, sc_first.row_index)
+            
             if sc_first.phone_number and not candidate.phone_number:
                 candidate.phone_number = sc_first.phone_number
             if sc_first.email and not candidate.email:
@@ -665,8 +671,14 @@ def execute_final_import(import_session, conflict_strategy, user):
         for jcode in jobs_for_cand:
             job = job_map[jcode]
             
-            application = JobApplication.objects.filter(job=job, candidate=candidate, is_deleted=False).first()
-            if not application:
+            application = JobApplication.all_objects.filter(job=job, candidate=candidate).first()
+            if application:
+                if application.is_deleted:
+                    application.is_deleted = False
+                    application.deleted_at = None
+                    application.status = JobApplication.STATUS_IN_PROGRESS
+                    application.save()
+            else:
                 application = JobApplication.objects.create(
                     job=job,
                     candidate=candidate,

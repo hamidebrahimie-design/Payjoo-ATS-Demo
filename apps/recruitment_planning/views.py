@@ -56,17 +56,63 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
         # Get start/end dates of requested Jalali month
         g_start, g_end = get_jalali_month_range(year, month)
 
+        # Get query parameters
+        search_query = request.GET.get('q', '').strip()
+        selected_dept = request.GET.get('department', '').strip()
+        sort_by = request.GET.get('sort_by', '-created_at').strip()
+
         # Active plans
         active_plans = JobRecruitmentPlan.objects.filter(
             status=JobRecruitmentPlan.STATUS_ACTIVE, 
             is_deleted=False,
             job__is_deleted=False
         ).exclude(job__status__in=[JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED])
+        
         draft_plans = JobRecruitmentPlan.objects.filter(
             status=JobRecruitmentPlan.STATUS_DRAFT, 
             is_deleted=False,
             job__is_deleted=False
         ).exclude(job__status__in=[JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED])
+
+        # Get list of unique departments for the dropdown
+        departments = JobOpportunity.objects.filter(
+            is_deleted=False
+        ).exclude(
+            department=''
+        ).values_list('department', flat=True).distinct().order_by('department')
+
+        # Apply filtering to active plans & drafts
+        from django.db.models import Q
+        if search_query:
+            active_plans = active_plans.filter(
+                Q(job__title__icontains=search_query) | 
+                Q(job__code__icontains=search_query) |
+                Q(job__request_number__icontains=search_query)
+            )
+            draft_plans = draft_plans.filter(
+                Q(job__title__icontains=search_query) | 
+                Q(job__code__icontains=search_query) |
+                Q(job__request_number__icontains=search_query)
+            )
+
+        if selected_dept:
+            active_plans = active_plans.filter(job__department=selected_dept)
+            draft_plans = draft_plans.filter(job__department=selected_dept)
+
+        # Apply sorting to active plans
+        valid_sorts = {
+            'start_date': 'start_date',
+            '-start_date': '-start_date',
+            'predicted_end_date': 'predicted_end_date',
+            '-predicted_end_date': '-predicted_end_date',
+            'title': 'job__title',
+            '-title': '-job__title',
+            'headcount': '-job__headcount',
+            'created_at': 'created_at',
+            '-created_at': '-created_at'
+        }
+        order_by_field = valid_sorts.get(sort_by, '-created_at')
+        active_plans = active_plans.order_by(order_by_field)
         
         # Find delayed plans (outside SLA)
         delayed_plans = []
@@ -138,6 +184,16 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
             recruitment_plan__isnull=False,
             recruitment_plan__is_deleted=False
         )
+
+        if search_query:
+            unplanned_jobs = unplanned_jobs.filter(
+                Q(title__icontains=search_query) | 
+                Q(code__icontains=search_query)
+            )
+        if selected_dept:
+            unplanned_jobs = unplanned_jobs.filter(department=selected_dept)
+            
+        unplanned_jobs = unplanned_jobs.order_by('title')
 
 
         # Agenda for the next 7 days
@@ -214,6 +270,10 @@ class PlanningDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
             'selected_year': year,
             'selected_month': month,
             'agenda_events': agenda_events,
+            'search_query': search_query,
+            'selected_dept': selected_dept,
+            'sort_by': sort_by,
+            'departments': departments,
         }
         return render(request, 'recruitment_planning/dashboard.html', context)
 

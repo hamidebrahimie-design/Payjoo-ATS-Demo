@@ -40,6 +40,32 @@ class JobOpportunityAndWorkflowTests(TestCase):
         self.assertEqual(self.stage1.default_weight, 40)
         self.assertEqual(self.stage2.default_weight, 60)
 
+    def test_job_list_filtering_and_sorting_state_preservation(self):
+        """تست حفظ وضعیت فیلترها و مرتب‌سازی در لیست فرصت‌های شغلی با استفاده از سشن"""
+        self.client.login(username='recruiter_test', password='password123')
+
+        # 1. Initially request list view with query parameters
+        url = reverse('job_list') + '?q=Python&sort=title&order=asc'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # Verify that parameters are stored in session
+        self.assertEqual(self.client.session.get('jobs_filter_params'), 'q=Python&sort=title&order=asc')
+
+        # 2. Access the list view WITHOUT parameters (simulating going back to the page)
+        response_back = self.client.get(reverse('job_list'))
+        # Should redirect to preserve state
+        self.assertEqual(response_back.status_code, 302)
+        self.assertIn('q=Python&sort=title&order=asc', response_back.url)
+
+        # 3. Request clear parameter to clear filters
+        response_clear = self.client.get(reverse('job_list') + '?clear=1')
+        self.assertEqual(response_clear.status_code, 302)
+        self.assertEqual(response_clear.url, reverse('job_list'))
+
+        # Verify session is cleared
+        self.assertNotIn('jobs_filter_params', self.client.session)
+
     def test_job_opportunity_copies_workflow_stages(self):
         """تست اینکه با ایجاد فرصت شغلی جدید، مراحل پیش‌فرض از الگوی فرآیند کپی می‌شوند"""
         job = JobOpportunity.objects.create(
@@ -521,5 +547,167 @@ class JobOpportunitySortingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         jobs = list(response.context['jobs'])
         self.assertEqual([j.headcount for j in jobs], [1, 2, 5])
+
+
+class JobOpportunityDeletionAndReuseTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(username='delete_recruiter', password='password123')
+        self.recruiter.profile.role = 'RECRUITMENT_SPECIALIST'
+        self.recruiter.profile.save()
+        self.client.login(username='delete_recruiter', password='password123')
+
+        from apps.candidates.models import Candidate, JobApplication
+        self.Candidate = Candidate
+        self.JobApplication = JobApplication
+
+    def test_reusing_code_and_request_number_after_deletion(self):
+        """تست استفاده مجدد از کد و شماره درخواست پس از حذف نرم"""
+        job1 = JobOpportunity.objects.create(
+            request_number='REQ-REUSE-01',
+            title='شغل اول',
+            code='CODE-REUSE-01',
+            department='فناوری'
+        )
+        job1.delete()
+
+        # Should be able to create a new one with same fields
+        try:
+            job2 = JobOpportunity.objects.create(
+                request_number='REQ-REUSE-01',
+                title='شغل دوم',
+                code='CODE-REUSE-01',
+                department='فناوری'
+            )
+        except Exception as e:
+            self.fail(f"Could not create job with reused code/request_number: {e}")
+
+        self.assertEqual(JobOpportunity.objects.filter(code='CODE-REUSE-01').count(), 1)
+        self.assertEqual(JobOpportunity.all_objects.filter(code='CODE-REUSE-01').count(), 2)
+
+    def test_active_jobs_cannot_have_duplicate_code_or_request_number(self):
+        """تست عدم امکان ثبت دو فرصت شغلی فعال با کد یا شماره درخواست یکسان"""
+        from django.db import IntegrityError, transaction
+
+        JobOpportunity.objects.create(
+            request_number='REQ-DUP-01',
+            title='شغل فعال',
+            code='CODE-DUP-01',
+            department='فناوری'
+        )
+
+        # Test duplicate code
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                JobOpportunity.objects.create(
+                    request_number='REQ-DUP-02',
+                    title='شغل دیگر با همان کد',
+                    code='CODE-DUP-01',
+                    department='فناوری'
+                )
+
+        # Test duplicate request_number
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                JobOpportunity.objects.create(
+                    request_number='REQ-DUP-01',
+                    title='شغل دیگر با همان شماره درخواست',
+                    code='CODE-DUP-02',
+                    department='فناوری'
+                )
+
+    def test_delete_job_and_keep_exclusive_candidates(self):
+        """تست حذف فرصت شغلی و حفظ متقاضیان اختصاصی در بانک استعدادها"""
+        job = JobOpportunity.objects.create(
+            request_number='REQ-DEL-K',
+            title='تست حذف و حفظ',
+            code='CODE-DEL-K',
+            department='فناوری'
+        )
+        candidate = self.Candidate.objects.create(
+            first_name='حسن',
+            last_name='رضایی',
+            national_id='1111111112',
+            phone_number='09121111112'
+        )
+        app = self.JobApplication.objects.create(job=job, candidate=candidate)
+
+        url = reverse('job_delete', kwargs={'pk': job.pk})
+        response = self.client.post(url, {'cleanup_option': 'keep'})
+        self.assertEqual(response.status_code, 200)
+
+        # Job and Application should be soft-deleted
+        self.assertTrue(JobOpportunity.all_objects.get(pk=job.pk).is_deleted)
+        self.assertTrue(self.JobApplication.all_objects.get(pk=app.pk).is_deleted)
+        # Candidate should NOT be deleted
+        candidate.refresh_from_db()
+        self.assertFalse(candidate.is_deleted)
+
+    def test_delete_job_and_delete_exclusive_candidates(self):
+        """تست حذف فرصت شغلی و حذف متقاضیان اختصاصی آن"""
+        job = JobOpportunity.objects.create(
+            request_number='REQ-DEL-D',
+            title='تست حذف و حذف متقاضی',
+            code='CODE-DEL-D',
+            department='فناوری'
+        )
+        candidate = self.Candidate.objects.create(
+            first_name='حسین',
+            last_name='احمدی',
+            national_id='1111111113',
+            phone_number='09121111113'
+        )
+        app = self.JobApplication.objects.create(job=job, candidate=candidate)
+
+        url = reverse('job_delete', kwargs={'pk': job.pk})
+        response = self.client.post(url, {'cleanup_option': 'delete_exclusive'})
+        self.assertEqual(response.status_code, 200)
+
+        # Job, Application and Candidate should be soft-deleted
+        self.assertTrue(JobOpportunity.all_objects.get(pk=job.pk).is_deleted)
+        self.assertTrue(self.JobApplication.all_objects.get(pk=app.pk).is_deleted)
+        
+        # Candidate profile is soft-deleted
+        candidate_from_db = self.Candidate.all_objects.get(pk=candidate.pk)
+        self.assertTrue(candidate_from_db.is_deleted)
+
+    def test_delete_job_does_not_delete_non_exclusive_candidates(self):
+        """تست اینکه حذف فرصت شغلی با انتخاب حذف متقاضیان، متقاضیانی که درخواست دیگری دارند را حذف نمی‌کند"""
+        job1 = JobOpportunity.objects.create(
+            request_number='REQ-DEL-N1',
+            title='تست حذف غیر اختصاصی ۱',
+            code='CODE-DEL-N1',
+            department='فناوری'
+        )
+        job2 = JobOpportunity.objects.create(
+            request_number='REQ-DEL-N2',
+            title='تست حذف غیر اختصاصی ۲',
+            code='CODE-DEL-N2',
+            department='فناوری'
+        )
+        candidate = self.Candidate.objects.create(
+            first_name='جعفر',
+            last_name='عباسی',
+            national_id='1111111114',
+            phone_number='09121111114'
+        )
+        app1 = self.JobApplication.objects.create(job=job1, candidate=candidate)
+        app2 = self.JobApplication.objects.create(job=job2, candidate=candidate)
+
+        url = reverse('job_delete', kwargs={'pk': job1.pk})
+        response = self.client.post(url, {'cleanup_option': 'delete_exclusive'})
+        self.assertEqual(response.status_code, 200)
+
+        # Job1 and App1 should be soft-deleted
+        self.assertTrue(JobOpportunity.all_objects.get(pk=job1.pk).is_deleted)
+        self.assertTrue(self.JobApplication.all_objects.get(pk=app1.pk).is_deleted)
+
+        # Job2 and App2 should NOT be deleted
+        self.assertFalse(JobOpportunity.all_objects.get(pk=job2.pk).is_deleted)
+        self.assertFalse(self.JobApplication.all_objects.get(pk=app2.pk).is_deleted)
+
+        # Candidate should NOT be deleted because they have active application to Job2
+        candidate.refresh_from_db()
+        self.assertFalse(candidate.is_deleted)
+
 
 

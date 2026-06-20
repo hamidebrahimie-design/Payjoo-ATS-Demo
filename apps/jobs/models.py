@@ -79,9 +79,9 @@ class JobOpportunity(SoftDeleteModel):
         ('CONTRACTUAL', 'قراردادی / پروژه‌ای'),
     ]
 
-    request_number = models.CharField(max_length=50, unique=True, verbose_name="شماره درخواست")
+    request_number = models.CharField(max_length=50, verbose_name="شماره درخواست")
     title = models.CharField(max_length=100, verbose_name="عنوان شغل")
-    code = models.CharField(max_length=50, unique=True, verbose_name="کد شغل")
+    code = models.CharField(max_length=50, verbose_name="کد شغل")
     department = models.CharField(max_length=100, verbose_name="بخش / دپارتمان")
     unit = models.CharField(max_length=100, blank=True, verbose_name="واحد سازمانی")
     CATEGORY_CHOICES = [
@@ -123,6 +123,20 @@ class JobOpportunity(SoftDeleteModel):
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['request_number'],
+                condition=models.Q(is_deleted=False),
+                name='unique_request_number_active',
+                violation_error_message="یک فرصت شغلی فعال با این شماره درخواست از قبل وجود دارد."
+            ),
+            models.UniqueConstraint(
+                fields=['code'],
+                condition=models.Q(is_deleted=False),
+                name='unique_code_active',
+                violation_error_message="یک فرصت شغلی فعال با این کد شغل از قبل وجود دارد."
+            )
+        ]
 
     def __str__(self):
         return f"{self.title} ({self.code})"

@@ -158,7 +158,7 @@
                 </button>
                 
                 {% if active_filters_count > 0 %}
-                <a href="?" class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1.5 flex-grow-1">
+                <a href="?clear=1" class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1.5 flex-grow-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
@@ -403,10 +403,10 @@
                             {% endif %}
                             {% if user.profile.can_manage_jobs %}
                             <a href="{% url 'job_edit' job.id %}" class="btn btn-sm btn-outline-primary me-1">ویرایش</a>
-                            <button hx-delete="{% url 'job_delete' job.id %}" 
-                                    hx-target="#job-{{ job.id }}" 
-                                    hx-confirm="آیا از حذف این فرصت شغلی مطمئن هستید؟" 
-                                    class="btn btn-sm btn-outline-danger">
+                            <button hx-get="{% url 'job_delete_confirm' job.id %}" 
+                                    hx-target="#deleteJobModalContainer" 
+                                    class="btn btn-sm btn-outline-danger"
+                                    id="btn-delete-job-{{ job.id }}">
                                 حذف
                             </button>
                             {% else %}
@@ -520,6 +520,7 @@
     </div>
 </div>
 {% endif %}
+<div id="deleteJobModalContainer"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -536,6 +537,17 @@
                 rtl: true
             });
         });
+    });
+
+    // Close delete modal on HTMX custom event
+    document.addEventListener('close-modal', function() {
+        var modalEl = document.getElementById('deleteJobModal');
+        if (modalEl) {
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        }
     });
 </script>
 {% endblock %}

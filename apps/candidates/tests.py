@@ -2384,16 +2384,62 @@ class CandidateModuleTests(TestCase):
         self.assertEqual(active_job_issues[0]['job_code'], self.job.code)
         
         # 3. Access Data Integrity Dashboard page as ADMIN
-        admin_user = User.objects.create_user(username='admin_test_user', password='password123')
+        admin_user = User.objects.create_user(username='admin_test_user_integrity', password='password123')
         admin_user.profile.role = UserProfile.ROLE_ADMIN
         admin_user.profile.save()
         
-        self.client.login(username='admin_test_user', password='password123')
+        self.client.login(username='admin_test_user_integrity', password='password123')
         url = reverse('data_integrity_dashboard')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'فرصت‌های شغلی فعال فاقد متقاضی')
         self.assertContains(response, self.job.title)
+
+    def test_candidate_excel_import_duplicate_candidate(self):
+        """تست ورود اطلاعات متقاضیان از اکسل زمانی که متقاضی از قبل در سیستم وجود دارد"""
+        import io
+        import openpyxl
+        from apps.candidates.models import Candidate, JobApplication
+
+        # Create an existing candidate
+        existing_cand = Candidate.objects.create(
+            first_name='علی',
+            last_name='تقوی',
+            national_id='0123456789',
+            email='old_ali@example.com',
+            phone_number='09121111111'
+        )
+
+        self.client.login(username='recruiter_user', password='password123')
+
+        # Build an Excel file to import with the same national_id but updated details
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["نام", "نام خانوادگی", "کد ملی", "ایمیل", "شماره تماس", "شماره پرسنلی (اختیاری)"])
+        ws.append(["علی رضا", "تقوی نیا", "0123456789", "new_ali@example.com", "09122222222", "888"])
+
+        excel_io = io.BytesIO()
+        wb.save(excel_io)
+        excel_io.seek(0)
+        excel_file = io.BytesIO(excel_io.read())
+        excel_file.name = 'candidates_dup.xlsx'
+
+        response = self.client.post(reverse('candidate_import_excel'), {
+            'excel_file': excel_file,
+            'job_id': self.job.id
+        })
+        self.assertEqual(response.status_code, 302)
+
+        # Check candidate details are updated
+        existing_cand.refresh_from_db()
+        self.assertEqual(existing_cand.first_name, "علی رضا")
+        self.assertEqual(existing_cand.last_name, "تقوی نیا")
+        self.assertEqual(existing_cand.email, "new_ali@example.com")
+        self.assertEqual(existing_cand.phone_number, "09122222222")
+        self.assertEqual(existing_cand.personnel_number, "888")
+
+        # Verify application created for the duplicate candidate
+        self.assertTrue(JobApplication.objects.filter(job=self.job, candidate=existing_cand, is_deleted=False).exists())
 
 
 

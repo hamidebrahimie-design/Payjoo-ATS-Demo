@@ -116,17 +116,73 @@
             nextButtonIcon: '>',
             previousButtonIcon: '<'
         });
+        $('#start_date_modal').removeAttr('readonly');
     }
 
+    // Clear stage date overrides when the main start date changes
+    $(document).off('change', '#start_date_modal');
+    $(document).on('change', '#start_date_modal', function() {
+        $('.stage-datepicker').val('');
+    });
+
     // Clean up any existing click handlers for the picker to prevent duplicates
-    $(document).off('click', '#bd-root-start_date_modal');
-    $(document).on('click', '#bd-root-start_date_modal', function() {
-        setTimeout(function() {
-            const input = document.getElementById('start_date_modal');
-            if (input) {
-                input.dispatchEvent(new Event('change', { bubbles: true }));
+    $(document).off('click', '#bd-main-start_date_modal');
+    $(document).on('click', '#bd-main-start_date_modal', function(e) {
+        if ($(e.target).closest('.bd-table td').length > 0) {
+            setTimeout(function() {
+                const input = document.getElementById('start_date_modal');
+                if (input) {
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 50);
+        }
+    });
+
+    // Initialize datepickers for steps in modal schedule preview
+    function initializeDatepickersModal() {
+        $('.stage-datepicker').each(function() {
+            const id = $(this).attr('id');
+            if (!$(this).data('kama-init')) {
+                kamaDatepicker(id, {
+                    buttonsColor: '#0052cc',
+                    markToday: true,
+                    gotoToday: true,
+                    twodigit: true,
+                    closeAfterSelect: true,
+                    nextButtonIcon: '>',
+                    previousButtonIcon: '<'
+                });
+                $(this).data('kama-init', true);
+                $(this).removeAttr('readonly');
             }
-        }, 50);
+        });
+    }
+
+    // Initialize on modal content load
+    setTimeout(initializeDatepickersModal, 150);
+
+    // Watch for subsequent updates
+    document.body.removeEventListener('htmx:afterSwap', window.modalHtmxSwapListener);
+    window.modalHtmxSwapListener = function(evt) {
+        if (evt.detail.target.id === 'schedule-preview-container-modal') {
+            initializeDatepickersModal();
+        }
+    };
+    document.body.addEventListener('htmx:afterSwap', window.modalHtmxSwapListener);
+
+    // Handle dynamically created datepicker day clicks to trigger HTMX submit inside modal
+    $(document).off('click', '[id^="bd-main-date_"]');
+    $(document).on('click', '[id^="bd-main-date_"]', function(e) {
+        if ($(e.target).closest('.bd-table td').length > 0) {
+            const mainId = $(this).attr('id');
+            const inputId = mainId.replace('bd-main-', '');
+            setTimeout(function() {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 50);
+        }
     });
 
     // Run digit conversion for the newly loaded modal content

@@ -230,7 +230,8 @@ def calculate_recruitment_schedule(job, start_date, overrides=None):
                 'is_exact': is_exact
             })
             
-            current_start = get_next_working_day(planned_end, holidays_set)
+            # Respect SLA: the next stage starts after the SLA days of the current stage have passed, regardless of is_exact
+            current_start = get_next_working_day(add_working_days(planned_start, sla_days, holidays_set), holidays_set)
 
     return schedule
 

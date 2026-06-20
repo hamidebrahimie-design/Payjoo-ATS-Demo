@@ -212,6 +212,45 @@ class RecruitmentPlanningTests(TestCase):
                 break
         self.assertTrue(found, "The planned job details were not found in the Excel export rows.")
 
+    def test_planning_dashboard_filtering_and_sorting(self):
+        """تست جستجو، فیلتر دپارتمان و مرتب‌سازی در داشبورد برنامه‌ریزی"""
+        self.client.login(username='admin_planning', password='testpassword123')
+
+        # Save plans first so we have items to filter/sort
+        # Plan 1 (job1: Python, headcount 15, Technical)
+        planning_url_1 = reverse('job_planning', kwargs={'job_id': self.job1.id})
+        self.client.post(planning_url_1, {'action': 'save', 'start_date': '1405/02/01'})
+
+        # Plan 2 (job2: UI Designer, headcount 10, Art)
+        planning_url_2 = reverse('job_planning', kwargs={'job_id': self.job2.id})
+        self.client.post(planning_url_2, {'action': 'save', 'start_date': '1405/03/01'})
+
+        # 1. Test search filter
+        response = self.client.get(reverse('planning_dashboard') + '?q=Python')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.job1.title)
+        self.assertNotContains(response, self.job2.title)
+
+        # 2. Test department filter
+        response = self.client.get(reverse('planning_dashboard') + '?department=هنری')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.job2.title)
+        self.assertNotContains(response, self.job1.title)
+
+        # 3. Test sorting by start date ascending
+        response = self.client.get(reverse('planning_dashboard') + '?sort_by=start_date')
+        self.assertEqual(response.status_code, 200)
+        active_plans = response.context['active_plans']
+        self.assertEqual(active_plans[0].job, self.job1) # 1405/02/01 is earlier
+        self.assertEqual(active_plans[1].job, self.job2)
+
+        # 4. Test sorting by start date descending
+        response = self.client.get(reverse('planning_dashboard') + '?sort_by=-start_date')
+        self.assertEqual(response.status_code, 200)
+        active_plans = response.context['active_plans']
+        self.assertEqual(active_plans[0].job, self.job2) # 1405/03/01 is later
+        self.assertEqual(active_plans[1].job, self.job1)
+
     def test_planning_calendar_view(self):
         """تست دسترسی به نمای تقویم شمسی ماهانه"""
         self.client.login(username='admin_planning', password='testpassword123')
@@ -372,9 +411,9 @@ class RecruitmentPlanningTests(TestCase):
         self.assertEqual(scr_plan_overridden['planned_start_date'], datetime.date(2026, 6, 8))
         self.assertEqual(scr_plan_overridden['planned_end_date'], datetime.date(2026, 6, 8))
         
-        # The subsequent EXAM stage should cascade starting from the next working day after 2026-06-08 (which is 2026-06-09)
+        # The subsequent EXAM stage should respect the 5 SLA days of the SCREENING stage and start on 2026-06-15
         ex_plan_overridden = next(s for s in schedule_overridden if s['stage'].id == self.stage_template_2.id)
-        self.assertEqual(ex_plan_overridden['planned_start_date'], datetime.date(2026, 6, 9))
+        self.assertEqual(ex_plan_overridden['planned_start_date'], datetime.date(2026, 6, 15))
 
     def test_edit_job_stage_plan_views(self):
         """تست نمایش و ویرایش دستی تاریخ برنامه‌ریزی یک مرحله از طریق وب"""
