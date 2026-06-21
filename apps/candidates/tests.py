@@ -1718,6 +1718,122 @@ class CandidateModuleTests(TestCase):
         self.assertEqual(state.notes, "مصاحبه عالی بود")
         self.assertEqual(state.evaluator, self.recruiter)
 
+    def test_import_score_entry_excel_optional_fields_and_shamsi_date(self):
+        """تست عدم اجبار در ورود ارزیاب و توضیحات و معتبر بودن تاریخ ارزیابی شمسی"""
+        import io
+        import openpyxl
+        from datetime import date
+        from django.contrib.auth.models import User
+        
+        # Create a specific evaluator user
+        evaluator_user = User.objects.create_user(
+            username='evaluator_one',
+            email='evaluator@example.com',
+            password='password123',
+            first_name='حمید',
+            last_name='حمیدی'
+        )
+        evaluator_user.profile.role = UserProfile.ROLE_ADMIN
+        evaluator_user.profile.save()
+
+        candidate1 = Candidate.objects.create(
+            first_name='محمد', last_name='کریمی', email='mohammad@example.com',
+            phone_number='09121234567', national_id='7777777777'
+        )
+        app1 = JobApplication.objects.create(job=self.job, candidate=candidate1)
+        stage = self.job.stages.order_by('sequence').first()
+        state1 = app1.stage_states.filter(stage=stage).first()
+
+        candidate2 = Candidate.objects.create(
+            first_name='سارا', last_name='کریمی', email='sara@example.com',
+            phone_number='09121234568', national_id='7777777778'
+        )
+        app2 = JobApplication.objects.create(job=self.job, candidate=candidate2)
+        state2 = app2.stage_states.filter(stage=stage).first()
+
+        # Build an Excel file in memory
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        # Columns: شناسه وضعیت, نمره نهایی مرحله, وضعیت ارزیابی, توضیحات, تاریخ ارزیابی, ارزیاب
+        ws.append(["شناسه وضعیت", "نمره نهایی مرحله", "وضعیت ارزیابی", "توضیحات و یادداشت ارزیاب", "تاریخ ارزیابی", "ارزیاب"])
+        # Row 1: Valid evaluator, Valid comments, Jalali date 14050331 (Gregorian: 2026-06-21)
+        ws.append([state1.id, "80.0", "قبول", "متقاضی بسیار عالی", "14050331", "حمید حمیدی"])
+        # Row 2: Missing evaluator, Missing comments, Missing date (all empty/None) -> should fallback nicely
+        ws.append([state2.id, "75.0", "قبول", "", "", ""])
+
+        excel_io = io.BytesIO()
+        wb.save(excel_io)
+        excel_io.seek(0)
+        excel_file = io.BytesIO(excel_io.read())
+        excel_file.name = 'optional_shamsi_test.xlsx'
+
+        self.client.login(username='recruiter_user', password='password123')
+        url = reverse('score_entry_import_excel')
+        response = self.client.post(url, {
+            'job_id': self.job.id,
+            'stage_id': stage.id,
+            'excel_file': excel_file
+        })
+        self.assertEqual(response.status_code, 302)
+
+        # Verify state1
+        state1.refresh_from_db()
+        self.assertEqual(state1.score, 80.0)
+        self.assertEqual(state1.status, ApplicationStageState.STATUS_COMPLETED)
+        self.assertEqual(state1.notes, "متقاضی بسیار عالی")
+        self.assertEqual(state1.evaluation_date, date(2026, 6, 21))
+        self.assertEqual(state1.evaluator, evaluator_user)
+
+        # Verify state2
+        state2.refresh_from_db()
+        self.assertEqual(state2.score, 75.0)
+        self.assertEqual(state2.status, ApplicationStageState.STATUS_COMPLETED)
+        self.assertEqual(state2.notes, "")
+        self.assertIsNone(state2.evaluation_date)
+        # fallback to current logged-in recruiter user
+        self.assertEqual(state2.evaluator, self.recruiter)
+
+    def test_export_score_entry_last_change_jalali(self):
+        """تست نمایش تاریخ آخرین تغییر به صورت شمسی در فایل اکسل خروجی"""
+        from openpyxl import load_workbook
+        import io
+        
+        # Create a candidate & application so there is data to export
+        candidate = Candidate.objects.create(
+            first_name='زهرا', last_name='تقوی', email='zahra.t@example.com',
+            phone_number='09121111112', national_id='1111111112'
+        )
+        JobApplication.objects.create(job=self.job, candidate=candidate)
+
+        self.client.login(username='recruiter_user', password='password123')
+        stage = self.job.stages.order_by('sequence').first()
+        
+        url = reverse('score_entry_export_excel') + f"?job_id={self.job.id}&stage_id={stage.id}"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+        # Load response excel content
+        excel_file = io.BytesIO(response.content)
+        wb = load_workbook(excel_file)
+        ws = wb.active
+        
+        # Row 1 is header. Find index of 'آخرین تغییر'
+        headers = [cell.value for cell in ws[1]]
+        self.assertIn("آخرین تغییر", headers)
+        last_change_idx = headers.index("آخرین تغییر")
+        
+        # Row 2 contains values
+        row2_values = [cell.value for cell in ws[2]]
+        last_change_val = row2_values[last_change_idx]
+        
+        # Ensure it contains a Jalali datetime structure like 'YYYY/MM/DD - HH:MM'
+        self.assertIsNotNone(last_change_val)
+        import re
+        # Match '1405/03/31 - 12:30' or similar Jalali pattern
+        pattern = r'^\d{4}/\d{2}/\d{2} - \d{2}:\d{2}$'
+        self.assertTrue(re.match(pattern, str(last_change_val)), f"Date value '{last_change_val}' does not match Jalali pattern")
+
     def test_import_score_entry_excel_validation_errors(self):
         """تست خطاهای مختلف در ورود نمرات از اکسل"""
         import io
@@ -2440,6 +2556,196 @@ class CandidateModuleTests(TestCase):
 
         # Verify application created for the duplicate candidate
         self.assertTrue(JobApplication.objects.filter(job=self.job, candidate=existing_cand, is_deleted=False).exists())
+
+
+    def test_interviewer_competency_scores(self):
+        """تست نمرات شایستگی مصاحبه‌گران و بازمحاسبه میانگین وزنی نمرات"""
+        from apps.candidates.models import Candidate, JobApplication, ApplicationStageState, ExternalInterviewerScore, ExternalInterviewerCompetencyScore, JobDefaultInterviewer
+        from apps.jobs.models import AssessmentCompetency
+        
+        self.client.login(username='recruiter_user', password='password123')
+        
+        # 1. تنظیم یک مرحله مصاحبه با شایستگی‌ها
+        stage = self.job.stages.first()
+        self.assertIsNotNone(stage)
+        stage.stage_type = 'INTERVIEW'
+        stage.save()
+        
+        comp1 = AssessmentCompetency.objects.create(stage=stage, name="مهارت فنی", weight=60)
+        comp2 = AssessmentCompetency.objects.create(stage=stage, name="ارتباطات", weight=40)
+        
+        # ۲. تعریف مصاحبه‌گر پیش‌فرض
+        iv = JobDefaultInterviewer.objects.create(job=self.job, interviewer_name="مهندس کریمی", weight=100)
+        
+        # ۳. ساخت کاندیدا و متقاضی جدید بدون رکوردهای مرحله
+        cand = Candidate.objects.create(
+            first_name='حسین', last_name='حسینی', national_id='0987654321', email='hassan@example.com', phone_number='09123334444'
+        )
+        app = JobApplication.objects.create(job=self.job, candidate=cand)
+        
+        # ۴. تست خروجی اکسل کامل که باید به صورت خودکار رکوردهای خالی را ایجاد کند
+        url_export = reverse('score_entry_export_excel')
+        response = self.client.get(url_export, {'job_id': self.job.id, 'stage_id': stage.id})
+        self.assertEqual(response.status_code, 200)
+        
+        state = ApplicationStageState.objects.filter(application=app, stage=stage).first()
+        self.assertIsNotNone(state)
+        
+        # ۵. پست کردن نمرات شایستگی برای مصاحبه‌گر
+        url_panel = reverse('interview_scores_panel', kwargs={'pk': state.id})
+        post_data = {
+            'bypass_locks': '1',
+            'interviewer_name[]': ['مهندس کریمی'],
+            'weight[]': ['100'],
+            'notes[]': ['توضیحات تستی'],
+            # نمره comp1: 90 و comp2: 80 => میانگین وزنی: (90*60 + 80*40)/100 = 86
+            f'comp_score_0_{comp1.id}': '90',
+            f'comp_score_0_{comp2.id}': '80',
+        }
+        response = self.client.post(url_panel, post_data)
+        self.assertEqual(response.status_code, 200)
+        
+        # بررسی بازمحاسبه نمره کل مصاحبه‌گر خارجی
+        es = state.external_interviewer_scores.filter(interviewer_name="مهندس کریمی", is_deleted=False).first()
+        self.assertIsNotNone(es)
+        self.assertEqual(es.score, 86.0)
+        
+        # بررسی نمره نهایی مرحله متقاضی که باید 86 باشد
+        state.refresh_from_db()
+        self.assertEqual(state.score, 86.0)
+        self.assertEqual(state.status, ApplicationStageState.STATUS_COMPLETED)
+
+    def test_import_score_entry_with_comments(self):
+        """تست ورود نمرات و توضیحات ارزیاب از فایل اکسل و عدم پاک شدن توضیحات در صورت نبود ستون مربوطه"""
+        import io
+        import openpyxl
+        
+        self.client.login(username='recruiter_user', password='password123')
+        
+        candidate = Candidate.objects.create(
+            first_name='سعید',
+            last_name='تقوی',
+            national_id='9876543210',
+            email='saeed@example.com',
+            phone_number='09121111111'
+        )
+        app = JobApplication.objects.create(job=self.job, candidate=candidate)
+        stage = self.job.stages.first()
+        state = app.stage_states.get(stage=stage)
+        
+        # 1. Import with comments column
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["شناسه وضعیت", "نام متقاضی", "نام خانوادگی", "کد ملی", "عنوان شغل", "مرحله", "نمره نهایی مرحله", "وضعیت ارزیابی", "توضیحات و یادداشت ارزیاب"])
+        ws.append([state.id, "سعید", "تقوی", "9876543210", self.job.title, stage.name, 85, "قبول", "توضیحات ارزیابی نمونه"])
+        
+        excel_io = io.BytesIO()
+        wb.save(excel_io)
+        excel_io.seek(0)
+        excel_file = io.BytesIO(excel_io.read())
+        excel_file.name = 'scores_import.xlsx'
+        
+        response = self.client.post(reverse('score_entry_import_excel'), {
+            'job_id': self.job.id,
+            'stage_id': stage.id,
+            'excel_file': excel_file,
+            'bypass_locks': 'true'
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        state.refresh_from_db()
+        self.assertEqual(state.score, 85.0)
+        self.assertEqual(state.notes, "توضیحات ارزیابی نمونه")
+        
+        # 2. Import WITHOUT comments column: should not clear existing comment in database
+        wb2 = openpyxl.Workbook()
+        ws2 = wb2.active
+        ws2.append(["شناسه وضعیت", "نام متقاضی", "نام خانوادگی", "کد ملی", "عنوان شغل", "مرحله", "نمره نهایی مرحله", "وضعیت ارزیابی"])
+        ws2.append([state.id, "سعید", "تقوی", "9876543210", self.job.title, stage.name, 90, "قبول"])
+        
+        excel_io2 = io.BytesIO()
+        wb2.save(excel_io2)
+        excel_io2.seek(0)
+        excel_file2 = io.BytesIO(excel_io2.read())
+        excel_file2.name = 'scores_import_no_notes.xlsx'
+        
+        response2 = self.client.post(reverse('score_entry_import_excel'), {
+            'job_id': self.job.id,
+            'stage_id': stage.id,
+            'excel_file': excel_file2,
+            'bypass_locks': 'true'
+        })
+        self.assertEqual(response2.status_code, 302)
+        
+        state.refresh_from_db()
+        self.assertEqual(state.score, 90.0)
+        # Comments should still be there!
+        self.assertEqual(state.notes, "توضیحات ارزیابی نمونه")
+
+    def test_import_bulk_interview_scores_with_comments(self):
+        """تست خروجی و ورودی نمرات مصاحبه گروهی همراه با توضیحات ارزیاب"""
+        import io
+        import openpyxl
+        from apps.candidates.models import JobDefaultInterviewer
+        
+        self.client.login(username='recruiter_user', password='password123')
+        
+        # Setup job stage as INTERVIEW
+        stage = self.job.stages.first()
+        stage.stage_type = 'INTERVIEW'
+        stage.save()
+        
+        iv = JobDefaultInterviewer.objects.create(job=self.job, interviewer_name="مصاحبه‌گر نمونه", weight=100)
+        
+        candidate = Candidate.objects.create(
+            first_name='مریم',
+            last_name='کریمی',
+            national_id='1112223334',
+            email='maryam@example.com',
+            phone_number='09122222222'
+        )
+        app = JobApplication.objects.create(job=self.job, candidate=candidate)
+        state = app.stage_states.get(stage=stage)
+        
+        # Test template download contains the 'توضیحات ارزیاب' column
+        response_download = self.client.get(reverse('download_interview_scores_template'), {
+            'job_id': self.job.id,
+            'stage_id': stage.id
+        })
+        self.assertEqual(response_download.status_code, 200)
+        
+        # Read the template using openpyxl
+        downloaded_excel = io.BytesIO(response_download.content)
+        wb_download = openpyxl.load_workbook(downloaded_excel)
+        ws_download = wb_download.active
+        
+        headers = [cell.value for cell in ws_download[2]]
+        self.assertIn('توضیحات ارزیاب', headers)
+        
+        # Test import of interview scores and comments
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["توضیح"]) # Row 1 placeholder
+        ws.append(["کد ملی", "نام و نام خانوادگی", "وضعیت فعلی", "نمره مصاحبه‌گر نمونه", "توضیحات ارزیاب"])
+        ws.append(["1112223334", "مریم کریمی", "در انتظار", 80, "توضیحات مصاحبه گروهی"])
+        
+        excel_io = io.BytesIO()
+        wb.save(excel_io)
+        excel_io.seek(0)
+        excel_file = io.BytesIO(excel_io.read())
+        excel_file.name = 'bulk_interview_import.xlsx'
+        
+        response = self.client.post(reverse('import_interview_scores'), {
+            'job_id': self.job.id,
+            'stage_id': stage.id,
+            'excel_file': excel_file
+        })
+        self.assertEqual(response.status_code, 200)
+        
+        state.refresh_from_db()
+        self.assertEqual(state.notes, "توضیحات مصاحبه گروهی")
+
+
 
 
 

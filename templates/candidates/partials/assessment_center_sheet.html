@@ -3,7 +3,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <form hx-post="{% url 'candidate_assessment_sheet' state.id %}" 
-      hx-target="{% if source == 'score_entry' %}#score-row-{{ state.id }}{% else %}#interviewer-row-{{ state.id }}{% endif %}" 
+      hx-target="{% if source == 'score_entry' %}#score-row-{{ state.application.id }}{% else %}#interviewer-row-{{ state.id }}{% endif %}" 
       hx-swap="outerHTML"
       class="m-0">
     {% csrf_token %}

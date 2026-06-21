@@ -610,6 +610,39 @@ class ExternalInterviewerScore(SoftDeleteModel):
     def __str__(self):
         return f"{self.interviewer_name}: {self.score} (وزن: {self.weight})"
 
+    def save(self, *args, **kwargs):
+        if self.pk:
+            c_scores = self.competency_scores.filter(is_deleted=False)
+            if c_scores.exists():
+                total_weight = sum(cs.competency.weight for cs in c_scores)
+                weighted_sum = sum(cs.score * cs.competency.weight for cs in c_scores)
+                self.score = round(weighted_sum / total_weight, 2) if total_weight > 0 else 0.0
+        super().save(*args, **kwargs)
+
+
+class ExternalInterviewerCompetencyScore(SoftDeleteModel):
+    external_interviewer_score = models.ForeignKey(
+        ExternalInterviewerScore,
+        on_delete=models.CASCADE,
+        related_name='competency_scores',
+        verbose_name="نمره مصاحبه‌گر خارجی"
+    )
+    competency = models.ForeignKey(
+        AssessmentCompetency,
+        on_delete=models.CASCADE,
+        related_name='external_given_scores',
+        verbose_name="شایستگی/پارامتر"
+    )
+    score = models.FloatField(default=0.0, verbose_name="نمره")
+
+    class Meta:
+        verbose_name = "نمره پارامتر مصاحبه‌گر خارجی"
+        verbose_name_plural = "نمرات پارامترهای مصاحبه‌گران خارجی"
+        unique_together = ('external_interviewer_score', 'competency')
+
+    def __str__(self):
+        return f"{self.competency.name}: {self.score}"
+
 
 class JobDefaultInterviewer(SoftDeleteModel):
     """

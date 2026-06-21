@@ -1152,6 +1152,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
             is_job_closed_or_cancelled = selected_job.status in [JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED]
 
         stage_id = request.GET.get('stage_id')
+        selected_stage = None
         q = request.GET.get('q')
         eval_status = request.GET.get('eval_status', 'PENDING')
         show_failed_prior_val = request.GET.get('show_failed_prior')
@@ -1159,21 +1160,16 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
         bypass_locks_val = request.GET.get('bypass_locks') or request.POST.get('bypass_locks')
         bypass_locks = bypass_locks_val in ['true', 'on', '1']
 
-        selected_stage = None
         stages = []
-        pending_states = []
+        applications = []
         page_obj = None
         paginator = None
         is_paginated = False
+        pending_states = []
 
         if selected_job:
-            stages = selected_job.stages.filter(is_deleted=False).exclude(weight=0).order_by('sequence')
+            stages = list(selected_job.stages.filter(is_deleted=False).order_by('sequence'))
             
-            if request.headers.get('HX-Request') and 'job_id' in request.GET and 'stage_id' not in request.GET:
-                return render(request, 'candidates/partials/score_entry_stages_select.html', {
-                    'stages': stages,
-                })
-
             if stage_id:
                 from django.db.models import Exists, OuterRef
                 selected_stage = get_object_or_404(JobOpportunityStage, pk=stage_id, is_deleted=False)
@@ -1188,7 +1184,6 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                     is_deleted=False
                 ).select_related('application__candidate', 'application__job', 'stage', 'evaluator')
                 
-                # Annotate if there is a failed prior stage state
                 prior_failed_subquery = ApplicationStageState.objects.filter(
                     application=OuterRef('application'),
                     stage__sequence__lt=OuterRef('stage__sequence'),
@@ -1200,17 +1195,14 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                     has_failed_prior=Exists(prior_failed_subquery)
                 )
                 
-                # Filter out prior failed stages unless specifically requested
                 if not show_failed_prior:
                     pending_states_qs = pending_states_qs.filter(has_failed_prior=False)
                 
-                # Apply eval_status filter
                 if eval_status == 'PENDING':
                     pending_states_qs = pending_states_qs.filter(status=ApplicationStageState.STATUS_PENDING)
                 elif eval_status == 'COMPLETED_FAILED':
                     pending_states_qs = pending_states_qs.filter(status__in=[ApplicationStageState.STATUS_COMPLETED, ApplicationStageState.STATUS_FAILED])
                 
-                # Apply name/id search
                 if q:
                     pending_states_qs = pending_states_qs.filter(
                         models.Q(application__candidate__first_name__icontains=q) |
@@ -1222,14 +1214,61 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                 paginator = Paginator(ordered_states, 10)
                 page_number = request.GET.get('page')
                 page_obj = paginator.get_page(page_number)
-                pending_states = page_obj
+                pending_states = list(page_obj)
                 is_paginated = page_obj.has_other_pages()
+                
+                applications = [state.application for state in pending_states]
+            else:
+                app_statuses = [JobApplication.STATUS_IN_PROGRESS]
+                if show_failed_prior or bypass_locks:
+                    app_statuses.append(JobApplication.STATUS_REJECTED)
+                    
+                applications_qs = JobApplication.objects.filter(
+                    job=selected_job,
+                    status__in=app_statuses,
+                    is_deleted=False
+                ).select_related('candidate').prefetch_related('stage_states__stage')
+                
+                if q:
+                    applications_qs = applications_qs.filter(
+                        models.Q(candidate__first_name__icontains=q) |
+                        models.Q(candidate__last_name__icontains=q) |
+                        models.Q(candidate__national_id__icontains=q)
+                    )
+                
+                if eval_status == 'PENDING':
+                    applications_qs = applications_qs.filter(status=JobApplication.STATUS_IN_PROGRESS)
+                elif eval_status == 'COMPLETED_FAILED':
+                    applications_qs = applications_qs.filter(status__in=[JobApplication.STATUS_SELECTED, JobApplication.STATUS_RESERVE, JobApplication.STATUS_REJECTED])
+
+                applications_qs = applications_qs.order_by('candidate__last_name')
+                paginator = Paginator(applications_qs, 10)
+                page_number = request.GET.get('page')
+                page_obj = paginator.get_page(page_number)
+                is_paginated = page_obj.has_other_pages()
+                
+                applications = list(page_obj)
+                pending_states = applications
+            
+            for app in applications:
+                state_map = {state.stage_id: state for state in app.stage_states.filter(is_deleted=False)}
+                app.stage_cells = []
+                for stage in stages:
+                    state = state_map.get(stage.id)
+                    if not state:
+                        state = ApplicationStageState.objects.create(
+                            application=app,
+                            stage=stage,
+                            status=ApplicationStageState.STATUS_PENDING,
+                            score=0.0
+                        )
+                    app.stage_cells.append(state)
 
         if request.headers.get('HX-Request'):
             return render(request, 'candidates/partials/score_entry_list.html', {
                 'selected_job': selected_job,
-                'selected_stage': selected_stage,
                 'stages': stages,
+                'applications': applications,
                 'pending_states': pending_states,
                 'selected_q': q,
                 'selected_eval_status': eval_status,
@@ -1245,8 +1284,8 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
             'jobs': jobs,
             'job_q': job_q,
             'selected_job': selected_job,
-            'selected_stage': selected_stage,
             'stages': stages,
+            'applications': applications,
             'pending_states': pending_states,
             'selected_q': q,
             'selected_eval_status': eval_status,
@@ -1270,12 +1309,12 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
         bypass_locks = bypass_locks_val in ['true', 'on', '1']
         
         selected_job = None
-        selected_stage = None
         stages = []
-        pending_states = []
+        applications = []
         page_obj = None
         paginator = None
         is_paginated = False
+        pending_states = []
 
         jobs_qs = JobOpportunity.objects.filter(is_deleted=False).exclude(
             status__in=[JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED]
@@ -1283,10 +1322,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
 
         if job_id:
             selected_job = get_object_or_404(JobOpportunity, pk=job_id, is_deleted=False)
-            stages = selected_job.stages.filter(is_deleted=False).exclude(weight=0).order_by('sequence')
-            if stage_id:
-                selected_stage = get_object_or_404(JobOpportunityStage, pk=stage_id, is_deleted=False)
-
+            stages = list(selected_job.stages.filter(is_deleted=False).order_by('sequence'))
             is_job_closed_or_cancelled = selected_job.status in [JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED]
 
             jobs = list(jobs_qs.order_by('-created_at'))
@@ -1294,27 +1330,47 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                 jobs.insert(0, selected_job)
 
             if not is_job_closed_or_cancelled:
-                state_ids = []
+                state_ids = set()
                 for key in request.POST.keys():
-                    if key.startswith('score_'):
+                    if key.startswith('score_') or key.startswith('status_') or key.startswith('notes_') or key.startswith('date_') or key.startswith('is_conditional_pass_'):
                         try:
-                            state_ids.append(int(key.split('_')[1]))
+                            state_ids.add(int(key.split('_')[-1]))
+                        except ValueError:
+                            pass
+
+                app_ids = set()
+                for key in request.POST.keys():
+                    if key.startswith('app_status_'):
+                        try:
+                            app_ids.add(int(key.split('_')[-1]))
                         except ValueError:
                             pass
 
                 with transaction.atomic():
+                    for aid in app_ids:
+                        app = JobApplication.objects.filter(pk=aid, is_deleted=False).first()
+                        if app:
+                            status_val = request.POST.get(f'app_status_{aid}')
+                            if status_val in [JobApplication.STATUS_IN_PROGRESS, JobApplication.STATUS_SELECTED, JobApplication.STATUS_RESERVE, JobApplication.STATUS_REJECTED]:
+                                if app.status != status_val:
+                                    app.status = status_val
+                                    app.save(update_fields=['status'])
+
                     for sid in state_ids:
                         state = ApplicationStageState.objects.filter(pk=sid, is_deleted=False).first()
                         if state and (bypass_locks or (state.is_accessible and not state.stage.is_completed)):
-                            score_val = request.POST.get(f'score_{sid}', '0')
                             status_val = request.POST.get(f'status_{sid}', ApplicationStageState.STATUS_PENDING)
                             notes_val = request.POST.get(f'notes_{sid}', '')
                             date_val = request.POST.get(f'date_{sid}', '').strip()
                             is_conditional_pass_val = request.POST.get(f'is_conditional_pass_{sid}') in ['true', 'on']
                             
-                            try:
-                                state.score = float(score_val)
-                            except ValueError:
+                            if state.stage.stage_type != 'SCREENING' and not state.stage.competencies.exists():
+                                score_val = request.POST.get(f'score_{sid}', '0')
+                                try:
+                                    state.score = float(score_val)
+                                except ValueError:
+                                    state.score = 0.0
+                            elif state.stage.stage_type == 'SCREENING':
                                 state.score = 0.0
                                 
                             state.status = status_val
@@ -1331,8 +1387,23 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                             state.is_manually_edited = True
                             state.save()
 
-            if selected_stage:
+                if selected_job.has_all_evaluations_completed:
+                    if selected_job.status not in [JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED, JobOpportunity.STATUS_SUSPENDED]:
+                        selected_job.status = JobOpportunity.STATUS_FINAL_SELECTION
+                        selected_job.save(update_fields=['status'])
+                    
+                    from django.contrib import messages
+                    messages.success(request, "ارزیابی تمامی مراحل داوطلبان با موفقیت به پایان رسید. اکنون می‌توانید نفرات برتر را انتخاب و نهایی کنید.")
+                    
+                    if request.headers.get('HX-Request'):
+                        response = HttpResponse()
+                        response['HX-Redirect'] = reverse('job_pipeline', kwargs={'pk': selected_job.id})
+                        return response
+                    return redirect('job_pipeline', pk=selected_job.id)
+
+            if stage_id:
                 from django.db.models import Exists, OuterRef
+                selected_stage = get_object_or_404(JobOpportunityStage, pk=stage_id, is_deleted=False)
                 app_statuses = [JobApplication.STATUS_IN_PROGRESS]
                 if show_failed_prior or bypass_locks:
                     app_statuses.append(JobApplication.STATUS_REJECTED)
@@ -1343,8 +1414,7 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                     stage=selected_stage,
                     is_deleted=False
                 ).select_related('application__candidate', 'application__job', 'stage', 'evaluator')
-
-                # Annotate if there is a failed prior stage state
+                
                 prior_failed_subquery = ApplicationStageState.objects.filter(
                     application=OuterRef('application'),
                     stage__sequence__lt=OuterRef('stage__sequence'),
@@ -1355,37 +1425,81 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                 pending_states_qs = pending_states_qs.annotate(
                     has_failed_prior=Exists(prior_failed_subquery)
                 )
-
-                # Filter out prior failed stages unless specifically requested
+                
                 if not show_failed_prior:
                     pending_states_qs = pending_states_qs.filter(has_failed_prior=False)
-
-                # Apply eval_status filter
+                
                 if eval_status == 'PENDING':
                     pending_states_qs = pending_states_qs.filter(status=ApplicationStageState.STATUS_PENDING)
                 elif eval_status == 'COMPLETED_FAILED':
                     pending_states_qs = pending_states_qs.filter(status__in=[ApplicationStageState.STATUS_COMPLETED, ApplicationStageState.STATUS_FAILED])
                 
-                # Apply name/id search
                 if q:
                     pending_states_qs = pending_states_qs.filter(
                         models.Q(application__candidate__first_name__icontains=q) |
                         models.Q(application__candidate__last_name__icontains=q) |
                         models.Q(application__candidate__national_id__icontains=q)
                     )
-
+                    
                 ordered_states = pending_states_qs.order_by('application__candidate__last_name')
                 paginator = Paginator(ordered_states, 10)
                 page_number = request.GET.get('page') or request.POST.get('page')
                 page_obj = paginator.get_page(page_number)
-                pending_states = page_obj
+                pending_states = list(page_obj)
                 is_paginated = page_obj.has_other_pages()
+                
+                applications = [state.application for state in pending_states]
+            else:
+                app_statuses = [JobApplication.STATUS_IN_PROGRESS]
+                if show_failed_prior or bypass_locks:
+                    app_statuses.append(JobApplication.STATUS_REJECTED)
+                    
+                applications_qs = JobApplication.objects.filter(
+                    job=selected_job,
+                    status__in=app_statuses,
+                    is_deleted=False
+                ).select_related('candidate').prefetch_related('stage_states__stage')
+                
+                if q:
+                    applications_qs = applications_qs.filter(
+                        models.Q(candidate__first_name__icontains=q) |
+                        models.Q(candidate__last_name__icontains=q) |
+                        models.Q(candidate__national_id__icontains=q)
+                    )
+                
+                if eval_status == 'PENDING':
+                    applications_qs = applications_qs.filter(status=JobApplication.STATUS_IN_PROGRESS)
+                elif eval_status == 'COMPLETED_FAILED':
+                    applications_qs = applications_qs.filter(status__in=[JobApplication.STATUS_SELECTED, JobApplication.STATUS_RESERVE, JobApplication.STATUS_REJECTED])
+
+                applications_qs = applications_qs.order_by('candidate__last_name')
+                paginator = Paginator(applications_qs, 10)
+                page_number = request.GET.get('page') or request.POST.get('page')
+                page_obj = paginator.get_page(page_number)
+                is_paginated = page_obj.has_other_pages()
+                
+                applications = list(page_obj)
+                pending_states = applications
+                
+            for app in applications:
+                state_map = {state.stage_id: state for state in app.stage_states.filter(is_deleted=False)}
+                app.stage_cells = []
+                for stage in stages:
+                    state = state_map.get(stage.id)
+                    if not state:
+                        state = ApplicationStageState.objects.create(
+                            application=app,
+                            stage=stage,
+                            status=ApplicationStageState.STATUS_PENDING,
+                            score=0.0
+                        )
+                    app.stage_cells.append(state)
 
         if request.headers.get('HX-Request'):
             return render(request, 'candidates/partials/score_entry_list.html', {
                 'selected_job': selected_job,
-                'selected_stage': selected_stage,
                 'stages': stages,
+                'applications': applications,
                 'pending_states': pending_states,
                 'bulk_success': not is_job_closed_or_cancelled and job_id is not None,
                 'selected_q': q,
@@ -1401,8 +1515,8 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
         return render(request, 'candidates/score_entry.html', {
             'jobs': jobs,
             'selected_job': selected_job,
-            'selected_stage': selected_stage,
             'stages': stages,
+            'applications': applications,
             'pending_states': pending_states,
             'bulk_success': not is_job_closed_or_cancelled and job_id is not None,
             'selected_q': q,
@@ -1469,13 +1583,51 @@ class ImportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
         state_id_idx = header_map.get("شناسه وضعیت")
         score_idx = header_map.get("نمره نهایی مرحله")
         status_idx = header_map.get("وضعیت ارزیابی")
-        notes_idx = header_map.get("توضیحات و یادداشت ارزیاب")
-        if notes_idx is None:
-            notes_idx = header_map.get("توضیحات")
+        
+        # Robust check for comments/notes column
+        notes_idx = None
+        for key in ["توضیحات و یادداشت ارزیاب", "توضیحات ارزیاب", "توضیحات", "توضیح", "یادداشت", "notes", "comment", "description"]:
+            for h_name in header_map:
+                if h_name and key.strip().lower() == str(h_name).strip().lower():
+                    notes_idx = header_map[h_name]
+                    break
+            if notes_idx is not None:
+                break
+
+        # Check for evaluator column
+        evaluator_idx = None
+        for key in ["ارزیاب", "نام ارزیاب", "evaluator", "assessor"]:
+            for h_name in header_map:
+                if h_name and key.strip().lower() == str(h_name).strip().lower():
+                    evaluator_idx = header_map[h_name]
+                    break
+            if evaluator_idx is not None:
+                break
+
+        # Check for evaluation date column
+        eval_date_idx = None
+        for key in ["تاریخ ارزیابی", "تاریخ", "date", "evaluation_date"]:
+            for h_name in header_map:
+                if h_name and key.strip().lower() == str(h_name).strip().lower():
+                    eval_date_idx = header_map[h_name]
+                    break
+            if eval_date_idx is not None:
+                break
 
         if state_id_idx is None or score_idx is None or status_idx is None:
             messages.error(request, "ستون‌های حیاتی 'شناسه وضعیت'، 'نمره نهایی مرحله' یا 'وضعیت ارزیابی' یافت نشدند.")
             return redirect(redirect_url)
+
+        from .models import JobDefaultInterviewer, ExternalInterviewerScore
+        default_interviewers = list(JobDefaultInterviewer.objects.filter(job=job, is_deleted=False).order_by('id'))
+        interviewer_col_map = {}
+        if stage.stage_type == 'INTERVIEW' and default_interviewers:
+            for iv in default_interviewers:
+                col_name = f"نمره {iv.interviewer_name}"
+                for header_name, col_idx in header_map.items():
+                    if header_name and (col_name.strip() == header_name.strip() or iv.interviewer_name.strip() in header_name):
+                        interviewer_col_map[iv.interviewer_name] = col_idx
+                        break
 
         success_count = 0
         error_count = 0
@@ -1501,10 +1653,43 @@ class ImportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                     if not any(row):
                         continue
 
-                    state_id = row[state_id_idx]
-                    score_val = row[score_idx]
-                    status_str = row[status_idx]
-                    notes_val = row[notes_idx] if notes_idx is not None else ""
+                    state_id = row[state_id_idx] if state_id_idx < len(row) else None
+                    score_val = row[score_idx] if score_idx < len(row) else None
+                    status_str = row[status_idx] if status_idx < len(row) else None
+                    
+                    notes_val = ""
+                    if notes_idx is not None and notes_idx < len(row):
+                        notes_val = row[notes_idx]
+                        if notes_val is None:
+                            notes_val = ""
+
+                    eval_date = None
+                    has_eval_date = False
+                    if eval_date_idx is not None and eval_date_idx < len(row):
+                        eval_date_val = row[eval_date_idx]
+                        has_eval_date = True
+                        if eval_date_val:
+                            from apps.historical_import.utils import parse_date_safely
+                            eval_date = parse_date_safely(eval_date_val)
+
+                    evaluator = None
+                    if evaluator_idx is not None and evaluator_idx < len(row):
+                        evaluator_val = row[evaluator_idx]
+                        if evaluator_val:
+                            evaluator_str = str(evaluator_val).strip()
+                            from django.contrib.auth.models import User
+                            from django.db.models import Value
+                            from django.db.models.functions import Concat
+                            evaluator = User.objects.annotate(
+                                full_name=Concat('first_name', Value(' '), 'last_name')
+                            ).filter(
+                                models.Q(username__iexact=evaluator_str) |
+                                models.Q(email__iexact=evaluator_str) |
+                                models.Q(full_name__iexact=evaluator_str)
+                            ).first()
+
+                    if not evaluator:
+                        evaluator = request.user
 
                     if not state_id:
                         errors.append(f"ردیف {idx}: شناسه وضعیت خالی است.")
@@ -1529,24 +1714,82 @@ class ImportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                         error_count += 1
                         continue
 
-                    # Parse score
-                    try:
-                        score = float(score_val) if score_val is not None else 0.0
-                    except (ValueError, TypeError):
-                        score = 0.0
-
                     # Parse status
                     db_status = 'PENDING'
                     if status_str:
                         clean_status = str(status_str).strip().lower()
                         db_status = status_mapping.get(clean_status, 'PENDING')
 
-                    state.score = score
-                    state.status = db_status
-                    if notes_val:
-                        state.notes = str(notes_val).strip()
-                    state.evaluator = request.user
-                    state.save()
+                    # Process interviewer scores
+                    has_interviewer_scores = False
+                    any_interviewer_changes = False
+                    if stage.stage_type == 'INTERVIEW' and default_interviewers:
+                        for iv in default_interviewers:
+                            col_idx = interviewer_col_map.get(iv.interviewer_name)
+                            if col_idx is not None and col_idx < len(row):
+                                raw_val = row[col_idx]
+                                score_val_iv = _normalize_number(raw_val)
+                                if score_val_iv is not None:
+                                    score_val_iv = max(0.0, min(100.0, score_val_iv))
+                                    has_interviewer_scores = True
+                                    
+                                    # upsert
+                                    es_obj = ExternalInterviewerScore.objects.filter(
+                                        stage_state=state,
+                                        interviewer_name=iv.interviewer_name,
+                                        is_deleted=False
+                                    ).first()
+                                    if es_obj:
+                                        if es_obj.score != score_val_iv or es_obj.weight != iv.weight:
+                                            es_obj.score = score_val_iv
+                                            es_obj.weight = iv.weight
+                                            es_obj.save(update_fields=['score', 'weight'])
+                                            any_interviewer_changes = True
+                                    else:
+                                        ExternalInterviewerScore.objects.create(
+                                            stage_state=state,
+                                            interviewer_name=iv.interviewer_name,
+                                            score=score_val_iv,
+                                            weight=iv.weight
+                                        )
+                                        any_interviewer_changes = True
+                                else:
+                                    es_obj = ExternalInterviewerScore.objects.filter(
+                                        stage_state=state,
+                                        interviewer_name=iv.interviewer_name,
+                                        is_deleted=False
+                                    ).first()
+                                    if es_obj:
+                                        es_obj.is_deleted = True
+                                        es_obj.save()
+                                        any_interviewer_changes = True
+
+                    if has_interviewer_scores or any_interviewer_changes:
+                        state.is_manually_edited = False
+                        state.status = db_status
+                        if notes_idx is not None:
+                            state.notes = str(notes_val).strip()
+                        if has_eval_date:
+                            state.evaluation_date = eval_date
+                        state.evaluator = evaluator
+                        state.save()
+                    else:
+                        # Fallback to manual score
+                        try:
+                            score = float(score_val) if score_val is not None else 0.0
+                        except (ValueError, TypeError):
+                            score = 0.0
+                        state.score = score
+                        state.status = db_status
+                        if notes_idx is not None:
+                            state.notes = str(notes_val).strip()
+                        if has_eval_date:
+                            state.evaluation_date = eval_date
+                        state.evaluator = evaluator
+                        state.is_manually_edited = True
+                        state._bypass_stage_score_calculation = True
+                        state.save()
+
                     success_count += 1
         except Exception as ex:
             messages.error(request, f"خطا در حین تراکنش بروزرسانی نمرات: {str(ex)}")
@@ -1914,8 +2157,22 @@ class AssessmentCenterSheetView(LoginRequiredMixin, RoleRequiredMixin, View):
             iscore.save()
 
         if source == 'score_entry':
+            stages = list(state.application.job.stages.filter(is_deleted=False).order_by('sequence'))
+            state_map = {s.stage_id: s for s in state.application.stage_states.filter(is_deleted=False)}
+            state.application.stage_cells = []
+            for stg in stages:
+                s_cell = state_map.get(stg.id)
+                if not s_cell:
+                    s_cell = ApplicationStageState.objects.create(
+                        application=state.application,
+                        stage=stg,
+                        status=ApplicationStageState.STATUS_PENDING,
+                        score=0.0
+                    )
+                state.application.stage_cells.append(s_cell)
             return render(request, 'candidates/partials/score_entry_row.html', {
-                'state': state,
+                'app': state.application,
+                'stages': stages,
                 'bypass_locks': bypass_locks,
             })
 
@@ -1933,34 +2190,59 @@ class InterviewScoresPanelView(LoginRequiredMixin, RoleRequiredMixin, View):
     ]
 
     def get(self, request, pk):
-        from .models import ExternalInterviewerScore, JobDefaultInterviewer
+        from .models import ExternalInterviewerScore, JobDefaultInterviewer, ExternalInterviewerCompetencyScore
         state = get_object_or_404(ApplicationStageState, pk=pk, is_deleted=False)
         
         if state.stage.stage_type != 'INTERVIEW':
             raise PermissionDenied("این پنل فقط برای مراحل مصاحبه در دسترس است.")
             
-        external_scores = state.external_interviewer_scores.filter(is_deleted=False)
+        external_scores = list(state.external_interviewer_scores.filter(is_deleted=False))
         bypass_locks = request.GET.get('bypass_locks') == '1'
+        
+        competencies = list(state.stage.competencies.filter(is_deleted=False).order_by('id'))
 
-        # اگه هنوز نمره‌ای ثبت نشده، مصاحبه‌گران پیش‌فرض شغل را برای پیش‌پر کردن فرم لود کن
+        # Map competencies to existing scores
+        for score in external_scores:
+            existing_comp_scores = {
+                cs.competency_id: cs.score 
+                for cs in score.competency_scores.filter(is_deleted=False)
+            }
+            score.comp_cells = [
+                {
+                    'competency': comp,
+                    'score': existing_comp_scores.get(comp.id, 0.0)
+                }
+                for comp in competencies
+            ]
+
+        # If no score exists, load job default interviewers to pre-populate form
         default_interviewers = []
-        if not external_scores.exists():
+        if not external_scores:
             default_interviewers = list(
                 JobDefaultInterviewer.objects.filter(
                     job=state.application.job,
                     is_deleted=False
                 ).order_by('id')
             )
+            for iv in default_interviewers:
+                iv.comp_cells = [
+                    {
+                        'competency': comp,
+                        'score': 0.0
+                    }
+                    for comp in competencies
+                ]
         
         return render(request, 'candidates/partials/interview_scores_panel.html', {
             'state': state,
             'external_scores': external_scores,
             'bypass_locks': bypass_locks,
             'default_interviewers': default_interviewers,
+            'competencies': competencies,
         })
 
     def post(self, request, pk):
-        from .models import ExternalInterviewerScore
+        from .models import ExternalInterviewerScore, ExternalInterviewerCompetencyScore
         from django.db import transaction
         
         state = get_object_or_404(ApplicationStageState, pk=pk, is_deleted=False)
@@ -1969,24 +2251,43 @@ class InterviewScoresPanelView(LoginRequiredMixin, RoleRequiredMixin, View):
         if state.stage.stage_type != 'INTERVIEW':
             raise PermissionDenied("این پنل فقط برای مراحل مصاحبه در دسترس است.")
 
+        competencies = list(state.stage.competencies.filter(is_deleted=False).order_by('id'))
         names = request.POST.getlist('interviewer_name[]')
         scores = request.POST.getlist('score[]')
         weights = request.POST.getlist('weight[]')
         notes = request.POST.getlist('notes[]')
 
+        # Since we are returning score_entry_row.html, we need stages and application context
+        from apps.jobs.models import JobOpportunityStage
+        stages = list(state.application.job.stages.filter(is_deleted=False).order_by('sequence'))
+        
+        # Ensure all states exist to prevent UI crashes when rendering the row
+        state_map = {s.stage_id: s for s in state.application.stage_states.filter(is_deleted=False)}
+        state.application.stage_cells = []
+        for stg in stages:
+            s_cell = state_map.get(stg.id)
+            if not s_cell:
+                s_cell = ApplicationStageState.objects.create(
+                    application=state.application,
+                    stage=stg,
+                    status=ApplicationStageState.STATUS_PENDING,
+                    score=0.0
+                )
+            state.application.stage_cells.append(s_cell)
+
         with transaction.atomic():
-            state.external_interviewer_scores.filter(is_deleted=False).update(is_deleted=True)
+            # Delete old interviewer scores (soft-delete)
+            old_scores = state.external_interviewer_scores.filter(is_deleted=False)
+            for old in old_scores:
+                old.competency_scores.filter(is_deleted=False).update(is_deleted=True)
+                old.is_deleted = True
+                old.save()
             
             for i in range(len(names)):
                 name = names[i].strip()
                 if not name:
                     continue
                 
-                try:
-                    score_val = float(scores[i])
-                except (ValueError, IndexError):
-                    score_val = 0.0
-                    
                 try:
                     weight_val = int(weights[i])
                     if weight_val < 1:
@@ -1996,18 +2297,53 @@ class InterviewScoresPanelView(LoginRequiredMixin, RoleRequiredMixin, View):
                     
                 notes_val = notes[i].strip() if i < len(notes) else ""
                 
-                ExternalInterviewerScore.objects.create(
+                # Fetch dynamically submitted competency scores for this row index
+                row_comp_scores = []
+                total_c_weight = 0
+                weighted_c_sum = 0.0
+                
+                for comp in competencies:
+                    key = f"comp_score_{i}_{comp.id}"
+                    raw_score = request.POST.get(key)
+                    if raw_score is not None:
+                        try:
+                            c_score = float(raw_score)
+                        except ValueError:
+                            c_score = 0.0
+                        row_comp_scores.append((comp, c_score))
+                        weighted_c_sum += c_score * comp.weight
+                        total_c_weight += comp.weight
+                
+                if row_comp_scores:
+                    final_score_val = round(weighted_c_sum / total_c_weight, 2) if total_c_weight > 0 else 0.0
+                else:
+                    try:
+                        final_score_val = float(scores[i])
+                    except (ValueError, IndexError):
+                        final_score_val = 0.0
+                
+                ext_score = ExternalInterviewerScore.objects.create(
                     stage_state=state,
                     interviewer_name=name,
-                    score=score_val,
+                    score=final_score_val,
                     weight=weight_val,
                     notes=notes_val
                 )
+                
+                for comp, c_score in row_comp_scores:
+                    ExternalInterviewerCompetencyScore.objects.create(
+                        external_interviewer_score=ext_score,
+                        competency=comp,
+                        score=c_score
+                    )
             
+            # Recalculate average and save state
+            state.is_manually_edited = False
             state.save()
 
         return render(request, 'candidates/partials/score_entry_row.html', {
-            'state': state,
+            'app': state.application,
+            'stages': stages,
             'bypass_locks': bypass_locks,
         })
 
@@ -2199,6 +2535,30 @@ class ExportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
         if show_failed_prior or bypass_locks:
             app_statuses.append(JobApplication.STATUS_REJECTED)
             
+        # Ensure all active applications have a stage state record for this stage before exporting
+        active_apps = JobApplication.objects.filter(
+            job=job,
+            status__in=app_statuses,
+            is_deleted=False
+        )
+        existing_app_ids = set(ApplicationStageState.objects.filter(
+            application__job=job,
+            stage=stage,
+            is_deleted=False
+        ).values_list('application_id', flat=True))
+        
+        to_create = []
+        for app in active_apps:
+            if app.id not in existing_app_ids:
+                to_create.append(ApplicationStageState(
+                    application=app,
+                    stage=stage,
+                    status=ApplicationStageState.STATUS_PENDING,
+                    score=0.0
+                ))
+        if to_create:
+            ApplicationStageState.objects.bulk_create(to_create)
+
         pending_states_qs = ApplicationStageState.objects.filter(
             application__job=job,
             application__status__in=app_statuses,
@@ -2240,14 +2600,20 @@ class ExportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
         
         headers = [
             "شناسه وضعیت", "نام متقاضی", "نام خانوادگی", "کد ملی", "عنوان شغل", "مرحله", 
-            "نمره نهایی مرحله", "وضعیت ارزیابی", "تاریخ ارزیابی", "ارزیاب", "آخرین تغییر"
+            "نمره نهایی مرحله", "وضعیت ارزیابی", "توضیحات و یادداشت ارزیاب", "تاریخ ارزیابی", "ارزیاب", "آخرین تغییر"
         ]
+        
+        from .models import JobDefaultInterviewer
+        default_interviewers = list(JobDefaultInterviewer.objects.filter(job=job, is_deleted=False).order_by('id'))
+        if stage.stage_type == 'INTERVIEW' and default_interviewers:
+            for iv in default_interviewers:
+                headers.append(f"نمره {iv.interviewer_name}")
         
         from apps.core.templatetags.jalali_tags import to_jalali
         rows = []
         for state in states:
             evaluator_name = state.evaluator.get_full_name() if state.evaluator else str(state.evaluator or '')
-            rows.append([
+            row_data = [
                 state.id,
                 state.application.candidate.first_name,
                 state.application.candidate.last_name,
@@ -2256,10 +2622,19 @@ class ExportScoreEntryExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                 stage.name,
                 state.score if state.score is not None else "",
                 state.get_status_display(),
+                state.notes if state.notes else "",
                 to_jalali(state.evaluation_date),
                 evaluator_name,
-                state.updated_at.strftime('%Y-%m-%d %H:%M') if state.updated_at else ""
-            ])
+                to_jalali(state.updated_at)
+            ]
+            if stage.stage_type == 'INTERVIEW' and default_interviewers:
+                existing = {
+                    es.interviewer_name: es.score
+                    for es in state.external_interviewer_scores.filter(is_deleted=False)
+                }
+                for iv in default_interviewers:
+                    row_data.append(existing.get(iv.interviewer_name, ""))
+            rows.append(row_data)
             
         from apps.core.utils import export_to_excel_response
         filename = f"score_entry_{job.id}_{stage.id}.xlsx"
@@ -2308,6 +2683,7 @@ class ExportInterviewsExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                     filtered_states.append(state)
             active_stage_states = filtered_states
 
+        from apps.core.templatetags.jalali_tags import to_jalali
         headers = [
             "شناسه", "نام متقاضی", "نام خانوادگی", "عنوان شغل", "مرحله جاری", "نمره شما", "آخرین تغییر"
         ]
@@ -2324,7 +2700,7 @@ class ExportInterviewsExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                 state.application.job.title,
                 state.stage.name,
                 my_score,
-                state.updated_at.strftime('%Y-%m-%d %H:%M') if state.updated_at else ""
+                to_jalali(state.updated_at)
             ])
             
         from apps.core.utils import export_to_excel_response
@@ -2831,8 +3207,22 @@ class StageRollbackView(LoginRequiredMixin, RoleRequiredMixin, View):
                 is_deleted=False
             ).update(is_deleted=True)
 
+        stages = list(app.job.stages.filter(is_deleted=False).order_by('sequence'))
+        state_map = {s.stage_id: s for s in app.stage_states.filter(is_deleted=False)}
+        app.stage_cells = []
+        for stg in stages:
+            s_cell = state_map.get(stg.id)
+            if not s_cell:
+                s_cell = ApplicationStageState.objects.create(
+                    application=app,
+                    stage=stg,
+                    status=ApplicationStageState.STATUS_PENDING,
+                    score=0.0
+                )
+            app.stage_cells.append(s_cell)
         return render(request, 'candidates/partials/score_entry_row.html', {
-            'state': stage_state,
+            'app': app,
+            'stages': stages,
             'bypass_locks': bypass_locks,
         })
 
@@ -3015,10 +3405,21 @@ class BulkInterviewScoresView(LoginRequiredMixin, RoleRequiredMixin, View):
         with transaction.atomic():
             for state in stage_states:
                 has_score = False
+                any_changes = False
                 for iv in default_interviewers:
                     field_key = f'score_{state.pk}_{iv.pk}'
                     raw = request.POST.get(field_key, '').strip()
                     if raw == '':
+                        # Delete existing score if it was cleared
+                        es_obj = ExternalInterviewerScore.objects.filter(
+                            stage_state=state,
+                            interviewer_name=iv.interviewer_name,
+                            is_deleted=False
+                        ).first()
+                        if es_obj:
+                            es_obj.is_deleted = True
+                            es_obj.save()
+                            any_changes = True
                         continue
                     try:
                         score_val = float(raw)
@@ -3033,9 +3434,11 @@ class BulkInterviewScoresView(LoginRequiredMixin, RoleRequiredMixin, View):
                         is_deleted=False
                     ).first()
                     if es_obj:
-                        es_obj.score = score_val
-                        es_obj.weight = iv.weight
-                        es_obj.save(update_fields=['score', 'weight'])
+                        if es_obj.score != score_val or es_obj.weight != iv.weight:
+                            es_obj.score = score_val
+                            es_obj.weight = iv.weight
+                            es_obj.save(update_fields=['score', 'weight'])
+                            any_changes = True
                     else:
                         ExternalInterviewerScore.objects.create(
                             stage_state=state,
@@ -3043,11 +3446,19 @@ class BulkInterviewScoresView(LoginRequiredMixin, RoleRequiredMixin, View):
                             score=score_val,
                             weight=iv.weight
                         )
+                        any_changes = True
 
-                if has_score:
-                    state.save()
+                if any_changes or has_score:
+                    if state.external_interviewer_scores.filter(is_deleted=False).exists():
+                        state.is_manually_edited = False
+                        state.save()
+                    else:
+                        state.score = 0.0
+                        state.status = ApplicationStageState.STATUS_PENDING
+                        state.is_manually_edited = False
+                        state.save()
 
-        return render(request, 'candidates/partials/bulk_interview_scores_panel.html', {
+        response = render(request, 'candidates/partials/bulk_interview_scores_panel.html', {
             'job': job,
             'stage': stage,
             'default_interviewers': default_interviewers,
@@ -3055,6 +3466,8 @@ class BulkInterviewScoresView(LoginRequiredMixin, RoleRequiredMixin, View):
             'saved': True,
             '_reload_list': True,
         })
+        response['HX-Trigger'] = 'refresh-score-entry-list'
+        return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3147,24 +3560,40 @@ class DownloadInterviewScoresTemplateView(LoginRequiredMixin, RoleRequiredMixin,
             bottom=Side(style='thin', color='CBD5E1'),
         )
 
+        competencies = list(stage.competencies.filter(is_deleted=False).order_by('id'))
+
+        # سطر هدر — ردیف ۲
+        headers = ['کد ملی', 'نام و نام خانوادگی', 'وضعیت فعلی']
+        
         # سطر اول — توضیح
-        ws.merge_cells(f'A1:{get_column_letter(3 + len(default_interviewers))}1')
+        total_cols = 3
+        if competencies:
+            for iv in default_interviewers:
+                for comp in competencies:
+                    headers.append(f"{iv.interviewer_name} - {comp.name}")
+                    total_cols += 1
+        else:
+            for iv in default_interviewers:
+                headers.append(f'{iv.interviewer_name}\n(وزن: {iv.weight}%)')
+                total_cols += 1
+
+        headers.append('توضیحات ارزیاب')
+        total_cols += 1
+
+        ws.merge_cells(f'A1:{get_column_letter(total_cols)}1')
         desc_cell = ws['A1']
         desc_cell.value = f'قالب ورود نمرات مصاحبه | فرصت شغلی: {job.title} | مرحله: {stage.name} | ستون‌های آبی را ویرایش نکنید. فقط نمرات (۰-۱۰۰) وارد کنید.'
         desc_cell.font = Font(name='Calibri', bold=True, color='1E3A5F', size=10)
         desc_cell.alignment = right
         ws.row_dimensions[1].height = 28
 
-        # سطر هدر — ردیف ۲
-        headers = ['کد ملی', 'نام و نام خانوادگی', 'وضعیت فعلی']
-        for iv in default_interviewers:
-            headers.append(f'{iv.interviewer_name}\n(وزن: {iv.weight}%)')
-
         for col_idx, header in enumerate(headers, start=1):
             cell = ws.cell(row=2, column=col_idx, value=header)
             cell.font = header_font
             if col_idx <= 3:
                 cell.fill = header_fill
+            elif col_idx == total_cols:
+                cell.fill = interviewer_fill
             else:
                 cell.fill = interviewer_fill
             cell.alignment = center
@@ -3183,11 +3612,6 @@ class DownloadInterviewScoresTemplateView(LoginRequiredMixin, RoleRequiredMixin,
 
         for row_idx, state in enumerate(stage_states, start=3):
             candidate = state.application.candidate
-            existing = {
-                es.interviewer_name: es.score
-                for es in state.external_interviewer_scores.filter(is_deleted=False)
-            }
-
             row_fill = row_fill_even if row_idx % 2 == 0 else row_fill_odd
 
             data = [
@@ -3195,8 +3619,30 @@ class DownloadInterviewScoresTemplateView(LoginRequiredMixin, RoleRequiredMixin,
                 f'{candidate.first_name} {candidate.last_name}',
                 status_map.get(state.status, state.status),
             ]
-            for iv in default_interviewers:
-                data.append(existing.get(iv.interviewer_name, ''))
+
+            if competencies:
+                for iv in default_interviewers:
+                    es = state.external_interviewer_scores.filter(
+                        interviewer_name=iv.interviewer_name, 
+                        is_deleted=False
+                    ).first()
+                    existing_comp_scores = {}
+                    if es:
+                        existing_comp_scores = {
+                            cs.competency_id: cs.score 
+                            for cs in es.competency_scores.filter(is_deleted=False)
+                        }
+                    for comp in competencies:
+                        data.append(existing_comp_scores.get(comp.id, ''))
+            else:
+                existing = {
+                    es.interviewer_name: es.score
+                    for es in state.external_interviewer_scores.filter(is_deleted=False)
+                }
+                for iv in default_interviewers:
+                    data.append(existing.get(iv.interviewer_name, ''))
+
+            data.append(state.notes if state.notes else '')
 
             for col_idx, value in enumerate(data, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
@@ -3207,6 +3653,9 @@ class DownloadInterviewScoresTemplateView(LoginRequiredMixin, RoleRequiredMixin,
                     cell.font = Font(name='Calibri', size=10)
                     if col_idx == 1:  # کد ملی — قفل
                         cell.font = Font(name='Calibri', size=10, color='374151')
+                elif col_idx == total_cols:
+                    cell.alignment = right
+                    cell.font = Font(name='Calibri', size=10)
                 else:
                     cell.alignment = center
                     cell.number_format = '0.00'
@@ -3215,13 +3664,14 @@ class DownloadInterviewScoresTemplateView(LoginRequiredMixin, RoleRequiredMixin,
         ws.column_dimensions['A'].width = 16
         ws.column_dimensions['B'].width = 22
         ws.column_dimensions['C'].width = 12
-        for i in range(len(default_interviewers)):
+        for i in range(total_cols - 4):
             col_letter = get_column_letter(4 + i)
-            ws.column_dimensions[col_letter].width = 14
+            ws.column_dimensions[col_letter].width = 15
+        ws.column_dimensions[get_column_letter(total_cols)].width = 25
 
         # یادداشت پایین
         note_row = len(list(stage_states)) + 3
-        ws.merge_cells(f'A{note_row}:{get_column_letter(3 + len(default_interviewers))}{note_row}')
+        ws.merge_cells(f'A{note_row}:{get_column_letter(total_cols)}{note_row}')
         note_cell = ws[f'A{note_row}']
         note_cell.value = '📌 راهنما: فقط ستون‌های آبی رنگ (نمرات) را ویرایش کنید. کد ملی را تغییر ندهید. اعداد فارسی نیز قابل قبول است.'
         note_cell.font = Font(name='Calibri', italic=True, color='6B7280', size=9)
@@ -3250,7 +3700,8 @@ class ImportInterviewScoresExcelView(LoginRequiredMixin, RoleRequiredMixin, View
 
     def post(self, request):
         import openpyxl
-        from .models import JobDefaultInterviewer, ExternalInterviewerScore
+        from .models import JobDefaultInterviewer, ExternalInterviewerScore, ExternalInterviewerCompetencyScore
+        from django.db import transaction
 
         job_id = request.POST.get('job_id')
         stage_id = request.POST.get('stage_id')
@@ -3295,6 +3746,13 @@ class ImportInterviewScoresExcelView(LoginRequiredMixin, RoleRequiredMixin, View
                 if header and iv.interviewer_name in str(header):
                     interviewer_col_map[iv.interviewer_name] = col_idx
                     break
+
+        # نگاشت ستون توضیحات ارزیاب
+        notes_col_idx = None
+        for col_idx, header in enumerate(header_row):
+            if header and any(key in str(header).lower() for key in ["توضیحات ارزیاب", "توضیحات", "توضیح", "یادداشت", "notes", "comment", "description"]):
+                notes_col_idx = col_idx
+                break
 
         saved_count = 0
         error_rows = []
@@ -3356,7 +3814,15 @@ class ImportInterviewScoresExcelView(LoginRequiredMixin, RoleRequiredMixin, View
                             weight=iv.weight
                         )
 
-                if has_score:
+                # Import stage state notes if present
+                notes_val = None
+                if notes_col_idx is not None and notes_col_idx < len(row):
+                    notes_val = row[notes_col_idx]
+                    if notes_val is not None:
+                        state.notes = str(notes_val).strip()
+
+                if has_score or (notes_col_idx is not None and notes_val is not None):
+                    state.is_manually_edited = False
                     state.save()
                     saved_count += 1
 
@@ -3391,7 +3857,7 @@ class ImportInterviewScoresExcelView(LoginRequiredMixin, RoleRequiredMixin, View
                 for iv in default_interviewers
             ]
 
-        return render(request, 'candidates/partials/bulk_interview_scores_panel.html', {
+        response = render(request, 'candidates/partials/bulk_interview_scores_panel.html', {
             'job': job,
             'stage': stage,
             'default_interviewers': default_interviewers,
@@ -3402,6 +3868,8 @@ class ImportInterviewScoresExcelView(LoginRequiredMixin, RoleRequiredMixin, View
                 'error_rows': error_rows,
             },
         })
+        response['HX-Trigger'] = 'refresh-score-entry-list'
+        return response
 
 
 class JobOpportunityReportView(LoginRequiredMixin, RoleRequiredMixin, View):
