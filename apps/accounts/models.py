@@ -30,6 +30,30 @@ class UserProfile(SoftDeleteModel):
     is_external = models.BooleanField(default=False, verbose_name="ارزیاب خارجی")
     phone_number = models.CharField(max_length=15, blank=True, verbose_name="شماره تماس")
 
+    THEME_CHOICES = [
+        ('indigo', 'غروب ایندیگو (پیش‌فرض)'),
+        ('emerald', 'سبز زمردین'),
+        ('slate', 'سنگ لوح تیره (سنگین)'),
+        ('sunset', 'آفتاب سوزان'),
+        ('crimson', 'سرخ یاقوتی'),
+    ]
+    FONT_FAMILY_CHOICES = [
+        ('vazir', 'وزیرمتن'),
+        ('yekan', 'یکان‌بخش'),
+        ('shabnam', 'شبنم'),
+        ('samim', 'صمیم'),
+    ]
+    FONT_SIZE_CHOICES = [
+        ('small', 'کوچک'),
+        ('medium', 'متوسط (پیش‌فرض)'),
+        ('large', 'بزرگ'),
+        ('xlarge', 'خیلی بزرگ'),
+    ]
+
+    theme = models.CharField(max_length=20, choices=THEME_CHOICES, default='indigo', verbose_name="پوسته رنگی")
+    font_family = models.CharField(max_length=20, choices=FONT_FAMILY_CHOICES, default='vazir', verbose_name="فونت")
+    font_size = models.CharField(max_length=20, choices=FONT_SIZE_CHOICES, default='medium', verbose_name="اندازه قلم")
+
     class Meta:
         verbose_name = "پروفایل کاربر"
         verbose_name_plural = "پروفایل‌های کاربران"

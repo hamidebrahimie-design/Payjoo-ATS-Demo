@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}تنظیمات شخصی‌سازی | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* تم کارت‌ها */
+    .preview-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .preview-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .preview-card.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(99, 102, 241, 0.03);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+    .color-swatch {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb" class="mb-1">
+        <ol class="breadcrumb mb-0 text-xs">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none text-muted">میز کار</a></li>
+            <li class="breadcrumb-item active text-primary" aria-current="page">شخصی‌سازی سامانه</li>
+        </ol>
+    </nav>
+    <h3 class="font-semibold text-secondary mb-1">تنظیمات شخصی‌سازی ظاهر سامانه</h3>
+    <p class="text-muted text-sm m-0">پوسته رنگی، فونت و اندازه نوشتار دلخواه خود را تنظیم کنید. تغییرات بلافاصله پیش‌نمایش داده می‌شوند.</p>
+</div>
+
+<div class="card premium-card" style="max-width: 800px;">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- ۱. بخش رنگ بندی پوسته‌ها -->
+            <div class="mb-5">
+                <h5 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                    🎨 انتخاب پوسته رنگی (Theme)
+                </h5>
+                <div class="row g-3">
+                    {% for code, label in profile.THEME_CHOICES %}
+                    <div class="col-6 col-md-2.4" style="flex: 0 0 20%; max-width: 20%;">
+                        <div class="preview-card p-3 text-center theme-option" data-theme="{{ code }}">
+                            <div class="d-flex justify-content-center mb-2">
+                                <div class="color-swatch 
+                                    {% if code == 'indigo' %}bg-indigo-swatch
+                                    {% elif code == 'emerald' %}bg-emerald-swatch
+                                    {% elif code == 'slate' %}bg-slate-swatch
+                                    {% elif code == 'sunset' %}bg-sunset-swatch
+                                    {% elif code == 'crimson' %}bg-crimson-swatch{% endif %}"></div>
+                            </div>
+                            <div class="text-xs font-semibold text-secondary">{{ label }}</div>
+                            <input type="radio" name="theme" value="{{ code }}" class="d-none" {% if profile.theme == code %}checked{% endif %}>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ۲. بخش نوع فونت -->
+            <div class="mb-5">
+                <h5 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                    ✍️ انتخاب نوع قلم (Font Family)
+                </h5>
+                <div class="row g-3">
+                    {% for code, label in profile.FONT_FAMILY_CHOICES %}
+                    <div class="col-6 col-md-3">
+                        <div class="preview-card p-3 text-center font-option" data-font="{{ code }}">
+                            <div class="fs-5 mb-1" style="
+                                {% if code == 'vazir' %}font-family: 'Vazirmatn', sans-serif;
+                                {% elif code == 'yekan' %}font-family: 'Yekan Bakh', 'YekanBakh', sans-serif;
+                                {% elif code == 'shabnam' %}font-family: 'Shabnam', sans-serif;
+                                {% elif code == 'samim' %}font-family: 'Samim', sans-serif;{% endif %}">
+                                نمونه متن ({{ label }})
+                            </div>
+                            <input type="radio" name="font_family" value="{{ code }}" class="d-none" {% if profile.font_family == code %}checked{% endif %}>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ۳. بخش اندازه فونت -->
+            <div class="mb-5">
+                <h5 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                    🔎 اندازه نوشتار (Font Size)
+                </h5>
+                <div class="row g-3">
+                    {% for code, label in profile.FONT_SIZE_CHOICES %}
+                    <div class="col-6 col-md-3">
+                        <div class="preview-card p-3 text-center size-option" data-size="{{ code }}">
+                            <div class="font-semibold text-secondary 
+                                {% if code == 'small' %}fs-6 text-xxs
+                                {% elif code == 'medium' %}fs-5 text-xs
+                                {% elif code == 'large' %}fs-4 text-sm
+                                {% elif code == 'xlarge' %}fs-3 text-md{% endif %}">
+                                {{ label }}
+                            </div>
+                            <input type="radio" name="font_size" value="{{ code }}" class="d-none" {% if profile.font_size == code %}checked{% endif %}>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr class="my-4 border-slate">
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary px-4 py-2 font-semibold">انصراف</a>
+                <button type="submit" class="btn btn-primary-custom px-4 py-2 font-bold shadow-md">ذخیره تنظیمات پوسته</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    /* استایل‌های رنگ دکمه‌های پالت رنگی */
+    .bg-indigo-swatch { background-color: #4f46e5 !important; }
+    .bg-emerald-swatch { background-color: #059669 !important; }
+    .bg-slate-swatch { background-color: #334155 !important; }
+    .bg-sunset-swatch { background-color: #ea580c !important; }
+    .bg-crimson-swatch { background-color: #db2777 !important; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ۱. مدیریت پیش‌نمایش تم رنگی در لحظه
+        const themeOptions = document.querySelectorAll('.theme-option');
+        themeOptions.forEach(opt => {
+            const radio = opt.querySelector('input[type="radio"]');
+            if (radio.checked) opt.classList.add('selected');
+
+            opt.addEventListener('click', function() {
+                themeOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                radio.checked = true;
+
+                // اعمال تم موقت بر روی body جهت پیش‌نمایش در لحظه
+                const themeCode = opt.dataset.theme;
+                const body = document.body;
+                
+                // پاک کردن تم‌های قبلی
+                body.className = body.className.replace(/\btheme-\S+/g, '');
+                body.classList.add(`theme-${themeCode}`);
+            });
+        });
+
+        // ۲. مدیریت پیش‌نمایش فونت در لحظه
+        const fontOptions = document.querySelectorAll('.font-option');
+        fontOptions.forEach(opt => {
+            const radio = opt.querySelector('input[type="radio"]');
+            if (radio.checked) opt.classList.add('selected');
+
+            opt.addEventListener('click', function() {
+                fontOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                radio.checked = true;
+
+                // اعمال فونت موقت
+                const fontCode = opt.dataset.font;
+                const body = document.body;
+                
+                body.className = body.className.replace(/\bfont-\S+/g, '');
+                body.classList.add(`font-${fontCode}`);
+            });
+        });
+
+        // ۳. مدیریت پیش‌نمایش سایز قلم در لحظه
+        const sizeOptions = document.querySelectorAll('.size-option');
+        sizeOptions.forEach(opt => {
+            const radio = opt.querySelector('input[type="radio"]');
+            if (radio.checked) opt.classList.add('selected');
+
+            opt.addEventListener('click', function() {
+                sizeOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                radio.checked = true;
+
+                // اعمال سایز موقت بر روی تگ html
+                const sizeCode = opt.dataset.size;
+                const html = document.documentElement;
+                
+                html.className = html.className.replace(/\bsize-\S+/g, '');
+                html.classList.add(`size-${sizeCode}`);
+            });
+        });
+    });
+</script>
+{% endblock %}

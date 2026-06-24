@@ -139,7 +139,17 @@
         <div class="col-lg-7">
             <div class="card config-card border-0 p-4 shadow-xs h-100 d-flex flex-column">
                 <h5 class="font-bold text-secondary mb-2">۳. پیش‌نمایش زنده سند Assessment Plan</h5>
-                <p class="text-muted text-xs mb-4">فرآیند ارزیابی، اوزان مراحل و حد نصاب‌ها به صورت خودکار بر اساس شایستگی‌های انتخابی محاسبه می‌شوند.</p>
+                <p class="text-muted text-xs mb-3">فرآیند ارزیابی، اوزان مراحل و حد نصاب‌ها به صورت خودکار بر اساس شایستگی‌های انتخابی محاسبه می‌شوند.</p>
+                
+                <!-- گزینه‌های محاسباتی -->
+                <div class="mb-3.5 p-2.5 bg-light bg-opacity-75 border border-light rounded-3 d-flex align-items-center mb-3">
+                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2" style="direction: rtl;">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="round_to_five" id="round_to_five" {% if round_to_five %}checked{% endif %} onchange="triggerPreviewUpdate()" style="cursor: pointer;">
+                        <label class="form-check-label text-xs font-bold text-secondary" for="round_to_five" style="cursor: pointer;">
+                            ⚖️ رند کردن اوزان شایستگی‌ها و مراحل به مضرب ۵
+                        </label>
+                    </div>
+                </div>
                 
                 <div class="flex-grow-1 border border-light rounded-3 p-3 bg-white d-flex flex-column justify-content-between" style="min-height: 400px;">
                     <div id="preview-table-container">
@@ -161,11 +171,18 @@
     </div>
 </form>
 
+<!-- کانتینر راهبرد استخدامی هوش مصنوعی -->
+<div class="row g-4 mt-2 mb-4" id="ai-advice-config-row" style="display: none;">
+    <div class="col-12">
+        <div id="ai-advice-config-container"></div>
+    </div>
+</div>
+
 <!-- فرم مجازی HTMX جهت دریافت پیش‌نمایش با استفاده از تریگر جاوااسکریپت -->
 <div id="htmx-preview-trigger"
      hx-post="{% url 'job_competency_config' job.id %}"
      hx-target="#preview-table-container"
-     hx-include="[name='selected_competencies'], [name^='stage_weight_'], [name^='stage_passing_score_'], [name='workflow_template_id'], [name='custom_competencies']"
+     hx-include="[name='selected_competencies'], [name^='stage_weight_'], [name^='stage_passing_score_'], [name='workflow_template_id'], [name='custom_competencies'], [name='round_to_five']"
      hx-vals="js:{action: 'preview'}"
      hx-trigger="updatePreview">
 </div>
@@ -182,7 +199,7 @@
                 <form id="custom-comp-form" onsubmit="submitCustomCompForm(event)">
                     <div class="mb-3">
                         <label for="custom_title" class="form-label font-semibold text-xs text-secondary mb-1.5">عنوان شایستگی:</label>
-                        <input type="text" id="custom_title" class="form-control text-xs" style="border-radius: 8px;" placeholder="مثلا: آشنایی با فریمورک جنگو" required>
+                        <select id="custom_title" class="form-select text-xs" style="border-radius: 8px;" placeholder="مثلا: آشنایی با فریمورک جنگو" required></select>
                     </div>
                     
                     <div class="mb-3">
@@ -233,6 +250,8 @@
 <!-- Tom Select JS -->
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
+    let customTitleSelect;
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Tom Select with remote search support
         const tomSelectInstance = new TomSelect('#post-select', {
@@ -268,11 +287,72 @@
                         // After loading comps, trigger preview update based on whatever becomes selected
                         setTimeout(triggerPreviewUpdate, 100);
                     });
+                    
+                    // Load AI advice card
+                    const aiRow = document.getElementById('ai-advice-config-row');
+                    if (aiRow) {
+                        aiRow.style.display = 'block';
+                        document.getElementById('ai-advice-config-container').innerHTML = `
+                            <div class="card border-0 shadow-lg p-5 text-center" style="border-radius: 20px;">
+                                <div class="spinner-border text-primary mb-3" role="status"></div>
+                                <h6 class="font-bold text-secondary">در حال دریافت و تحلیل توصیه‌های هوشمند هوش مصنوعی...</h6>
+                            </div>
+                        `;
+                        htmx.ajax('GET', '{% url "recruitment_patterns" %}?action=ai_advise&post_code=' + encodeURIComponent(value), {
+                            target: '#ai-advice-config-container'
+                        });
+                    }
                 } else {
                     document.getElementById('post-comps-container').innerHTML = 
                         '<div class="text-center text-muted py-5 text-xs">لطفاً ابتدا یک پست سازمانی انتخاب کنید.</div>';
+                    const aiRow = document.getElementById('ai-advice-config-row');
+                    if (aiRow) {
+                        aiRow.style.display = 'none';
+                        document.getElementById('ai-advice-config-container').innerHTML = '';
+                    }
                     triggerPreviewUpdate();
                 }
+            }
+        });
+
+        // Initialize Tom Select for custom competency title
+        customTitleSelect = new TomSelect('#custom_title', {
+            valueField: 'title',
+            labelField: 'title',
+            searchField: 'title',
+            create: true, // Allow user to type manually if not found in db
+            placeholder: "جستجو یا تایپ شایستگی دستی...",
+            rtl: true,
+            preload: 'focus', // load items when focused
+            load: function(query, callback) {
+                var url = '{% url "search_competencies_api" %}?q=' + encodeURIComponent(query);
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        callback(json.items);
+                    }).catch(() => {
+                        callback();
+                    });
+            },
+            onChange: function(value) {
+                if (value) {
+                    const data = customTitleSelect.options[value];
+                    if (data && data.competency_type) {
+                        // Pre-populate fields
+                        document.getElementById('custom_type').value = data.competency_type;
+                        document.getElementById('custom_importance').value = data.importance;
+                        document.getElementById('custom_level').value = data.level;
+                    }
+                }
+            }
+        });
+
+        // Clear modal form and Tom Select when modal is closed
+        const modalEl = document.getElementById('customCompModal');
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('custom-comp-form').reset();
+            if (customTitleSelect) {
+                customTitleSelect.clear();
             }
         });
 
@@ -291,6 +371,21 @@
             }).then(() => {
                 setTimeout(triggerPreviewUpdate, 100);
             });
+
+            // Load AI advice card on initial load
+            const aiRow = document.getElementById('ai-advice-config-row');
+            if (aiRow) {
+                aiRow.style.display = 'block';
+                document.getElementById('ai-advice-config-container').innerHTML = `
+                    <div class="card border-0 shadow-lg p-5 text-center" style="border-radius: 20px;">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <h6 class="font-bold text-secondary">در حال دریافت و تحلیل توصیه‌های هوشمند هوش مصنوعی...</h6>
+                    </div>
+                `;
+                htmx.ajax('GET', '{% url "recruitment_patterns" %}?action=ai_advise&post_code=' + encodeURIComponent(initialPostCode), {
+                    target: '#ai-advice-config-container'
+                });
+            }
         } else {
             document.getElementById('post-comps-container').innerHTML = 
                 '<div class="text-center text-muted py-5 text-xs">لطفاً ابتدا یک پست سازمانی انتخاب کنید.</div>';
@@ -307,9 +402,36 @@
     }
 
     function selectAllPostComps() {
-        const checkboxes = document.querySelectorAll('.post-comp-checkbox');
+        const checkboxes = document.querySelectorAll('.post-comp-item:not(.d-none) .post-comp-checkbox');
         checkboxes.forEach(cb => cb.checked = true);
         triggerPreviewUpdate();
+    }
+
+    function deselectAllPostComps() {
+        const checkboxes = document.querySelectorAll('.post-comp-item:not(.d-none) .post-comp-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        triggerPreviewUpdate();
+    }
+
+    function filterPostCompetencies() {
+        const checkedFilters = Array.from(document.querySelectorAll('.type-filter-checkbox:checked')).map(cb => cb.value);
+        const items = document.querySelectorAll('.post-comp-item');
+        items.forEach(item => {
+            const type = item.getAttribute('data-type');
+            if (checkedFilters.includes(type)) {
+                item.classList.remove('d-none');
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+    }
+
+    function toggleAllFilters(status) {
+        const filters = document.querySelectorAll('.type-filter-checkbox');
+        filters.forEach(f => {
+            f.checked = status;
+        });
+        filterPostCompetencies();
     }
 
     function submitCustomCompForm(event) {
@@ -387,6 +509,9 @@
         
         // Reset form
         document.getElementById('custom-comp-form').reset();
+        if (customTitleSelect) {
+            customTitleSelect.clear();
+        }
     }
     
     function removeCustomComp(button) {
@@ -414,5 +539,37 @@
         };
         return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
+
+    window.applyAIWeights = function(weightsStr) {
+        try {
+            const weights = JSON.parse(weightsStr);
+            let applied = false;
+            for (const [stage, val] of Object.entries(weights)) {
+                const input = document.querySelector(`input[name="stage_weight_${stage}"]`);
+                if (input) {
+                    input.value = val;
+                    applied = true;
+                }
+            }
+            if (applied) {
+                // Trigger preview update to recalculate and validate total weights
+                triggerPreviewUpdate();
+                
+                // Show a nice temporary floating feedback message
+                const msg = document.createElement('div');
+                msg.className = 'position-fixed bottom-0 end-0 m-4 p-3 bg-success text-white rounded-3 shadow animate__animated animate__fadeInUp';
+                msg.style.zIndex = '9999';
+                msg.innerText = '✓ اوزان پیشنهادی هوش مصنوعی بر روی فرم اعمال شدند.';
+                document.body.appendChild(msg);
+                setTimeout(() => {
+                    msg.classList.remove('animate__fadeInUp');
+                    msg.classList.add('animate__fadeOutDown');
+                    setTimeout(() => msg.remove(), 500);
+                }, 3000);
+            }
+        } catch (e) {
+            console.error('Error applying AI weights:', e);
+        }
+    };
 </script>
 {% endblock %}

@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory, BaseInlineFormSet
-from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate
+from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate, AISetting
 
 class JobOpportunityForm(forms.ModelForm):
     start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}))
@@ -220,3 +220,15 @@ WorkflowStageTemplateFormSet = inlineformset_factory(
     extra=1,
     can_delete=True
 )
+
+
+class AISettingForm(forms.ModelForm):
+    class Meta:
+        model = AISetting
+        fields = ['api_key', 'base_url', 'model_name', 'is_active']
+        widgets = {
+            'api_key': forms.PasswordInput(render_value=True, attrs={'class': 'form-control', 'placeholder': 'وارد کردن کلید API (مثال: av-xxx)'}),
+            'base_url': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'https://api.avalai.ir/v1'}),
+            'model_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'gpt-4o'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+        }

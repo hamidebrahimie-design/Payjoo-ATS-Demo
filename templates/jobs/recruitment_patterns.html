@@ -1,7 +1,11 @@
 {% extends "base.html" %}
-{% block title %}داشبورد الگوهای استخدامی مبتنی بر شایستگی | سامانه پیجو{% endblock %}
+{% block title %}شبیه‌ساز الگوهای استخدامی مبتنی بر شایستگی | سامانه پیجو{% endblock %}
 
 {% block extra_head %}
+<!-- Tom Select CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<!-- Animate.css for subtle micro-animations -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 <style>
     .pattern-card {
         background: #ffffff;
@@ -28,129 +32,292 @@
         border-color: #cbd5e1;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
     }
+    .ts-dropdown {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    .ts-control {
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+    }
+    /* Indicator transitions */
+    .htmx-indicator {
+        display: none !important;
+    }
+    .htmx-request .htmx-indicator {
+        display: inline-block !important;
+    }
+    .htmx-request.htmx-indicator {
+        display: inline-block !important;
+    }
+    .htmx-request {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    /* Premium segmented control tabs */
+    .custom-nav-pills {
+        background: #f1f5f9;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        display: inline-flex;
+    }
+    .custom-nav-pills .nav-link {
+        color: #64748b;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: all 0.2s ease;
+        padding: 8px 18px;
+        font-size: 0.8rem;
+    }
+    .custom-nav-pills .nav-link.active {
+        background-color: #ffffff !important;
+        color: #4f46e5 !important;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+    }
+    .custom-nav-pills .nav-link:hover:not(.active) {
+        color: #1e293b;
+        background-color: rgba(226, 232, 240, 0.5);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h3 class="font-bold text-secondary mb-1">📊 داشبورد الگوهای استخدامی (Recruitment Patterns)</h3>
-    <p class="text-muted text-sm m-0">تحلیل، استخراج و شبیه‌سازی مراحل و اوزان ارزیابی بر اساس پروفایل شایستگی‌های سازمان.</p>
+<div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style="direction: rtl;">
+    <div>
+        <h3 class="font-bold text-secondary mb-1">📊 شبیه‌ساز الگوهای استخدامی (Recruitment Pattern Simulator)</h3>
+        <p class="text-muted text-sm m-0">پست سازمانی مورد نظر را جستجو کرده و شبیه‌سازی فرآیند استخدام، اوزان مراحل ارزیابی و پیشنهادهای هوش مصنوعی را دریافت کنید.</p>
+    </div>
+    
+    <!-- Tab Pill Buttons -->
+    <ul class="nav nav-pills custom-nav-pills" id="dashboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="simulator-tab" data-bs-toggle="tab" data-bs-target="#simulator-pane" type="button" role="tab" aria-controls="simulator-pane" aria-selected="true">
+                🎯 شبیه‌ساز و الگوهای پست
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats-pane" type="button" role="tab" aria-controls="stats-pane" aria-selected="false">
+                📊 آمار مرجع و کانون‌های مشترک
+            </button>
+        </li>
+    </ul>
 </div>
 
-<!-- ردیف کارت‌های آماری -->
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
-            <div>
-                <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">تعداد کل شایستگی‌های مرجع</span>
-                <span class="stat-badge">{{ total_count }}</span>
-            </div>
-            <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
-            <div>
-                <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">پست‌های سازمانی دارای شایستگی</span>
-                <span class="stat-badge text-success">{{ unique_posts_count }}</span>
-            </div>
-            <div class="p-3 bg-success bg-opacity-10 text-success rounded-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+<div class="tab-content" id="dashboardTabsContent">
+    <!-- Tab 1: Simulator (Active, Full Width) -->
+    <div class="tab-pane fade show active" id="simulator-pane" role="tabpanel" aria-labelledby="simulator-tab" tabindex="0">
+        <div class="card pattern-card border-0 p-4 shadow-xs mb-4" style="direction: rtl;">
+            <h5 class="font-bold text-secondary mb-2">🎯 شبیه‌ساز تعاملی فرآیند استخدام</h5>
+            <p class="text-muted text-xs mb-4">جهت شبیه‌سازی مراحل، اوزان و متدولوژی بهینه ارزیابی، پست سازمانی مورد نظر را انتخاب نمایید:</p>
+            
+            <div class="mb-2">
+                <select id="dashboard-post-select" class="form-select text-xs font-semibold" style="border-radius: 8px;">
+                    <option value="">-- برای شروع، پست سازمانی را جستجو کنید (مثال: برنامه نویس یا مدیر) --</option>
+                </select>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
-            <div>
-                <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">مراحل ارزیابی فعال در پترن‌ها</span>
-                <span class="stat-badge text-warning">۴ مرحله</span>
-            </div>
-            <div class="p-3 bg-warning bg-opacity-10 text-warning rounded-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row g-4">
-    <!-- توزیع انواع شایستگی‌ها -->
-    <div class="col-lg-4">
-        <div class="card pattern-card border-0 p-4 shadow-xs h-100">
-            <h5 class="font-bold text-secondary mb-4">توزیع انواع شایستگی‌ها در بانک مرجع</h5>
-            <div class="d-flex flex-column gap-3.5">
-                {% for item in type_distribution %}
-                <div>
-                    <div class="d-flex justify-content-between text-xs font-semibold mb-1">
-                        <span>
-                            {% if item.competency_type == 'KN' %}دانش (Knowledge)
-                            {% elif item.competency_type == 'SK' %}مهارت (Skill)
-                            {% elif item.competency_type == 'AB' %}توانایی (Ability)
-                            {% elif item.competency_type == 'GE' %}رفتاری (Behavioral)
-                            {% elif item.competency_type == 'ST' %}ارزش‌ها و سبک‌ها
-                            {% elif item.competency_type == 'PR' %}گردشکار
-                            {% elif item.competency_type == 'CQ' %}گواهینامه و صلاحیت
-                            {% else %}علایق حرفه‌ای{% endif %}
-                        </span>
-                        <strong class="text-primary">{{ item.count }} ردیف</strong>
+        <div id="simulation-result">
+            <!-- راهنمای شروع تعاملی به جای پیش‌نمایش شلوغ اولیه -->
+            <div class="card pattern-card border-0 p-5 shadow-xs text-center bg-white bg-opacity-80" style="border: 1px dashed rgba(99, 102, 241, 0.25) !important; border-radius: 16px;">
+                <div class="mb-3 text-primary animate__animated animate__fadeInDown">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <h6 class="font-bold text-secondary mb-2">شبیه‌ساز هوشمند آماده به کار است</h6>
+                <p class="text-muted text-xs mx-auto mb-0" style="max-width: 480px; line-height: 1.6;">
+                    برای شروع شبیه‌سازی مراحل سنجش، تعیین اوزان ارزیابی و استراتژی‌های هوش مصنوعی (AI)، از فیلد بالا نام یا کد پست سازمانی مورد نظر را جستجو و انتخاب کنید.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Stats (Reference Stats & Shared Assessment Overlaps) -->
+    <div class="tab-pane fade" id="stats-pane" role="tabpanel" aria-labelledby="stats-tab" tabindex="0">
+        <!-- ردیف کارت‌های آماری -->
+        <div class="row g-4 mb-4" style="direction: rtl;">
+            <div class="col-md-4">
+                <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
+                    <div>
+                        <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">تعداد کل شایستگی‌های مرجع</span>
+                        <span class="stat-badge">{{ total_count }}</span>
                     </div>
-                    <div class="progress progress-bar-custom bg-light">
-                        <div class="progress-bar {% if item.competency_type == 'KN' %}bg-primary{% elif item.competency_type in 'SK,AB' %}bg-success{% elif item.competency_type in 'GE,ST' %}bg-warning{% else %}bg-secondary{% endif %}" 
-                             role="progressbar" 
-                             style="width: {% widthratio item.count total_count 100 %}%"></div>
+                    <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
                     </div>
                 </div>
-                {% endfor %}
+            </div>
+            <div class="col-md-4">
+                <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
+                    <div>
+                        <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">پست‌های سازمانی دارای شایستگی</span>
+                        <span class="stat-badge text-success">{{ unique_posts_count }}</span>
+                    </div>
+                    <div class="p-3 bg-success bg-opacity-10 text-success rounded-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card pattern-card border-0 p-4 d-flex flex-row align-items-center justify-content-between">
+                    <div>
+                        <span class="text-xxs font-bold text-muted d-block mb-1.5 uppercase">مراحل ارزیابی فعال در پترن‌ها</span>
+                        <span class="stat-badge text-warning">۴ مرحله</span>
+                    </div>
+                    <div class="p-3 bg-warning bg-opacity-10 text-warning rounded-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- الگوهای ارزیابی پیشنهادی بر اساس شایستگی‌های پست -->
-    <div class="col-lg-8">
-        <div class="card pattern-card border-0 p-4 shadow-xs h-100">
-            <h5 class="font-bold text-secondary mb-2">شبیه‌سازی الگوی فرآیند و وزن ارزیابی پست‌ها</h5>
-            <p class="text-muted text-xs mb-4">نمونه محاسباتی وزن مراحل ارزیابی بر اساس شایستگی‌های ثبت شده برای هر پست سازمانی.</p>
-            
-            <div class="d-flex flex-column gap-3">
-                {% for pattern in post_patterns %}
-                <div class="card post-card p-3 bg-white">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="row g-4" style="direction: rtl;">
+            <!-- Column 1: Competency Distribution -->
+            <div class="col-md-6">
+                <div class="card pattern-card border-0 p-4 shadow-xs h-100">
+                    <h5 class="font-bold text-secondary mb-4">توزیع انواع شایستگی‌ها در بانک مرجع</h5>
+                    <div class="d-flex flex-column gap-3.5">
+                        {% for item in type_distribution %}
                         <div>
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary text-xxs font-bold px-2 py-1 mb-1">کد پست: {{ pattern.post_code }}</span>
-                            <h6 class="font-bold text-secondary m-0">{{ pattern.post_title|default:"بدون عنوان" }}</h6>
+                            <div class="d-flex justify-content-between text-xs font-semibold mb-1">
+                                <span>
+                                    {% if item.competency_type == 'KN' %}دانش (Knowledge)
+                                    {% elif item.competency_type == 'SK' %}مهارت (Skill)
+                                    {% elif item.competency_type == 'AB' %}توانایی (Ability)
+                                    {% elif item.competency_type == 'GE' %}رفتاری (Behavioral)
+                                    {% elif item.competency_type == 'ST' %}ارزش‌ها و سبک‌ها
+                                    {% elif item.competency_type == 'PR' %}گردشکار
+                                    {% elif item.competency_type == 'CQ' %}گواهینامه و صلاحیت
+                                    {% else %}علایق حرفه‌ای{% endif %}
+                                </span>
+                                <strong class="text-primary">{{ item.count }} ردیف</strong>
+                            </div>
+                            <div class="progress progress-bar-custom bg-light">
+                                <div class="progress-bar {% if item.competency_type == 'KN' %}bg-primary{% elif item.competency_type in 'SK,AB' %}bg-success{% elif item.competency_type in 'GE,ST' %}bg-warning{% else %}bg-secondary{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {% widthratio item.count total_count 100 %}%"></div>
+                            </div>
                         </div>
-                        <span class="text-xs text-muted font-medium">{{ pattern.competencies_count }} شایستگی تعریف شده</span>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-1.5 mt-2">
-                        {% for stype, sdata in pattern.plan.items %}
-                        <div class="d-flex align-items-center gap-1.5 border border-light bg-light bg-opacity-50 px-2.5 py-1.5 rounded" style="border-radius: 6px;">
-                            <span class="text-xs text-secondary font-medium">
-                                {% if stype == 'EXAM' %}📝
-                                {% elif stype == 'SKILL_TEST' %}⚙️
-                                {% elif stype == 'INTERVIEW' %}🗣️
-                                {% else %}🏢{% endif %}
-                                {{ sdata.name }}:
-                            </span>
-                            <span class="badge bg-primary text-white text-xxs font-bold">{{ sdata.weight }}٪</span>
-                        </div>
-                        {% empty %}
-                        <span class="text-xxs text-muted">این پست فاقد شایستگی ارزیابی‌شونده (KN, SK, AB, GE, ST) است و فرآیند ارزیابی برای آن پیشنهاد نمی‌شود.</span>
                         {% endfor %}
                     </div>
                 </div>
-                {% empty %}
-                <div class="text-center text-muted py-5">اطلاعاتی در بانک شایستگی موجود نیست. لطفا ابتدا فایل اکسل شایستگی را آپلود کنید.</div>
-                {% endfor %}
+            </div>
+
+            <!-- Column 2: Shared Assessment Centers Suggestions -->
+            <div class="col-md-6">
+                <div class="card pattern-card border-0 p-4 shadow-xs h-100" style="background: linear-gradient(170deg, rgba(239, 246, 255, 0.9) 0%, rgba(255, 255, 255, 1) 100%); border: 1px solid rgba(59, 130, 246, 0.15) !important;">
+                    <h6 class="font-bold text-secondary mb-2 d-flex align-items-center gap-2">
+                        <span class="text-primary">💡</span>
+                        کانون‌های ارزیابی پیشنهادی مشترک
+                    </h6>
+                    <p class="text-muted text-xxs mb-3.5" style="line-height: 1.5;">پست‌های هم‌پوشان (بالای ۸۰٪ شباهت شایستگی‌های فنی) که می‌توان برای کاهش هزینه، فرآیند ارزیابی آن‌ها را ادغام کرد:</p>
+                    
+                    <div class="d-flex flex-column gap-3">
+                        {% for sug in overlap_suggestions %}
+                        <div class="p-2.5 bg-white border border-light rounded-3 shadow-xxs">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex flex-column gap-0.5" style="max-width: 70%;">
+                                    <span class="text-xxs font-bold text-secondary">{{ sug.post1_title }}</span>
+                                    <span class="text-muted text-xxs" style="font-size: 8.5px;">با پست: {{ sug.post2_title }}</span>
+                                </div>
+                                <span class="badge bg-primary bg-opacity-10 text-primary text-xxs font-bold px-2 py-1" style="font-size: 9px; border-radius: 5px;">{{ sug.overlap_pct }}٪ شباهت</span>
+                            </div>
+                            
+                            {% if sug.shared_stages %}
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                {% for stage in sug.shared_stages %}
+                                    {% if "کتبی" in stage %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary text-xxs font-bold px-1.5 py-0.5" style="font-size: 7.5px; border-radius: 4px; border: 1px solid rgba(0, 82, 204, 0.15);">📝 آزمون کتبی</span>
+                                    {% elif "مهارتی" in stage %}
+                                    <span class="badge bg-success bg-opacity-10 text-success text-xxs font-bold px-1.5 py-0.5" style="font-size: 7.5px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.15);">⚙️ آزمون مهارتی</span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger text-xxs font-bold px-1.5 py-0.5" style="font-size: 7.5px; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.15);">🏢 کانون ارزیابی</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                {% for comp in sug.shared_competencies %}
+                                <span class="badge bg-light text-secondary text-xxs" style="font-size: 8px; border-radius: 4px; border: 1px solid rgba(226, 232, 240, 0.7);">{{ comp }}</span>
+                                {% endfor %}
+                                {% if sug.shared_count > 4 %}
+                                <span class="text-muted font-bold text-xxs align-self-center ms-1" style="font-size: 8px;">+{{ sug.shared_count|add:"-4" }} مورد دیگر</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-4 bg-white bg-opacity-50 rounded-3 border border-light">
+                            <span class="text-muted text-xxs">هیچ جفت پست هم‌پوشانی (بالای ۸۰٪ شباهت) در سازمان یافت نشد.</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Tom Select JS -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const select = new TomSelect('#dashboard-post-select', {
+            valueField: 'post_code',
+            labelField: 'display_name',
+            searchField: 'display_name',
+            create: false,
+            placeholder: "جستجو و انتخاب پست سازمانی...",
+            rtl: true,
+            preload: 'focus',
+            load: function(query, callback) {
+                var url = '{% url "search_posts_api" %}?q=' + encodeURIComponent(query);
+                fetch(url)
+                    .then(response => response.json())
+                    .then(json => {
+                        callback(json.items);
+                    }).catch(() => {
+                        callback();
+                    });
+            },
+            onChange: function(value) {
+                if (value) {
+                    // Show a nice loading card in the result div
+                    document.getElementById('simulation-result').innerHTML = `
+                        <div class="card pattern-card border-0 p-5 shadow-xs text-center">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <h6 class="font-bold text-secondary">در حال تحلیل شایستگی‌ها و محاسبات شبیه‌سازی...</h6>
+                            <span class="text-xxs text-muted">شبیه‌ساز در حال انطباق استعدادها و پست‌های مشابه است</span>
+                        </div>
+                    `;
+                    
+                    htmx.ajax('GET', '{% url "recruitment_patterns" %}', {
+                        target: '#simulation-result',
+                        values: {
+                            action: 'simulate',
+                            post_code: value,
+                            round: false
+                        }
+                    });
+                } else {
+                    // Reload if selection is cleared to show original default patterns
+                    window.location.reload();
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}

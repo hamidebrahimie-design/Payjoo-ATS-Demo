@@ -5,7 +5,7 @@ from .views import (
     SystemBackupView, DownloadBackupView, RestoreBackupView,
     SystemUpdateCheckView, SystemUpdateRunView, SystemHealthCheckView, SystemRestartView,
     SMSPanelDashboardView, JobStagesOptionsView, SMSCandidatesPreviewView, SMSExportExcelView,
-    ExportUnitStatsExcelView
+    ExportUnitStatsExcelView, UserPreferencesView
 )
 
 urlpatterns = [
@@ -28,5 +28,6 @@ urlpatterns = [
     path('sms-panel/preview/', SMSCandidatesPreviewView.as_view(), name='sms_panel_preview'),
     path('sms-panel/export/', SMSExportExcelView.as_view(), name='sms_panel_export'),
     path('dashboard/export-unit-stats/', ExportUnitStatsExcelView.as_view(), name='export_unit_stats'),
+    path('preferences/', UserPreferencesView.as_view(), name='user_preferences'),
 ]
 

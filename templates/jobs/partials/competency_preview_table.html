@@ -23,7 +23,8 @@
                 <td class="font-bold text-secondary">{{ forloop.counter }}</td>
                 <td class="text-start">
                     <span class="font-bold text-dark d-block">
-                        {% if stype == 'EXAM' %}📝 آزمون کتبی
+                        {% if stype == 'SCREENING' %}🔍 غربالگری اولیه
+                        {% elif stype == 'EXAM' %}📝 آزمون کتبی
                         {% elif stype == 'SKILL_TEST' %}⚙️ آزمون مهارتی
                         {% elif stype == 'INTERVIEW' %}🗣️ مصاحبه تخصصی
                         {% else %}🏢 کانون ارزیابی{% endif %}
@@ -31,41 +32,63 @@
                     <span class="text-xxs text-muted">ابزار پیش‌فرض سیستم</span>
                 </td>
                 <td>
-                    <div class="d-flex align-items-center justify-content-center gap-1">
-                        <input type="number" 
-                               name="stage_weight_{{ stype }}" 
-                               value="{{ sdata.weight }}" 
-                               min="{{ sdata.min_limit }}" 
-                               max="{{ sdata.max_limit }}" 
-                               class="form-control form-control-sm text-center font-bold" 
-                               style="width: 65px; border-radius: 6px; font-size: 11px;"
-                               onchange="triggerPreviewUpdate();">
-                        <span class="text-xs font-semibold text-secondary">٪</span>
-                    </div>
-                    <span class="text-xxs text-muted d-block mt-1 font-semibold" style="font-size: 8.5px;">مجاز: {{ sdata.min_limit }}٪ تا {{ sdata.max_limit }}٪</span>
+                    {% if stype == 'SCREENING' %}
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <input type="number" 
+                                   name="stage_weight_{{ stype }}" 
+                                   value="0" 
+                                   class="form-control form-control-sm text-center font-bold bg-light" 
+                                   style="width: 65px; border-radius: 6px; font-size: 11px;"
+                                   disabled>
+                            <span class="text-xs font-semibold text-muted">٪</span>
+                        </div>
+                        <span class="text-xxs text-muted d-block mt-1 font-semibold" style="font-size: 8px;">غیر قابل تغییر (پیش‌نیاز)</span>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <input type="number" 
+                                   name="stage_weight_{{ stype }}" 
+                                   value="{{ sdata.weight }}" 
+                                   min="{{ sdata.min_limit }}" 
+                                   max="{{ sdata.max_limit }}" 
+                                   class="form-control form-control-sm text-center font-bold" 
+                                   style="width: 65px; border-radius: 6px; font-size: 11px;"
+                                   onchange="triggerPreviewUpdate();">
+                            <span class="text-xs font-semibold text-secondary">٪</span>
+                        </div>
+                        <span class="text-xxs text-muted d-block mt-1 font-semibold" style="font-size: 8.5px;">مجاز: {{ sdata.min_limit }}٪ تا {{ sdata.max_limit }}٪</span>
+                    {% endif %}
                 </td>
                 <td class="text-start">
-                    <div class="d-flex flex-column gap-1">
-                        {% for comp in sdata.competencies %}
-                        <div class="d-flex justify-content-between text-xxs border-bottom border-light pb-1">
-                            <span class="text-dark">{{ comp.title }}</span>
-                            <span class="text-muted font-bold">{{ comp.weight }}٪</span>
+                    {% if stype == 'SCREENING' %}
+                        <div class="text-xxs py-1 text-center text-muted font-medium">بررسی عمومی رزومه‌ها و شرایط احراز</div>
+                    {% else %}
+                        <div class="d-flex flex-column gap-1">
+                            {% for comp in sdata.competencies %}
+                            <div class="d-flex justify-content-between text-xxs border-bottom border-light pb-1">
+                                <span class="text-dark">{{ comp.title }}</span>
+                                <span class="text-muted font-bold">{{ comp.weight }}٪</span>
+                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
+                    {% endif %}
                 </td>
                 <td>
-                    <div class="d-flex align-items-center justify-content-center gap-1">
-                        <input type="number" 
-                               name="stage_passing_score_{{ stype }}" 
-                               value="{{ sdata.passing_score }}" 
-                               min="0" 
-                               max="100" 
-                               class="form-control form-control-sm text-center font-bold" 
-                               style="width: 65px; border-radius: 6px; font-size: 11px;"
-                               onchange="triggerPreviewUpdate();">
-                        <span class="text-xs font-semibold text-secondary">٪</span>
-                    </div>
+                    {% if stype == 'SCREENING' %}
+                        <span class="text-muted text-xxs">—</span>
+                        <input type="hidden" name="stage_passing_score_{{ stype }}" value="0">
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <input type="number" 
+                                   name="stage_passing_score_{{ stype }}" 
+                                   value="{{ sdata.passing_score }}" 
+                                   min="0" 
+                                   max="100" 
+                                   class="form-control form-control-sm text-center font-bold" 
+                                   style="width: 65px; border-radius: 6px; font-size: 11px;"
+                                   onchange="triggerPreviewUpdate();">
+                            <span class="text-xs font-semibold text-secondary">٪</span>
+                        </div>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

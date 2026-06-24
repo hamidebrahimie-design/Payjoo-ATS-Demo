@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}تنظیمات موتور هوش مصنوعی | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<!-- Animate.css for micro-animations -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(124, 58, 237, 0.05);
+    }
+    .preset-btn {
+        transition: all 0.2s ease;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+    .preset-btn:hover {
+        border-color: #8b5cf6;
+        background-color: rgba(139, 92, 246, 0.04);
+        transform: translateY(-2px);
+    }
+    .input-group-text-btn {
+        cursor: pointer;
+        background: none;
+        border-left: none;
+    }
+    .indicator-text {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="font-bold text-secondary mb-1">🔧 تنظیمات موتور هوش مصنوعی (AI Engine Settings)</h3>
+    <p class="text-muted text-sm m-0">پیکربندی کلید، آدرس پایه و مدل‌های هوش مصنوعی (LLM) برای تحلیل خودکار شایستگی‌ها و ارائه راهبردهای استخدامی.</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-8">
+        <div class="card glass-card border-0 p-4 shadow-sm">
+            <h5 class="font-bold text-secondary mb-4">⚙️ پیکربندی سرویس دهنده هوش مصنوعی</h5>
+            
+            <!-- دکمه‌های آماده (Presets) -->
+            <div class="mb-4">
+                <label class="form-label font-semibold text-xs text-secondary mb-2.5">انتخاب سریع سرویس‌دهنده (presets):</label>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="preset-btn p-3 bg-white text-center" onclick="applyPreset('avalai')">
+                            <span class="fs-5 d-block mb-1">🇮🇷</span>
+                            <span class="text-xs font-bold text-secondary d-block">سرویس ایرانی AvalAI</span>
+                            <span class="text-xxs text-muted d-block mt-0.5">مدل پیش‌فرض: gpt-4o</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="preset-btn p-3 bg-white text-center" onclick="applyPreset('openai')">
+                            <span class="fs-5 d-block mb-1">🌐</span>
+                            <span class="text-xs font-bold text-secondary d-block">سرویس OpenAI</span>
+                            <span class="text-xxs text-muted d-block mt-0.5">مدل پیش‌فرض: gpt-4o</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="preset-btn p-3 bg-white text-center" onclick="applyPreset('deepseek')">
+                            <span class="fs-5 d-block mb-1">🐳</span>
+                            <span class="text-xs font-bold text-secondary d-block">سرویس DeepSeek</span>
+                            <span class="text-xxs text-muted d-block mt-0.5">مدل پیش‌فرض: deepseek-chat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4 text-muted bg-opacity-20">
+
+            <form action="{% url 'ai_setting' %}" method="post" id="ai-settings-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save">
+
+                <div class="row g-3">
+                    <!-- آدرس پایه -->
+                    <div class="col-md-12">
+                        <label for="id_base_url" class="form-label font-semibold text-xs text-secondary mb-1.5">آدرس پایه API (Base URL):</label>
+                        {{ form.base_url }}
+                        <div class="form-text text-xxs text-muted mt-1">آدرس پایه وب‌سرویس سازگار با قالب OpenAI (مثال: https://api.avalai.ir/v1).</div>
+                    </div>
+
+                    <!-- کلید API با قابلیت نمایش/مخفی‌سازی -->
+                    <div class="col-md-12">
+                        <label for="id_api_key" class="form-label font-semibold text-xs text-secondary mb-1.5">کلید دسترسی (API Key):</label>
+                        <div class="input-group">
+                            {{ form.api_key }}
+                            <button class="btn btn-outline-secondary" type="button" id="toggle-password" style="border-top-left-radius: 8px; border-bottom-left-radius: 8px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="eye-icon">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.755 12.001 12.001 0 0118.983 0 1.012 1.012 0 010 .755 12.001 12.001 0 01-18.983 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="form-text text-xxs text-muted mt-1">کلید دریافتی از پنل توسعه‌دهندگان سرویس مربوطه. این فیلد به صورت رمزنگاری‌شده ذخیره می‌شود.</div>
+                    </div>
+
+                    <!-- نام مدل -->
+                    <div class="col-md-8">
+                        <label for="id_model_name" class="form-label font-semibold text-xs text-secondary mb-1.5">نام مدل (Model Name):</label>
+                        {{ form.model_name }}
+                        <div class="form-text text-xxs text-muted mt-1">نام دقیق شناسه مدل (مانند gpt-4o یا deepseek-chat).</div>
+                    </div>
+
+                    <!-- وضعیت فعال بودن -->
+                    <div class="col-md-4 d-flex align-items-center mt-4">
+                        <div class="form-check form-switch p-0" style="direction: rtl;">
+                            {{ form.is_active }}
+                            <label class="form-check-label text-xs font-bold text-secondary ms-2" for="id_is_active" style="cursor: pointer;">
+                                فعالسازی موتور هوش مصنوعی
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بخش بررسی اتصال آزمایشی -->
+                <div class="mt-4 p-3 bg-light rounded-4 border border-light">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <div>
+                            <span class="text-xs font-bold text-secondary d-block">🧪 تست زنده ارتباط با سرور</span>
+                            <span class="text-xxs text-muted">بررسی زنده اعتبار کلید و آدرس بدون نیاز به ذخیره فرم.</span>
+                        </div>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-primary py-1.5 px-3 font-semibold text-xs d-flex align-items-center gap-1.5"
+                                style="border-radius: 8px;"
+                                hx-post="{% url 'ai_setting' %}"
+                                hx-include="[name='api_key'], [name='base_url'], [name='model_name']"
+                                hx-vals="js:{action: 'test_connection'}"
+                                hx-target="#connection-test-result"
+                                hx-indicator="#test-loading-indicator">
+                            <span>ارسال پینگ تستی</span>
+                        </button>
+                    </div>
+                    
+                    <div id="test-loading-indicator" class="htmx-indicator py-1">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="text-xxs text-muted font-semibold ms-1">در حال ارسال سیگنال و دریافت پاسخ...</span>
+                    </div>
+
+                    <div id="connection-test-result" class="mt-2"></div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex gap-2">
+                    <button type="submit" class="btn btn-success px-4 py-2.5 font-bold text-xs d-flex align-items-center gap-2" style="border-radius: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        ذخیره تنظیمات سیستم
+                    </button>
+                    <a href="{% url 'recruitment_patterns' %}" class="btn btn-light px-4 py-2.5 font-bold text-xs" style="border-radius: 8px;">بازگشت به شبیه‌ساز</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function applyPreset(provider) {
+        const baseUrlInput = document.getElementById('id_base_url');
+        const modelInput = document.getElementById('id_model_name');
+        
+        if (provider === 'avalai') {
+            baseUrlInput.value = 'https://api.avalai.ir/v1';
+            modelInput.value = 'gpt-4o';
+        } else if (provider === 'openai') {
+            baseUrlInput.value = 'https://api.openai.com/v1';
+            modelInput.value = 'gpt-4o';
+        } else if (provider === 'deepseek') {
+            baseUrlInput.value = 'https://api.deepseek.com';
+            modelInput.value = 'deepseek-chat';
+        }
+        
+        // Add visual flash effect to inputs
+        baseUrlInput.classList.add('animate__animated', 'animate__pulse');
+        modelInput.classList.add('animate__animated', 'animate__pulse');
+        setTimeout(() => {
+            baseUrlInput.classList.remove('animate__animated', 'animate__pulse');
+            modelInput.classList.remove('animate__animated', 'animate__pulse');
+        }, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('id_api_key');
+        const eyeIcon = document.getElementById('eye-icon');
+
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            if (type === 'text') {
+                // Change icon to eye-slash
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                `;
+            } else {
+                // Change icon back to normal eye
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.755 12.001 12.001 0 0118.983 0 1.012 1.012 0 010 .755 12.001 12.001 0 01-18.983 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                `;
+            }
+        });
+        
+        // Style all text inputs
+        const inputs = ['id_base_url', 'id_api_key', 'id_model_name'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.classList.contains('form-control')) {
+                el.classList.add('form-control');
+            }
+            if (el) {
+                el.style.borderRadius = '8px';
+                el.style.fontSize = '0.85rem';
+                el.style.padding = '10px 12px';
+            }
+        });
+    });
+</script>
+{% endblock %}

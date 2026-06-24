@@ -7,6 +7,7 @@ from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.db.models import Count
 
 from .forms import PersianLoginForm, UserCreationForm, UserUpdateForm
 from .models import UserProfile
@@ -159,28 +160,31 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 })
         data['job_status_distribution'] = job_status_distribution
 
-        # ۳. توزیع متقاضیان در مراحل ارزیابی فعال (بر اساس stage_type استاندارد)
-        from django.db.models import Count
+        # ۳. توزیع متقاضیان در مراحل ارزیابی فعال (بر اساس stage_type واقعی متقاضی)
         STAGE_TYPE_LABELS = {
+            'SCREENING': 'غربالگری اولیه',
             'EXAM':      'آزمون کتبی',
-            'INTERVIEW': 'مصاحبه حضوری',
             'SKILL_TEST':'آزمون مهارتی',
+            'INTERVIEW': 'مصاحبه حضوری',
             'ASSESSMENT':'کانون ارزیابی',
         }
-        STAGE_TYPE_ORDER = ['EXAM', 'INTERVIEW', 'SKILL_TEST', 'ASSESSMENT']
+        STAGE_TYPE_ORDER = ['SCREENING', 'EXAM', 'SKILL_TEST', 'INTERVIEW', 'ASSESSMENT']
 
-        # تعداد متقاضیان IN_PROGRESS در هر stage_type (بر اساس وضعیت فعلی فرصت شغلی job.status)
-        pending_counts = JobApplication.objects.filter(
+        active_apps_dashboard = JobApplication.objects.filter(
             status='IN_PROGRESS',
-            is_deleted=False,
-        ).exclude(job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']).values(
-            'job__status'
-        ).annotate(count=Count('id'))
+            is_deleted=False
+        ).exclude(job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED'])
 
-        stage_type_counts = {row['job__status']: row['count'] for row in pending_counts}
+        stage_counts = {st: 0 for st in STAGE_TYPE_ORDER}
+        app_stages = active_apps_dashboard.values_list('current_stage__stage_type', flat=True)
+        for stype in app_stages:
+            resolved_type = stype if stype is not None else 'SCREENING'
+            if resolved_type in stage_counts:
+                stage_counts[resolved_type] += 1
+
         stage_people_stats = []
         for stype in STAGE_TYPE_ORDER:
-            cnt = stage_type_counts.get(stype, 0)
+            cnt = stage_counts[stype]
             stage_people_stats.append({
                 'stage_type': stype,
                 'stage_name': STAGE_TYPE_LABELS.get(stype, stype),
@@ -1541,6 +1545,39 @@ class ExportUnitStatsExcelView(LoginRequiredMixin, View):
             rows.append(row)
             
         return export_to_excel_response("توزیع_متقاضیان_واحد_سازمانی.xlsx", headers, rows)
+
+
+class UserPreferencesView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/preferences.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile'] = self.request.user.profile
+        return context
+
+    def post(self, request, *args, **kwargs):
+        from django.contrib import messages
+        profile = request.user.profile
+        
+        theme = request.POST.get('theme', '').strip()
+        font_family = request.POST.get('font_family', '').strip()
+        font_size = request.POST.get('font_size', '').strip()
+        
+        valid_themes = [t[0] for t in profile.THEME_CHOICES]
+        valid_fonts = [f[0] for f in profile.FONT_FAMILY_CHOICES]
+        valid_sizes = [s[0] for s in profile.FONT_SIZE_CHOICES]
+        
+        if theme in valid_themes:
+            profile.theme = theme
+        if font_family in valid_fonts:
+            profile.font_family = font_family
+        if font_size in valid_sizes:
+            profile.font_size = font_size
+            
+        profile.save(update_fields=['theme', 'font_family', 'font_size'])
+        
+        messages.success(request, "تنظیمات شخصی‌سازی شما با موفقیت ذخیره گردید و اعمال شد.")
+        return redirect('user_preferences')
 
 
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, UpdateView
 from django.views import View
 from django.urls import reverse_lazy
@@ -286,6 +286,7 @@ class JobOpportunityUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView
             self.object = form.save()
             stages.instance = self.object
             stages.save()
+            self.object.sync_application_stages()
             return super().form_valid(form)
         else:
             return self.form_invalid(form)
@@ -714,6 +715,333 @@ class CentralCompetencyListView(LoginRequiredMixin, RoleRequiredMixin, ListView)
         return context
 
 
+def clean_str(s):
+    if not s:
+        return ""
+    s = s.replace("ي", "y").replace("ك", "k").replace("ی", "y").replace("ک", "k")
+    s = s.replace("\u200c", "").replace("‌", "")
+    return "".join(s.split())
+
+
+def is_functional_competency(title, ctype):
+    if ctype not in ['KN', 'SK', 'AB']:
+        return False
+    
+    excluded_titles = {
+        "مدیریت مصرف آب",
+        "امنیت سایبری",
+        "آشنایی با مبانی مدیریت کربن",
+        "اقدامات اقلیمی ملی و بین المللی",
+        "تاب آوری",
+        "اقدامات اقلیمی ملی و بین‌المللی",
+        "تاب‌آوری",
+        "آشنایی با مبانی مدیریت کربن و اقدامات اقلیمی ملی و بین المللی",
+        "آشنایی با مبانی مدیریت کربن و اقدامات اقلیمی ملی و بین‌المللی"
+    }
+    cleaned_title = clean_str(title)
+    excluded_cleaned = {clean_str(t) for t in excluded_titles}
+    return cleaned_title not in excluded_cleaned
+
+
+def get_job_category_from_title(title):
+    if not title:
+        return ''
+    if 'کارشناس مدیریت' in title:
+        return 'کارشناس مدیریت'
+    if 'کارشناس مسئول' in title:
+        return 'کارشناس مسئول'
+    if 'کارشناس' in title:
+        return 'کارشناس'
+    if 'کاردان مسئول' in title:
+        return 'کاردان مسئول'
+    if 'کاردان' in title:
+        return 'کاردان'
+    if 'اپراتور' in title or 'تعمیرکار' in title:
+        return 'اپراتور - تعمیرکار'
+    return ''
+
+
+def get_ai_recommendation(post_code, post_title, comps, refresh=False):
+    """
+    Helper to fetch AI recruitment strategies with caching and offline fallback.
+    Returns:
+        dict: containing opt_advice, scenario, questions, benchmark_mappings, is_live, cached
+    """
+    comps = [
+        c for c in comps
+        if is_functional_competency(c.title, c.competency_type)
+    ]
+
+    from apps.jobs.models import AIPostRecommendation, AISetting
+    import urllib.request
+    import json
+
+
+    # 1. Check cache first if refresh is False
+    cached_recommendation = None
+    if not refresh:
+        cached_recommendation = AIPostRecommendation.objects.filter(post_code=post_code, is_deleted=False).first()
+
+    if cached_recommendation:
+        raw_advice = cached_recommendation.opt_advice or []
+        opt_advice = []
+        for item in raw_advice:
+            if isinstance(item, dict):
+                text = item.get('text', '')
+                weights = item.get('weights', {})
+            else:
+                text = str(item)
+                weights = {}
+            opt_advice.append({
+                'text': text,
+                'weights': weights,
+                'weights_json': json.dumps(weights)
+            })
+
+        return {
+            'opt_advice': opt_advice,
+            'scenario': cached_recommendation.scenario or "",
+            'questions': cached_recommendation.questions or [],
+            'benchmark_mappings': cached_recommendation.benchmark_mappings or [],
+            'is_live': True,
+            'cached': True
+        }
+
+    # 2. Call LLM API
+    ai_setting = AISetting.get_active_setting()
+    is_live = False
+    opt_advice = []
+    scenario = ""
+    questions = []
+    benchmark_mappings = []
+
+    if ai_setting and ai_setting.api_key:
+        try:
+            comp_list_str = "\n".join([f"- {c.title} ({c.get_competency_type_display()} - اهمیت: {c.get_importance_display()})" for c in comps])
+
+            system_prompt = (
+                "شما یک دستیار هوشمند، ارشد و بسیار دقیق در حوزه جذب، استخدام و توسعه منابع انسانی هستید.\n"
+                "وظیفه شما این است که با تحلیل دقیق عنوان پست سازمانی و لیست شایستگی‌های تعریف‌شده آن، یک راهبرد اختصاصی، سناریوی ارزیابی عملی و نگاشت بنچمارک‌های جهانی تولید کنید.\n"
+                "برای پرهیز از خروجی‌های تکراری و یکسان، توصیه‌ها و سناریوهای شما باید کاملاً منعکس‌کننده ماهیت و نیازمندی‌های خاص شغل باشد. به عنوان مثال:\n"
+                "- برای مشاغل فنی/مهندسی/IT: بر آزمون‌های مهارتی عملی، سناریوهای طراحی سیستم، برنامه‌نویسی زوجی و حل مسئله تیمی تمرکز کنید.\n"
+                "- برای مشاغل مدیریتی/سرپرستی: بر سناریوهای بازی نقش، حل تعارض، مدیریت کارتابل (In-Basket) و مصاحبه‌های عمیق رفتاری بر اساس Lominger و Korn Ferry تمرکز کنید.\n"
+                "- برای مشاغل فروش/پشتیبانی/اداری: بر سناریوهای شبیه‌سازی مشتری، نفوذ و اثرگذاری، تعامل تیمی و تاب‌آوری تمرکز کنید.\n\n"
+                "همچنین باید تمامی شایستگی‌های ورودی پست را با چارچوب‌های استاندارد جهانی (SHL UCF، Lominger، Korn Ferry یا DDI) تطبیق داده و نگاشت کنید.\n"
+                "پاسخ خود را دقیقاً در قالب ساختار JSON زیر بازگردانید و هیچ توضیح اضافه یا متنی خارج از JSON ارائه ندهید. پاسخ‌ها حتماً به زبان فارسی باشد:\n"
+                "{\n"
+                "  \"opt_advice\": [\n"
+                "    {\n"
+                "      \"text\": \"توصیه اختصاصی بهینه‌سازی شایستگی یا ساختار ارزیابی این پست با ذکر درصد وزن‌های پیشنهادی ملموس (مثلاً آزمون مهارتی ۴۰٪، مصاحبه ۳۰٪...)\",\n"
+                "      \"weights\": {\"SKILL_TEST\": 40, \"INTERVIEW\": 30, \"EXAM\": 10, \"ASSESSMENT\": 20}\n"
+                "    }\n"
+                "  ],\n"
+                "  \"benchmark_mappings\": [\n"
+                "    {\n"
+                "      \"competency\": \"نام دقیق شایستگی ورودی از لیست کاربر\",\n"
+                "      \"framework\": \"نام یکی از چارچوب‌های جهانی (مثلاً SHL UCF یا Lominger یا Korn Ferry یا DDI)\",\n"
+                "      \"dimension\": \"نام بعد یا عنوان معادل دقیق در آن چارچوب جهانی\",\n"
+                "      \"tool\": \"ابزار سنجش پیشنهادی (مثلاً آزمون کتبی، کانون ارزیابی، ایفای نقش، تست شبیه‌ساز)\",\n"
+                "      \"rationale\": \"توضیح کوتاه فنی و کاربردی درباره علت این نگاشت و نحوه ارزیابی آن\"\n"
+                "    }\n"
+                "  ],\n"
+                "  \"scenario\": \"شرح کامل سناریوی ارزیابی و ابزارها متناسب با پست (حداقل ۳ الی ۴ جمله تفصیلی)\",\n"
+                "  \"questions\": [\n"
+                "    \"سوال مصاحبه ساختاریافته CBI اول مبتنی بر شایستگی‌های این پست...\",\n"
+                "    \"سوال مصاحبه ساختاریافته CBI دوم...\",\n"
+                "    \"سوال مصاحبه ساختاریافته CBI سوم...\"\n"
+                "  ]\n"
+                "}"
+            )
+
+            user_prompt = f"عنوان پست: {post_title}\nکد پست: {post_code}\nشایستگی‌های تعریف‌شده:\n{comp_list_str}"
+
+            payload = {
+                "model": ai_setting.model_name,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.7,
+                "response_format": {"type": "json_object"}
+            }
+
+            url = f"{ai_setting.base_url.rstrip('/')}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {ai_setting.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    res_body = response.read().decode('utf-8')
+                    res_json = json.loads(res_body)
+                    content = res_json['choices'][0]['message']['content']
+                    parsed_content = json.loads(content)
+
+                    raw_advice = parsed_content.get('opt_advice', [])
+                    cache_advice_list = []
+                    for item in raw_advice:
+                        if isinstance(item, dict):
+                            text = item.get('text', '')
+                            weights = item.get('weights', {})
+                        else:
+                            text = str(item)
+                            weights = {}
+
+                        opt_advice.append({
+                            'text': text,
+                            'weights': weights,
+                            'weights_json': json.dumps(weights)
+                        })
+                        cache_advice_list.append({
+                            'text': text,
+                            'weights': weights
+                        })
+
+                    scenario = parsed_content.get('scenario', '')
+                    questions = parsed_content.get('questions', [])
+                    benchmark_mappings = parsed_content.get('benchmark_mappings', [])
+
+                    if opt_advice and scenario and questions:
+                        is_live = True
+                        AIPostRecommendation.objects.update_or_create(
+                            post_code=post_code,
+                            defaults={
+                                'opt_advice': cache_advice_list,
+                                'scenario': scenario,
+                                'questions': questions,
+                                'benchmark_mappings': benchmark_mappings,
+                                'is_deleted': False
+                            }
+                        )
+        except Exception:
+            pass
+
+    # 3. Fallback to local mock data if not live
+    if not is_live:
+        # Extract comps titles and types
+        imp_comps = [c for c in comps if c.importance == 1]
+        
+        has_kn = any(c.competency_type == 'KN' for c in comps)
+        has_sk_ab = any(c.competency_type in ['SK', 'AB'] for c in comps)
+        has_ge_st = any(c.competency_type in ['GE', 'ST'] for c in comps)
+        
+        weights = {}
+        if has_kn and has_sk_ab and has_ge_st:
+            weights = {"EXAM": 25, "SKILL_TEST": 25, "INTERVIEW": 20, "ASSESSMENT": 30}
+        elif has_sk_ab and has_ge_st:
+            weights = {"SKILL_TEST": 40, "INTERVIEW": 20, "ASSESSMENT": 40}
+        elif has_kn and has_sk_ab:
+            weights = {"EXAM": 30, "SKILL_TEST": 40, "INTERVIEW": 30}
+        else:
+            weights = {"EXAM": 30, "INTERVIEW": 30, "ASSESSMENT": 40}
+            
+        stage_names_fa = {
+            'EXAM': 'آزمون کتبی',
+            'SKILL_TEST': 'آزمون مهارتی',
+            'INTERVIEW': 'مصاحبه تخصصی',
+            'ASSESSMENT': 'کانون ارزیابی'
+        }
+        
+        weights_str = "، ".join([f"{stage_names_fa.get(k, k)} به میزان {v}٪" for k, v in weights.items()])
+        
+        raw_advice = [
+            {
+                "text": f"توصیه می‌شود در سناریوی ارزیابی پست «{post_title}»، فرآیندی ترکیبی شامل {weights_str} پیاده‌سازی شود تا شایستگی‌های فنی و عمومی به طور متعادل سنجیده شوند.",
+                "weights": weights
+            }
+        ]
+        
+        if imp_comps:
+            core_titles = " و ".join([f"«{c.title}»" for c in imp_comps[:2]])
+            raw_advice.append({
+                "text": f"توصیه می‌شود تمرکز اصلی فرآیند ارزیابی و مصاحبه بر شایستگی‌های محوری {core_titles} قرار گیرد و حدنصاب قبولی بالاتری برای آن‌ها در نظر گرفته شود.",
+                "weights": {}
+            })
+            
+        raw_advice.append({
+            "text": f"پیشنهاد می‌شود برای بهینه‌سازی فرآیند جذب «{post_title}»، ارزیابی‌های مربوط به مهارت‌های ارتباطی و کار تیمی در خلال تمرین‌های گروهی کانون ارزیابی رصد و ثبت گردند.",
+            "weights": {}
+        })
+        
+        benchmark_mappings = []
+        frameworks = ["SHL UCF", "Lominger", "Korn Ferry", "DDI"]
+        for idx, c in enumerate(comps[:4]):
+            fw = frameworks[idx % len(frameworks)]
+            if c.competency_type == 'KN':
+                dim = f"Applying Expertise and Technology ({c.title})"
+                tool = "آزمون کتبی تخصصی"
+                rat = f"سنجش دانش نظری و تخصصی داوطلب در رابطه با شایستگی «{c.title}»."
+            elif c.competency_type in ['SK', 'AB']:
+                dim = f"Applying Skills and Practical Abilities ({c.title})"
+                tool = "آزمون مهارتی عملی یا شبیه‌ساز"
+                rat = f"ارزیابی توانمندی داوطلب در پیاده‌سازی عملی مهارت «{c.title}» در کار واقعی."
+            else:
+                dim = f"Behavioral Competence and Values ({c.title})"
+                tool = "شبیه‌سازی ایفای نقش یا کانون ارزیابی"
+                rat = f"بررسی الگوهای رفتاری و انطباق فرهنگی داوطلب با معیارهای «{c.title}»."
+                
+            benchmark_mappings.append({
+                "competency": c.title,
+                "framework": fw,
+                "dimension": dim,
+                "tool": tool,
+                "rationale": rat
+            })
+            
+        comp_titles_str = "، ".join([c.title for c in comps[:3]])
+        scenario = (
+            f"سناریوی ارزیابی شبیه‌سازی‌شده برای پست سازمانی «{post_title}» مبتنی بر شایستگی‌های {comp_titles_str} طراحی شده است. "
+            f"این کانون ارزیابی شامل یک مطالعه موردی (Case Study) ۳۰ دقیقه‌ای و یک تمرین شبیه‌سازی نقش است که طی آن داوطلب در مواجهه با چالش‌های روزمره شغل «{post_title}» قرار می‌گیرد. "
+            f"در پایان، داوطلبان در یک مصاحبه ساختاریافته رفتاری شرکت می‌کنند تا مهارت‌های حل تعارض، تاب‌آوری و تفکر تحلیلی آن‌ها به طور دقیق ارزیابی شود."
+        )
+        
+        questions = []
+        for c in comps[:3]:
+            questions.append(
+                f"یک تجربه واقعی را شرح دهید که در آن برای پیشبرد وظایف شغلی نیاز مبرم به استفاده از «{c.title}» داشتید. چطور چالش را مدیریت کردید و نتیجه چه بود؟"
+            )
+        questions.append(
+            f"به عنوان کاندیدای پست «{post_title}»، اگر در محیط کار با شرایط بحرانی یا تغییر ناگهانی اولویت‌ها مواجه شوید، چطور برنامه‌ریزی و اقدام می‌کنید؟"
+        )
+
+        for item in raw_advice:
+            opt_advice.append({
+                'text': item['text'],
+                'weights': item['weights'],
+                'weights_json': json.dumps(item['weights'])
+            })
+
+        # Overwrite database cache with fallback mock data
+        from apps.jobs.models import AIPostRecommendation
+        cache_advice_list = [
+            {'text': item['text'], 'weights': item['weights']} 
+            for item in raw_advice
+        ]
+        AIPostRecommendation.objects.update_or_create(
+            post_code=post_code,
+            defaults={
+                'opt_advice': cache_advice_list,
+                'scenario': scenario,
+                'questions': questions,
+                'benchmark_mappings': benchmark_mappings,
+                'is_deleted': False
+            }
+        )
+
+    return {
+        'opt_advice': opt_advice,
+        'scenario': scenario,
+        'questions': questions,
+        'benchmark_mappings': benchmark_mappings,
+        'is_live': is_live,
+        'cached': cached_recommendation is not None
+    }
+
+
 class RecruitmentPatternDashboardView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     template_name = 'jobs/recruitment_patterns.html'
     allowed_roles = [
@@ -724,6 +1052,406 @@ class RecruitmentPatternDashboardView(LoginRequiredMixin, RoleRequiredMixin, Tem
         UserProfile.ROLE_DEPARTMENT_USER,
         UserProfile.ROLE_READ_ONLY_AUDITOR,
     ]
+
+    def get(self, request, *args, **kwargs):
+        action = request.GET.get('action', '').strip()
+        
+        if action == 'simulate':
+            post_code = request.GET.get('post_code', '').strip()
+            round_weights = request.GET.get('round', 'false').lower() == 'true'
+            
+            from apps.jobs.models import CentralCompetency
+            from django.db.models import Count, Q
+            
+            comps = CentralCompetency.objects.filter(post_code=post_code, is_deleted=False).exclude(
+                Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) |
+                Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+            )
+            if not comps.exists():
+                return HttpResponse('<div class="alert alert-warning text-sm text-center">هیچ شایستگی برای این پست یافت نشد.</div>')
+            
+            post_title = comps.first().post_title or ''
+            
+            class MockComp:
+                def __init__(self, c):
+                    self.code = c.code
+                    self.title = c.title
+                    self.competency_type = c.competency_type
+                    self.importance = c.importance
+                    self.level = c.level
+                    
+            mock_comps = [MockComp(c) for c in comps]
+            plan = calculate_assessment_plan(mock_comps, round_to_five=round_weights)
+            
+            # Find similar posts based on shared competency titles and matching job category (same rank)
+            current_category = get_job_category_from_title(post_title)
+            selected_comp_titles = list(comps.values_list('title', flat=True))
+            similar_candidates = (
+                CentralCompetency.objects.filter(title__in=selected_comp_titles, is_deleted=False)
+                .exclude(post_code=post_code)
+                .exclude(Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) | Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']))
+                .values('post_code', 'post_title')
+                .annotate(match_count=Count('id'))
+                .order_by('-match_count')
+            )
+            similar_posts_list = []
+            for item in similar_candidates:
+                other_code = item['post_code']
+                other_title = item['post_title'] or ''
+                other_category = get_job_category_from_title(other_title)
+                if current_category == other_category:
+                    # Find shared competencies
+                    other_comps_qs = CentralCompetency.objects.filter(post_code=other_code, is_deleted=False).exclude(
+                        Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+                    )
+                    other_comps = set(other_comps_qs.values_list('title', flat=True))
+                    shared = list(set(selected_comp_titles).intersection(other_comps))
+                    
+                    similar_posts_list.append({
+                        'post_code': other_code,
+                        'post_title': other_title,
+                        'match_count': item['match_count'],
+                        'shared_competencies': shared
+                    })
+                    if len(similar_posts_list) >= 5:
+                        break
+            
+            # Find matching talents (candidates) from talent bank based on job competency overlap
+            # Extract target functional competencies of the current post
+            target_comps = [c for c in comps if is_functional_competency(c.title, c.competency_type)]
+            target_comp_titles = [c.title for c in target_comps]
+            target_comp_set = set(target_comp_titles)
+
+            from apps.jobs.models import JobOpportunity
+            from apps.candidates.models import JobApplication, Candidate
+            
+            jobs_qs = JobOpportunity.objects.filter(is_deleted=False).prefetch_related('selected_competencies')
+            similar_job_ids = []
+            job_overlap_pcts = {}
+            job_shared_comps = {}
+
+            if len(target_comp_set) > 0:
+                for job in jobs_qs:
+                    if job.code == post_code:
+                        continue
+                    job_comps = {
+                        jc.title for jc in job.selected_competencies.all()
+                        if not jc.is_deleted and is_functional_competency(jc.title, jc.competency_type)
+                    }
+                    intersection = target_comp_set.intersection(job_comps)
+                    overlap_pct = (len(intersection) / len(target_comp_set)) * 100
+                    if overlap_pct >= 50:
+                        similar_job_ids.append(job.id)
+                        job_overlap_pcts[job.id] = round(overlap_pct)
+                        job_shared_comps[job.id] = list(intersection)
+
+            # Filter out candidates that have STATUS_SELECTED anywhere in the system
+            selected_candidate_ids = set(
+                JobApplication.objects.filter(
+                    status=JobApplication.STATUS_SELECTED,
+                    is_deleted=False
+                ).values_list('candidate_id', flat=True)
+            )
+
+            matching_applications = JobApplication.objects.filter(
+                job_id__in=similar_job_ids,
+                is_deleted=False
+            ).exclude(
+                candidate_id__in=selected_candidate_ids
+            ).select_related('candidate', 'job')
+
+            candidate_best_matches = {}
+            for app in matching_applications:
+                cand = app.candidate
+                if not cand or cand.is_deleted:
+                    continue
+                overlap_pct = job_overlap_pcts[app.job_id]
+                
+                if cand.id not in candidate_best_matches:
+                    candidate_best_matches[cand.id] = app
+                else:
+                    existing_app = candidate_best_matches[cand.id]
+                    if app.final_score > existing_app.final_score:
+                        candidate_best_matches[cand.id] = app
+                    elif app.final_score == existing_app.final_score:
+                        if overlap_pct > job_overlap_pcts[existing_app.job_id]:
+                            candidate_best_matches[cand.id] = app
+
+            talents = []
+            for cand_id, app in candidate_best_matches.items():
+                cand = app.candidate
+                overlap_pct = job_overlap_pcts[app.job_id]
+                shared = job_shared_comps[app.job_id]
+                
+                talents.append({
+                    'id': cand.id,
+                    'first_name': cand.first_name,
+                    'last_name': cand.last_name,
+                    'phone_number': cand.phone_number,
+                    'match_percent': overlap_pct,
+                    'source_job_title': app.job.title,
+                    'source_job_score': round(app.final_score),
+                    'shared_competencies': shared
+                })
+
+            # Sort talents by final score descending, and match percentage descending
+            talents.sort(key=lambda x: (x['source_job_score'], x['match_percent']), reverse=True)
+            talents = talents[:5]
+            
+            from apps.jobs.models import AIPostRecommendation
+            has_cached_ai = AIPostRecommendation.objects.filter(post_code=post_code, is_deleted=False).exists()
+            ai_data = None
+            if has_cached_ai:
+                ai_data = get_ai_recommendation(post_code, post_title, comps, refresh=False)
+            
+            # Calculate overlap with other posts, highlighting those with active JobOpportunities in progress
+            from collections import defaultdict
+            all_comps_qs = CentralCompetency.objects.filter(is_deleted=False).exclude(
+                Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) |
+                Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+            ).values('post_code', 'post_title', 'title', 'competency_type')
+            post_comps = defaultdict(list)
+            post_titles = {}
+            for c in all_comps_qs:
+                p_code = c['post_code']
+                if is_functional_competency(c['title'], c['competency_type']):
+                    post_comps[p_code].append({
+                        'title': c['title'],
+                        'type': c['competency_type']
+                    })
+                if c['post_title']:
+                    post_titles[p_code] = c['post_title']
+            
+            overlap_list = []
+            selected_comps_dict = {c.title: c.competency_type for c in comps if is_functional_competency(c.title, c.competency_type)}
+            selected_comps_set = set(selected_comps_dict.keys())
+            
+            for code, comps_list in post_comps.items():
+                if code == post_code:
+                    continue
+                if not comps_list:
+                    continue
+                
+                other_titles = {c['title'] for c in comps_list}
+                intersection = selected_comps_set.intersection(other_titles)
+                min_len = min(len(selected_comps_set), len(other_titles))
+                if min_len > 0:
+                    overlap_pct = (len(intersection) / min_len) * 100
+                else:
+                    overlap_pct = 0
+                
+                if overlap_pct >= 80 and len(intersection) > 1:
+                    # Determine which assessments are shared based on the intersection's competency types
+                    shared_stages = []
+                    has_written = False
+                    has_skill = False
+                    has_assessment_center = False
+                    
+                    for title in intersection:
+                        ctype = selected_comps_dict[title]
+                        if ctype == 'KN':
+                            has_written = True
+                        elif ctype in ['SK', 'AB']:
+                            has_skill = True
+                        elif ctype in ['GE', 'ST']:
+                            has_assessment_center = True
+                    
+                    if has_written:
+                        shared_stages.append("آزمون کتبی مشترک")
+                    if has_skill:
+                        shared_stages.append("ارزیابی مهارتی مشترک")
+                    if has_assessment_center:
+                        shared_stages.append("کانون ارزیابی مشترک")
+                    
+                    # Check if there is an active JobOpportunity for this post code
+                    from apps.jobs.models import JobOpportunity
+                    active_opp = JobOpportunity.objects.filter(
+                        code=code, is_deleted=False
+                    ).exclude(
+                        status__in=[JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED]
+                    ).first()
+                    
+                    overlap_list.append({
+                        'post_code': code,
+                        'post_title': post_titles.get(code, code),
+                        'overlap_pct': round(overlap_pct),
+                        'shared_competencies': list(intersection)[:6],
+                        'shared_count': len(intersection),
+                        'shared_stages': shared_stages,
+                        'is_active_opportunity': active_opp is not None,
+                        'active_opp_title': active_opp.title if active_opp else None,
+                        'active_opp_id': active_opp.id if active_opp else None,
+                        'active_opp_status': active_opp.get_status_display() if active_opp else None
+                    })
+            
+            overlap_list.sort(key=lambda x: (x['is_active_opportunity'], x['overlap_pct']), reverse=True)
+            high_overlap_post = overlap_list[0] if overlap_list else None
+            
+            context = {
+                'post_code': post_code,
+                'post_title': post_title,
+                'competencies': comps,
+                'plan': plan['stages'],
+                'errors': plan.get('errors', []),
+                'similar_posts': similar_posts_list,
+                'talents': talents,
+                'round_weights': round_weights,
+                'has_cached_ai': has_cached_ai,
+                'ai_data': ai_data,
+                'high_overlap_post': high_overlap_post,
+                'overlap_list': overlap_list[:5],
+            }
+            return render(request, 'jobs/partials/post_pattern_simulation.html', context)
+            
+        elif action == 'ai_advise':
+            post_code = request.GET.get('post_code', '').strip()
+            refresh = request.GET.get('refresh', 'false').lower() == 'true'
+            
+            from apps.jobs.models import CentralCompetency
+            comps = CentralCompetency.objects.filter(post_code=post_code, is_deleted=False)
+            post_title = comps.first().post_title if comps.exists() else 'پست شبیه‌سازی شده'
+            
+            ai_data = get_ai_recommendation(post_code, post_title, comps, refresh=refresh)
+            
+            context = {
+                'post_code': post_code,
+                'post_title': post_title,
+                'opt_advice': ai_data['opt_advice'],
+                'scenario': ai_data['scenario'],
+                'questions': ai_data['questions'],
+                'benchmark_mappings': ai_data.get('benchmark_mappings', []),
+                'is_live': ai_data['is_live'],
+                'cached': ai_data['cached']
+            }
+            return render(request, 'jobs/partials/ai_recruitment_strategy.html', context)
+        
+        elif action == 'ai_match_talent_scores':
+            post_code = request.GET.get('post_code', '').strip()
+            candidate_id = request.GET.get('candidate_id', '').strip()
+            
+            from apps.jobs.models import CentralCompetency, AISetting
+            from apps.candidates.models import Candidate, JobApplication
+            from django.db.models import Q
+            import json
+            import urllib.request
+            
+            candidate = get_object_or_404(Candidate, id=candidate_id, is_deleted=False)
+            
+            # Find candidate's best overlapping job
+            comps = CentralCompetency.objects.filter(post_code=post_code, is_deleted=False).exclude(
+                Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) |
+                Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+            )
+            post_title = comps.first().post_title if comps.exists() else 'پست شبیه‌سازی شده'
+            target_comps = [c for c in comps if is_functional_competency(c.title, c.competency_type)]
+            target_comp_titles = [c.title for c in target_comps]
+            target_comp_set = set(target_comp_titles)
+            
+            candidate_apps = JobApplication.objects.filter(candidate=candidate, is_deleted=False).select_related('job')
+            best_app = None
+            best_overlap_pct = 0
+            best_shared_comps = []
+            
+            for app in candidate_apps:
+                if app.job.code == post_code:
+                    continue
+                job_comps = {
+                    jc.title for jc in app.job.selected_competencies.all()
+                    if not jc.is_deleted and is_functional_competency(jc.title, jc.competency_type)
+                }
+                intersection = target_comp_set.intersection(job_comps)
+                if len(target_comp_set) > 0:
+                    overlap_pct = (len(intersection) / len(target_comp_set)) * 100
+                else:
+                    overlap_pct = 0
+                
+                if overlap_pct >= 50:
+                    if overlap_pct > best_overlap_pct:
+                        best_overlap_pct = overlap_pct
+                        best_app = app
+                        best_shared_comps = list(intersection)
+                    elif overlap_pct == best_overlap_pct and best_app:
+                        if app.final_score > best_app.final_score:
+                            best_app = app
+                            best_shared_comps = list(intersection)
+            
+            if not best_app:
+                return HttpResponse(
+                    '<div class="modal-body text-center py-4" style="direction: rtl;">'
+                    '<div class="alert alert-warning text-xxs font-bold">هیچ ارزیابی همپوشانی برای این داوطلب یافت نشد.</div>'
+                    '</div>'
+                )
+            
+            ai_analysis = ""
+            ai_setting = AISetting.get_active_setting()
+            
+            if ai_setting and ai_setting.api_key:
+                try:
+                    system_prompt = (
+                        "شما یک متخصص ارشد سنجش و جذب منابع انسانی هستید.\n"
+                        "وظیفه شما تحلیل قابلیت انتقال (Transferability) نتایج ارزیابی قبلی یک داوطلب به پست جدید است.\n"
+                        "با توجه به لیست شایستگی‌های مشترک و نمره نهایی کسب‌شده داوطلب در ارزیابی قبلی، یک تحلیل بسیار کوتاه و خلاصه (حداکثر ۳ الی ۴ جمله) ارائه دهید شامل:\n"
+                        "۱. آیا نمره کسب شده صلاحیت او را برای شایستگی‌های مشترک در پست جدید تأیید می‌کند؟\n"
+                        "۲. چه بخش‌ها یا شایستگی‌های دیگری در پست جدید نیاز به مصاحبه یا ارزیابی مجدد دارد؟\n"
+                        "پاسخ را به زبان فارسی، ساختاریافته و در قالب بندهای کوتاه بنویسید. حجم پاسخ بسیار محدود باشد (کمتر از ۱۵۰ کلمه)."
+                    )
+                    
+                    comps_str = "، ".join(best_shared_comps)
+                    user_prompt = (
+                        f"نام داوطلب: {candidate.first_name} {candidate.last_name}\n"
+                        f"پست جدید (هدف): {post_title}\n"
+                        f"ارزیابی قبلی در شغل: {best_app.job.title}\n"
+                        f"نمره نهایی کسب‌شده قبلی: {best_app.final_score}٪\n"
+                        f"شایستگی‌های مشترک بین دو پست: {comps_str}"
+                    )
+                    
+                    payload = {
+                        "model": ai_setting.model_name,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": 0.5
+                    }
+                    
+                    url = f"{ai_setting.base_url.rstrip('/')}/chat/completions"
+                    headers = {
+                        "Authorization": f"Bearer {ai_setting.api_key}",
+                        "Content-Type": "application/json"
+                    }
+                    
+                    data = json.dumps(payload).encode('utf-8')
+                    req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+                    
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        if response.status == 200:
+                            res_body = response.read().decode('utf-8')
+                            res_json = json.loads(res_body)
+                            ai_analysis = res_json['choices'][0]['message']['content'].strip()
+                except Exception:
+                    pass
+            
+            if not ai_analysis:
+                # Fallback to local simulated assessment if offline or failed
+                comps_str = "، ".join(best_shared_comps)
+                ai_analysis = (
+                    f"با توجه به کسب نمره {best_app.final_score}٪ در ارزیابی قبلی برای پست «{best_app.job.title}» و همپوشانی {round(best_overlap_pct)}٪ در شایستگی‌های مشترک ({comps_str})، "
+                    f"صلاحیت عمومی کاندیدا در این بخش‌ها مطلوب و قابل قبول ارزیابی می‌شود. "
+                    f"با این وجود، توصیه می‌شود بخش‌های اختصاصی و مهارتی پست هدف («{post_title}») که در ارزیابی قبلی غایب بوده‌اند، در فرآیند مصاحبه مجدداً سنجیده شوند."
+                )
+            
+            context = {
+                'candidate': candidate,
+                'candidate_name': f"{candidate.first_name} {candidate.last_name}",
+                'overlap_pct': round(best_overlap_pct),
+                'source_job_title': best_app.job.title,
+                'source_job_score': round(best_app.final_score),
+                'shared_competencies': best_shared_comps,
+                'ai_analysis': ai_analysis,
+            }
+            return render(request, 'jobs/partials/ai_talent_suitability_match.html', context)
+        
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -778,7 +1506,7 @@ class RecruitmentPatternDashboardView(LoginRequiredMixin, RoleRequiredMixin, Tem
                     self.level = c.level
                     
             mock_comps = [MockComp(c) for c in comps]
-            plan = calculate_assessment_plan(mock_comps)
+            plan = calculate_assessment_plan(mock_comps, round_to_five=True)
             
             post_patterns.append({
                 'post_code': post_code,
@@ -788,6 +1516,85 @@ class RecruitmentPatternDashboardView(LoginRequiredMixin, RoleRequiredMixin, Tem
             })
             
         context['post_patterns'] = post_patterns
+        
+        # Calculate overlap suggestions for active JobOpportunities in progress
+        from apps.jobs.models import JobOpportunity
+        active_jobs = JobOpportunity.objects.filter(is_deleted=False).exclude(
+            status__in=[JobOpportunity.STATUS_CLOSED, JobOpportunity.STATUS_CANCELLED]
+        )
+        
+        job_comps = {}
+        for job in active_jobs:
+            comps_qs = job.selected_competencies.filter(is_deleted=False).values('title', 'competency_type')
+            if comps_qs:
+                filtered_dict = {
+                    c['title']: c['competency_type'] 
+                    for c in comps_qs 
+                    if is_functional_competency(c['title'], c['competency_type'])
+                }
+                if filtered_dict:
+                    job_comps[job.id] = {
+                        'title': job.title,
+                        'code': job.code,
+                        'comps': filtered_dict
+                    }
+        
+        overlap_suggestions = []
+        job_ids = list(job_comps.keys())
+        n = len(job_ids)
+        for i in range(n):
+            for j in range(i + 1, n):
+                id1 = job_ids[i]
+                id2 = job_ids[j]
+                dict1 = job_comps[id1]['comps']
+                dict2 = job_comps[id2]['comps']
+                set1 = set(dict1.keys())
+                set2 = set(dict2.keys())
+                
+                intersection = set1.intersection(set2)
+                min_len = min(len(set1), len(set2))
+                if min_len > 0:
+                    overlap_pct = (len(intersection) / min_len) * 100
+                else:
+                    overlap_pct = 0
+                
+                if overlap_pct >= 80 and len(intersection) > 1:
+                    # Determine which assessments are shared based on the intersection's competency types
+                    shared_stages = []
+                    has_written = False
+                    has_skill = False
+                    has_assessment_center = False
+                    
+                    for title in intersection:
+                        ctype = dict1[title]
+                        if ctype == 'KN':
+                            has_written = True
+                        elif ctype in ['SK', 'AB']:
+                            has_skill = True
+                        elif ctype in ['GE', 'ST']:
+                            has_assessment_center = True
+                    
+                    if has_written:
+                        shared_stages.append("آزمون کتبی مشترک")
+                    if has_skill:
+                        shared_stages.append("ارزیابی مهارتی مشترک")
+                    if has_assessment_center:
+                        shared_stages.append("کانون ارزیابی مشترک")
+                        
+                    overlap_suggestions.append({
+                        'post1_title': job_comps[id1]['title'],
+                        'post1_code': job_comps[id1]['code'],
+                        'post2_title': job_comps[id2]['title'],
+                        'post2_code': job_comps[id2]['code'],
+                        'overlap_pct': round(overlap_pct),
+                        'shared_count': len(intersection),
+                        'shared_competencies': list(intersection)[:4],
+                        'shared_stages': shared_stages
+                    })
+        
+        overlap_suggestions.sort(key=lambda x: x['overlap_pct'], reverse=True)
+        context['overlap_suggestions'] = overlap_suggestions[:6]
+        
         return context
 
 
@@ -813,7 +1620,10 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
             
             # Fetch matching unique posts
             from django.db.models import Q, Count
-            posts_query = CentralCompetency.objects.filter(is_deleted=False)
+            posts_query = CentralCompetency.objects.filter(is_deleted=False).exclude(
+                Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) |
+                Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+            )
             if q:
                 posts_query = posts_query.filter(
                     Q(post_code__icontains=q) | Q(post_title__icontains=q)
@@ -886,11 +1696,14 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     custom_weights[stage.stage_type] = stage.weight
                     custom_passing_scores[stage.stage_type] = int(stage.passing_score)
 
+        round_to_five = request.GET.get('round_to_five', 'on') == 'on'
+
         # Get suggested workflows based on current selection
         plan_res = calculate_assessment_plan(
             selected_comps,
             custom_weights=custom_weights,
-            custom_passing_scores=custom_passing_scores
+            custom_passing_scores=custom_passing_scores,
+            round_to_five=round_to_five
         )
         active_stage_keys = list(plan_res['stages'].keys())
         from .utils import suggest_workflow_templates
@@ -907,7 +1720,8 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
             'suggested_post_count': suggested_post_count,
             'calculated_plan': plan_res['stages'],
             'suggested_workflows': suggested_workflows,
-            'selected_workflow_id': selected_workflow_id
+            'selected_workflow_id': selected_workflow_id,
+            'round_to_five': round_to_five
         }
         return render(request, self.template_name, context)
 
@@ -978,10 +1792,13 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     TempComp(cc['title'], cc['competency_type'], cc['importance'], cc['level'])
                 )
 
+            round_to_five = request.POST.get('round_to_five') == 'on'
+
             plan_res = calculate_assessment_plan(
                 temp_comps,
                 custom_weights=custom_weights,
-                custom_passing_scores=custom_passing_scores
+                custom_passing_scores=custom_passing_scores,
+                round_to_five=round_to_five
             )
             
             active_stage_keys = list(plan_res['stages'].keys())
@@ -1060,10 +1877,13 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     TempComp(cc['title'], cc['competency_type'], cc['importance'], cc['level'])
                 )
 
+            round_to_five = request.POST.get('round_to_five') == 'on'
+
             plan_res = calculate_assessment_plan(
                 temp_comps,
                 custom_weights=custom_weights,
-                custom_passing_scores=custom_passing_scores
+                custom_passing_scores=custom_passing_scores,
+                round_to_five=round_to_five
             )
             stages_data = plan_res['stages']
             
@@ -1099,7 +1919,8 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     'calculated_plan': stages_data,
                     'errors': errors,
                     'suggested_workflows': suggested_workflows,
-                    'selected_workflow_id': request.POST.get('workflow_template_id')
+                    'selected_workflow_id': request.POST.get('workflow_template_id'),
+                    'round_to_five': round_to_five
                 }
                 return render(request, self.template_name, context)
 
@@ -1202,6 +2023,7 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                             weight=c_info['weight']
                         )
                     seq += 1
+                job.sync_application_stages()
 
             messages.success(request, "شایستگی‌های فرصت شغلی و سند Assessment Plan با موفقیت ثبت و الگوی فرآیند مربوطه اعمال گردید.")
             return redirect('job_list')
@@ -1245,7 +2067,10 @@ class SearchPostsApiView(LoginRequiredMixin, RoleRequiredMixin, View):
     def get(self, request):
         q = request.GET.get('q', '').strip()
         from django.db.models import Q, Count
-        posts_query = CentralCompetency.objects.filter(is_deleted=False)
+        posts_query = CentralCompetency.objects.filter(is_deleted=False).exclude(
+            Q(post_title__in=['', None, 'بدون عنوان', 'بدون‌عنوان']) |
+            Q(title__in=['', None, 'بدون عنوان', 'بدون‌عنوان'])
+        )
         if q:
             posts_query = posts_query.filter(
                 Q(post_code__icontains=q) | Q(post_title__icontains=q)
@@ -1309,6 +2134,43 @@ class SearchPostsDetailApiView(LoginRequiredMixin, RoleRequiredMixin, View):
         }
         import json
         return HttpResponse(json.dumps(data), content_type='application/json')
+
+
+class SearchCompetenciesApiView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_RECRUITMENT_DIRECTOR,
+        UserProfile.ROLE_RECRUITMENT_SPECIALIST,
+        UserProfile.ROLE_JOB_CLASSIFICATION_USER,
+    ]
+
+    def get(self, request):
+        q = request.GET.get('q', '').strip()
+        from django.db.models import Q
+        comps_query = CentralCompetency.objects.filter(is_deleted=False)
+        if q:
+            comps_query = comps_query.filter(
+                Q(title__icontains=q) | Q(code__icontains=q)
+            )
+        
+        items = []
+        seen_titles = set()
+        for c in comps_query.order_by('title')[:300]:
+            title_clean = c.title.strip()
+            if title_clean not in seen_titles:
+                seen_titles.add(title_clean)
+                items.append({
+                    'title': title_clean,
+                    'competency_type': c.competency_type,
+                    'importance': c.importance,
+                    'level': c.level,
+                    'display_name': f"{title_clean} ({c.get_competency_type_display()} - {c.get_importance_display()} - {c.get_level_display()})"
+                })
+                if len(items) >= 50:
+                    break
+                    
+        import json
+        return HttpResponse(json.dumps({'items': items}), content_type='application/json')
 
 
 import csv
@@ -1404,3 +2266,137 @@ class CustomCompetenciesReportView(LoginRequiredMixin, RoleRequiredMixin, ListVi
             return response
             
         return super().get(request, *args, **kwargs)
+
+
+class AISettingView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+    template_name = 'jobs/ai_setting.html'
+
+    def get(self, request):
+        from apps.jobs.models import AISetting
+        from apps.jobs.forms import AISettingForm
+        
+        setting = AISetting.objects.first()
+        if not setting:
+            setting = AISetting(base_url="https://api.avalai.ir/v1", model_name="gpt-4o", is_active=True)
+            
+        form = AISettingForm(instance=setting)
+        return render(request, self.template_name, {'form': form, 'setting': setting})
+
+    def post(self, request):
+        from apps.jobs.models import AISetting
+        from apps.jobs.forms import AISettingForm
+        
+        action = request.POST.get('action', 'save').strip()
+        
+        if action == 'test_connection':
+            api_key = request.POST.get('api_key', '').strip()
+            base_url = request.POST.get('base_url', '').strip()
+            model_name = request.POST.get('model_name', '').strip()
+            
+            if not api_key:
+                return HttpResponse(
+                    '<div class="alert alert-warning d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'
+                    '<span>⚠ لطفاً کلید API را وارد کنید.</span>'
+                    '</div>'
+                )
+            
+            try:
+                import urllib.request
+                import json
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": "Respond with only one word: Connected."}],
+                    "max_tokens": 5
+                }
+                url = f"{base_url.rstrip('/')}/chat/completions"
+                data = json.dumps(payload).encode('utf-8')
+                req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+                
+                with urllib.request.urlopen(req, timeout=6) as response:
+                    if response.status == 200:
+                        res_body = response.read().decode('utf-8')
+                        res_json = json.loads(res_body)
+                        ans = res_json['choices'][0]['message']['content'].strip()
+                        html = (
+                            f'<div class="alert alert-success d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'
+                            f'<span>✓ اتصال زنده با موفقیت برقرار شد! پاسخ سرور: {ans}</span>'
+                            f'</div>'
+                        )
+                    else:
+                        html = (
+                            f'<div class="alert alert-danger d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'
+                            f'<span>✗ خطا در برقراری اتصال (کد وضعیت {response.status}): {response.reason}</span>'
+                            f'</div>'
+                        )
+            except urllib.error.HTTPError as he:
+                try:
+                    error_text = he.read().decode('utf-8')[:120]
+                except Exception:
+                    error_text = str(he)
+                html = (
+                    f'<div class="alert alert-danger d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'
+                    f'<span>✗ خطا در برقراری اتصال (کد وضعیت {he.code}): {error_text}</span>'
+                    f'</div>'
+                )
+            except Exception as e:
+                html = (
+                    f'<div class="alert alert-danger d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'
+                    f'<span>✗ خطا در برقراری ارتباط: {str(e)}</span>'
+                    f'</div>'
+                )
+            return HttpResponse(html)
+            
+        else:
+            setting = AISetting.objects.first()
+            if setting:
+                form = AISettingForm(request.POST, instance=setting)
+            else:
+                form = AISettingForm(request.POST)
+                
+            if form.is_valid():
+                form.save()
+                from django.contrib import messages
+                messages.success(request, "تنظیمات هوش مصنوعی با موفقیت ذخیره شد.")
+                return redirect('ai_setting')
+            
+            return render(request, self.template_name, {'form': form, 'setting': setting})
+
+
+class JobAIStrategyPrintView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_RECRUITMENT_DIRECTOR,
+        UserProfile.ROLE_RECRUITMENT_SPECIALIST,
+        UserProfile.ROLE_JOB_CLASSIFICATION_USER,
+    ]
+
+    def get(self, request):
+        post_code = request.GET.get('post_code', '').strip()
+        from apps.jobs.models import CentralCompetency
+        
+        comps = CentralCompetency.objects.filter(post_code=post_code, is_deleted=False)
+        if not comps.exists():
+            return HttpResponse('پست سازمانی یافت نشد.', status=404)
+            
+        post_title = comps.first().post_title or 'پست سازمانی'
+        
+        # Get AI recommendation (check cache/fallback)
+        ai_data = get_ai_recommendation(post_code, post_title, comps, refresh=False)
+        
+        context = {
+            'post_code': post_code,
+            'post_title': post_title,
+            'opt_advice': ai_data['opt_advice'],
+            'scenario': ai_data['scenario'],
+            'questions': ai_data['questions'],
+            'benchmark_mappings': ai_data.get('benchmark_mappings', []),
+            'is_live': ai_data['is_live'],
+            'cached': ai_data['cached']
+        }
+        
+        return render(request, 'jobs/print_ai_strategy.html', context)

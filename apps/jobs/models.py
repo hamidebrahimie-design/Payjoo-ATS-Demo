@@ -276,14 +276,132 @@ class JobOpportunity(SoftDeleteModel):
                     sequence=st.sequence,
                     stage_type=st.stage_type
                 )
+        
+        if workflow_changed and not is_new:
+            self.sync_application_stages()
 
     def delete(self, *args, **kwargs):
+        from django.utils import timezone
         super().delete(*args, **kwargs)
+        
+        # Soft delete related selected competencies
+        self.selected_competencies.filter(is_deleted=False).update(
+            is_deleted=True,
+            deleted_at=timezone.now()
+        )
+        
+        # Soft delete related stages
+        stages = self.stages.filter(is_deleted=False)
+        for stage in stages:
+            stage.delete()
+            
+        # Soft delete related stage interviewers
+        self.stage_interviewers.filter(is_deleted=False).update(
+            is_deleted=True,
+            deleted_at=timezone.now()
+        )
+        
         try:
             if hasattr(self, 'recruitment_plan') and self.recruitment_plan:
                 self.recruitment_plan.delete()
         except Exception:
             pass
+
+    def sync_application_stages(self):
+        """
+        همگام‌سازی وضعیت‌های مراحل (ApplicationStageState) متقاضیان فعال فرصت شغلی
+        زمانی که ساختار مراحل تغییر می‌کند (مثلا در پیکربندی شایستگی‌ها یا تغییر گردش کار).
+        """
+        from apps.candidates.models import JobApplication, ApplicationStageState
+        from django.utils import timezone
+        
+        applications = list(self.applications.filter(is_deleted=False))
+        if not applications:
+            return
+
+        # مراحل فعال فعلی فرصت شغلی به ترتیب
+        active_stages = list(self.stages.filter(is_deleted=False).order_by('sequence'))
+        
+        # تمام وضعیت‌های مراحل غیرحذف‌شده برای کاندیداهای این شغل
+        existing_states = list(ApplicationStageState.objects.filter(
+            application__in=applications,
+            is_deleted=False
+        ).select_related('stage'))
+        
+        # ساخت نگاشت برای هر کاندیدا و نوع مرحله: (application_id, stage_type) -> state
+        state_map = {}
+        for state in existing_states:
+            key = (state.application_id, state.stage.stage_type)
+            if key in state_map:
+                old_val = state_map[key]
+                # حفظ وضعیت نهایی شده یا دارای امتیاز بیشتر در صورت هم‌پوشانی
+                if state.status in ['COMPLETED', 'FAILED'] or state.score > old_val.score:
+                    state_map[key] = state
+            else:
+                state_map[key] = state
+                
+        states_to_soft_delete = []
+        new_states_to_create = []
+        
+        for app in applications:
+            # وضعیت‌های مرحله فعلی متقاضی
+            app_states = [s for s in existing_states if s.application_id == app.id]
+            app_states_by_type = {s.stage.stage_type: s for s in app_states}
+            
+            for stage in active_stages:
+                existing_state = app_states_by_type.get(stage.stage_type)
+                
+                if existing_state:
+                    if existing_state.stage_id == stage.id:
+                        # از قبل به مرحله درستی اشاره می‌کند
+                        continue
+                    else:
+                        # به یک مرحله قدیمی/غیرفعال از همان نوع اشاره می‌کند. آن را آرشیو (حذف نرم) می‌کنیم.
+                        states_to_soft_delete.append(existing_state)
+                        # ایجاد وضعیت جدید اشاره‌کننده به مرحله جدید با حفظ داده‌ها
+                        new_states_to_create.append(ApplicationStageState(
+                            application=app,
+                            stage=stage,
+                            status=existing_state.status,
+                            score=existing_state.score,
+                            evaluator=existing_state.evaluator,
+                            notes=existing_state.notes,
+                            score_discrepancy_alert=existing_state.score_discrepancy_alert,
+                            is_conditional_pass=existing_state.is_conditional_pass,
+                            evaluation_date=existing_state.evaluation_date,
+                            is_manually_edited=existing_state.is_manually_edited,
+                        ))
+                else:
+                    # هیچ وضعیت متناظری وجود ندارد -> ایجاد وضعیت در انتظار
+                    new_states_to_create.append(ApplicationStageState(
+                        application=app,
+                        stage=stage,
+                        status=ApplicationStageState.STATUS_PENDING,
+                        score=0.0
+                    ))
+            
+            # اگر وضعیتی وجود دارد که نوع مرحله آن دیگر در مراحل فعال نیست، آن را هم حذف نرم می‌کنیم.
+            active_types = {st.stage_type for st in active_stages}
+            for s in app_states:
+                if s.stage.stage_type not in active_types:
+                    states_to_soft_delete.append(s)
+                    
+        # اعمال تغییرات دیتابیس
+        if states_to_soft_delete:
+            state_ids_to_del = [s.id for s in states_to_soft_delete]
+            ApplicationStageState.objects.filter(id__in=state_ids_to_del).update(
+                is_deleted=True,
+                deleted_at=timezone.now()
+            )
+            
+        if new_states_to_create:
+            ApplicationStageState.objects.bulk_create(new_states_to_create)
+            
+        # بروزرسانی مرحله جاری متقاضیان
+        for app in applications:
+            if 'stage_states' in app.__dict__:
+                del app.__dict__['stage_states']
+            app.recalculate_current_stage(save=True)
 
 
 
@@ -341,6 +459,20 @@ class JobOpportunityStage(SoftDeleteModel):
         if not reached_states:
             return False
         return not any(state.status == ApplicationStageState.STATUS_PENDING for state in reached_states)
+
+    def delete(self, *args, **kwargs):
+        from django.utils import timezone
+        super().delete(*args, **kwargs)
+        # Soft delete related assessment competencies
+        self.competencies.filter(is_deleted=False).update(
+            is_deleted=True,
+            deleted_at=timezone.now()
+        )
+        # Soft delete related stage interviewers
+        self.interviewers.filter(is_deleted=False).update(
+            is_deleted=True,
+            deleted_at=timezone.now()
+        )
 
 
 
@@ -455,3 +587,44 @@ class JobOpportunityCompetency(SoftDeleteModel):
 
     def __str__(self):
         return f"{self.title} ({self.code}) - {self.job.title}"
+
+
+class AISetting(SoftDeleteModel):
+    api_key = models.CharField(max_length=255, blank=True, verbose_name="کلید API")
+    base_url = models.CharField(max_length=255, default="https://api.avalai.ir/v1", verbose_name="آدرس پایه (Base URL)")
+    model_name = models.CharField(max_length=100, default="gpt-4o", verbose_name="نام مدل")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+
+    class Meta:
+        verbose_name = "تنظیمات هوش مصنوعی"
+        verbose_name_plural = "تنظیمات هوش مصنوعی"
+
+    def __str__(self):
+        return f"تنظیمات AI - {self.model_name} ({'فعال' if self.is_active else 'غیرفعال'})"
+
+    @classmethod
+    def get_active_setting(cls):
+        return cls.objects.filter(is_active=True).first()
+
+
+class AIPostRecommendation(SoftDeleteModel):
+    post_code = models.CharField(max_length=50, verbose_name="کد پست سازمانی")
+    opt_advice = models.JSONField(null=True, blank=True, verbose_name="توصیه‌های بهینه‌سازی شایستگی‌ها")
+    scenario = models.TextField(null=True, blank=True, verbose_name="سناریوی ارزیابی کانون ارزیابی")
+    questions = models.JSONField(null=True, blank=True, verbose_name="سوالات مصاحبه ساختاریافته")
+    benchmark_mappings = models.JSONField(null=True, blank=True, verbose_name="نگاشت بنچمارک‌های جهانی")
+    last_generated = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین تولید پاسخ")
+
+    class Meta:
+        verbose_name = "پیشنهاد هوش مصنوعی پست"
+        verbose_name_plural = "پیشنهادات هوش مصنوعی پست‌ها"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post_code'],
+                condition=models.Q(is_deleted=False),
+                name='unique_post_code_active_recommendation'
+            )
+        ]
+
+    def __str__(self):
+        return f"پیشنهاد AI برای پست {self.post_code}"

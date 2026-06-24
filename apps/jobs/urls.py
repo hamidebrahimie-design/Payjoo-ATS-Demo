@@ -20,7 +20,10 @@ from .views import (
     JobAssessmentPlanPrintView,
     SearchPostsApiView,
     SearchPostsDetailApiView,
-    CustomCompetenciesReportView
+    CustomCompetenciesReportView,
+    SearchCompetenciesApiView,
+    AISettingView,
+    JobAIStrategyPrintView
 )
 
 urlpatterns = [
@@ -43,8 +46,11 @@ urlpatterns = [
     path('competencies/upload/', CentralCompetencyUploadView.as_view(), name='competency_upload'),
     path('competencies/patterns/', RecruitmentPatternDashboardView.as_view(), name='recruitment_patterns'),
     path('competencies/custom-report/', CustomCompetenciesReportView.as_view(), name='custom_competencies_report'),
+    path('competencies/settings/ai/', AISettingView.as_view(), name='ai_setting'),
     path('api/posts/search/', SearchPostsApiView.as_view(), name='search_posts_api'),
     path('api/posts/detail/', SearchPostsDetailApiView.as_view(), name='post_detail_api'),
+    path('api/competencies/search/', SearchCompetenciesApiView.as_view(), name='search_competencies_api'),
     path('<int:job_id>/competencies/', JobCompetencyConfigView.as_view(), name='job_competency_config'),
     path('<int:job_id>/assessment-plan/print/', JobAssessmentPlanPrintView.as_view(), name='job_assessment_plan_print'),
+    path('competencies/patterns/print-ai-strategy/', JobAIStrategyPrintView.as_view(), name='job_ai_strategy_print'),
 ]

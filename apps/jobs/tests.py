@@ -899,10 +899,10 @@ class CompetencyEngineTests(TestCase):
 
         # Verify job stages and competencies are created
         self.job.refresh_from_db()
-        self.assertEqual(self.job.stages.filter(is_deleted=False).count(), 3)
-        # Stages created: EXAM, SKILL_TEST, INTERVIEW (because SK requires both skills test and interview)
+        self.assertEqual(self.job.stages.filter(is_deleted=False).count(), 4)
+        # Stages created: SCREENING, EXAM, SKILL_TEST, INTERVIEW (because SCREENING is always active, and SK requires both skills test and interview)
         stage_names = set(s.stage_type for s in self.job.stages.filter(is_deleted=False))
-        self.assertEqual(stage_names, {'EXAM', 'SKILL_TEST', 'INTERVIEW'})
+        self.assertEqual(stage_names, {'SCREENING', 'EXAM', 'SKILL_TEST', 'INTERVIEW'})
         
         # Verify AssessmentPlan printable page
         print_url = reverse('job_assessment_plan_print', kwargs={'job_id': self.job.id})
@@ -1203,6 +1203,887 @@ class CompetencyEngineTests(TestCase):
         
         forbidden_response = self.client.get(url)
         self.assertEqual(forbidden_response.status_code, 403)
+
+
+class SearchCompetenciesApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser(username='admin_test', password='password123')
+        self.user.profile.role = 'ADMIN'
+        self.user.profile.save()
+        self.client.login(username='admin_test', password='password123')
+
+        CentralCompetency.objects.create(
+            post_code='TEST-01', post_title='Test Title', code='KN_TEST_01', title='Python Mastery',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=2
+        )
+        CentralCompetency.objects.create(
+            post_code='TEST-02', post_title='Test Title 2', code='KN_TEST_02', title='Django Competency',
+            competency_type='SK', category_raw='SK- مهارت', cluster_raw='3-عمومی', importance=2, level=3
+        )
+        # Duplicate title to verify deduplication
+        CentralCompetency.objects.create(
+            post_code='TEST-03', post_title='Test Title 3', code='KN_TEST_03', title='Python Mastery',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=2
+        )
+
+    def test_search_competencies_success(self):
+        url = reverse('search_competencies_api')
+        response = self.client.get(url, {'q': 'Python'})
+        self.assertEqual(response.status_code, 200)
+        
+        import json
+        data = json.loads(response.content)
+        self.assertIn('items', data)
+        self.assertEqual(len(data['items']), 1) # Deduplicated
+        self.assertEqual(data['items'][0]['title'], 'Python Mastery')
+        self.assertEqual(data['items'][0]['competency_type'], 'KN')
+        self.assertEqual(data['items'][0]['importance'], 1)
+        self.assertEqual(data['items'][0]['level'], 2)
+
+    def test_search_competencies_no_query(self):
+        url = reverse('search_competencies_api')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        
+        import json
+        data = json.loads(response.content)
+        self.assertEqual(len(data['items']), 2) # Both competencies returned (unique by title)
+
+
+class JobOpportunityCascadeDeleteTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(username='test_user', password='password123')
+        
+        self.job = JobOpportunity.objects.create(
+            request_number='REQ-DEL-1',
+            title='Job to delete',
+            code='DEL-01',
+            department='Test Dep'
+        )
+        
+        self.stage = JobOpportunityStage.objects.create(
+            job=self.job,
+            name='Test Stage',
+            weight=100,
+            sequence=1,
+            stage_type='INTERVIEW'
+        )
+        
+        # Create AssessmentCompetency
+        from apps.jobs.models import AssessmentCompetency
+        self.ac = AssessmentCompetency.objects.create(
+            stage=self.stage,
+            name='Cognitive ability',
+            weight=100
+        )
+        
+        # Create JobOpportunityCompetency
+        self.joc = JobOpportunityCompetency.objects.create(
+            job=self.job,
+            code='JOC-01',
+            title='Skill Title',
+            competency_type='SK',
+            importance=1,
+            level=2,
+            is_custom=True
+        )
+
+    def test_job_opportunity_cascade_delete(self):
+        job_pk = self.job.pk
+        stage_pk = self.stage.pk
+        ac_pk = self.ac.pk
+        joc_pk = self.joc.pk
+        
+        # Delete job opportunity
+        self.job.delete()
+        
+        # Verify job is soft deleted
+        self.assertFalse(JobOpportunity.objects.filter(pk=job_pk).exists())
+        self.assertTrue(JobOpportunity.all_objects.get(pk=job_pk).is_deleted)
+        
+        # Verify stage is soft deleted
+        self.assertFalse(JobOpportunityStage.objects.filter(pk=stage_pk).exists())
+        self.assertTrue(JobOpportunityStage.all_objects.get(pk=stage_pk).is_deleted)
+        
+        # Verify AssessmentCompetency is soft deleted
+        from apps.jobs.models import AssessmentCompetency
+        self.assertFalse(AssessmentCompetency.objects.filter(pk=ac_pk).exists())
+        self.assertTrue(AssessmentCompetency.all_objects.get(pk=ac_pk).is_deleted)
+        
+        # Verify JobOpportunityCompetency is soft deleted
+        self.assertFalse(JobOpportunityCompetency.objects.filter(pk=joc_pk).exists())
+        self.assertTrue(JobOpportunityCompetency.all_objects.get(pk=joc_pk).is_deleted)
+
+
+class AssessmentPlanRoundingTests(TestCase):
+    def test_calculate_assessment_plan_rounding_to_five(self):
+        from apps.jobs.utils import calculate_assessment_plan
+        
+        class MockComp:
+            def __init__(self, code, title, competency_type, importance, level):
+                self.code = code
+                self.title = title
+                self.competency_type = competency_type
+                self.importance = importance
+                self.level = level
+
+        comps = [
+            MockComp('C1', 'Comp 1', 'KN', 1, 2),
+            MockComp('C2', 'Comp 2', 'SK', 2, 3),
+            MockComp('C3', 'Comp 3', 'GE', 1, 1),
+        ]
+        
+        # Test with round_to_five = True
+        res = calculate_assessment_plan(comps, round_to_five=True)
+        stages = res['stages']
+        
+        # Verify that all stage weights are multiples of 5
+        for s in stages.values():
+            self.assertEqual(s['weight'] % 5, 0)
+        self.assertEqual(sum(s['weight'] for s in stages.values()), 100)
+
+        # Test with round_to_five = False
+        res_false = calculate_assessment_plan(comps, round_to_five=False)
+        stages_false = res_false['stages']
+        # The weights shouldn't all be multiples of 5 (e.g. EXAM might be 28 or 29)
+        has_non_multiple_of_five = any(s['weight'] % 5 != 0 for s in stages_false.values())
+        self.assertTrue(has_non_multiple_of_five)
+
+
+class RecruitmentPatternSimulatorTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_superuser(username='admin_test', password='password123')
+        self.user.profile.role = 'ADMIN'
+        self.user.profile.save()
+        self.client.login(username='admin_test', password='password123')
+
+        # Create CentralCompetency entries
+        CentralCompetency.objects.create(
+            post_code='DEV-01', post_title='برنامه‌نویس نرم‌افزار', code='KN-01', title='Python Programming',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        CentralCompetency.objects.create(
+            post_code='DEV-01', post_title='برنامه‌نویس نرم‌افزار', code='SK-01', title='Django Web Framework',
+            competency_type='SK', category_raw='SK- مهارت', cluster_raw='3-عمومی', importance=1, level=2
+        )
+        CentralCompetency.objects.create(
+            post_code='MGR-01', post_title='Project Manager', code='GE-01', title='Leadership Skills',
+            competency_type='GE', category_raw='GE- رفتاری', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        CentralCompetency.objects.create(
+            post_code='MGR-01', post_title='Project Manager', code='KN-02', title='Python Programming',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=2, level=2
+        )
+
+        # Create Candidate and candidate skills/experience
+        from apps.candidates.models import Candidate, CandidateSkill, CandidateExperience
+        self.candidate = Candidate.objects.create(
+            first_name='Ali', last_name='Alavi', phone_number='09123456789', national_id='1234567890'
+        )
+        CandidateSkill.objects.create(
+            candidate=self.candidate, name='Python Programming', level='EXPERT'
+        )
+        CandidateExperience.objects.create(
+            candidate=self.candidate, company='Test Co', job_title='برنامه‌نویس نرم‌افزار', start_date='2020-01-01'
+        )
+
+        # Create Job Opportunity for MGR-01 so it has competency overlap
+        from apps.jobs.models import JobOpportunity, JobOpportunityCompetency
+        from apps.candidates.models import JobApplication
+        
+        job_mgr = JobOpportunity.objects.create(
+            request_number='REQ-MGR1',
+            title='Project Manager',
+            code='MGR-01',
+            status=JobOpportunity.STATUS_PUBLISHED
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job_mgr,
+            code='KN-02',
+            title='Python Programming',
+            competency_type='KN',
+            importance=2,
+            level=2
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job_mgr,
+            code='GE-01',
+            title='Leadership Skills',
+            competency_type='GE',
+            importance=1,
+            level=3
+        )
+        
+        # Create JobApplication for candidate in job_mgr with score 70.0
+        JobApplication.objects.create(
+            job=job_mgr,
+            candidate=self.candidate,
+            status=JobApplication.STATUS_IN_PROGRESS,
+            final_score=70.0
+        )
+
+    def test_dashboard_main_view(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'توزیع انواع شایستگی‌ها')
+        self.assertContains(response, 'شبیه‌ساز هوشمند آماده به کار است')
+
+    def test_simulator_simulate_action(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'DEV-01', 'round': 'true'})
+        self.assertEqual(response.status_code, 200)
+        # Should render post_pattern_simulation.html content
+        self.assertContains(response, 'برنامه‌نویس نرم‌افزار')
+        self.assertContains(response, 'Python Programming')
+        self.assertContains(response, 'Django Web Framework')
+        
+        # Talent matching verification
+        self.assertContains(response, 'Ali Alavi')
+        self.assertContains(response, 'Python Programming')
+        
+        # Similar post verification
+        self.assertContains(response, 'Project Manager') # Shares 'Python Programming'
+
+    def test_simulator_ai_advise_action(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'راهبرد استخدامی و ارزیابی پیشنهادی هوش مصنوعی')
+        self.assertContains(response, 'آزمون مهارتی به میزان 40٪')
+
+    def test_simulator_ai_advise_other_post_title(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'MGR-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'راهبرد استخدامی')
+        self.assertContains(response, 'آزمون کتبی به میزان 30٪')
+
+    def test_simulator_candidate_match_score(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '50٪ تطابق')
+
+    def test_simulator_competency_overlap(self):
+        from apps.jobs.models import CentralCompetency, JobOpportunity, JobOpportunityCompetency
+        url = reverse('recruitment_patterns')
+        
+        # 1. Create two active JobOpportunity instances
+        job1 = JobOpportunity.objects.create(
+            request_number='REQ-101',
+            title='برنامه‌نویس بک‌اند',
+            code='DEV-01',
+            status=JobOpportunity.STATUS_PUBLISHED
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job1,
+            code='KN-01',
+            title='Python Programming',
+            competency_type='KN',
+            importance=1,
+            level=3
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job1,
+            code='SK-01',
+            title='Django Web Framework',
+            competency_type='SK',
+            importance=1,
+            level=3
+        )
+        
+        job2 = JobOpportunity.objects.create(
+            request_number='REQ-102',
+            title='برنامه‌نویس پایتون',
+            code='DEV-XX',
+            status=JobOpportunity.STATUS_PUBLISHED
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job2,
+            code='KN-XX',
+            title='Python Programming',
+            competency_type='KN',
+            importance=1,
+            level=3
+        )
+        JobOpportunityCompetency.objects.create(
+            job=job2,
+            code='SK-XX',
+            title='Django Web Framework',
+            competency_type='SK',
+            importance=1,
+            level=3
+        )
+        
+        # Now fetch dashboard page and verify overlap suggestions widget contains the shared suggestion between active JobOpportunities
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'برنامه‌نویس بک‌اند')
+        self.assertContains(response, 'برنامه‌نویس پایتون')
+        self.assertContains(response, 'آزمون کتبی')
+        self.assertContains(response, 'آزمون مهارتی')
+        
+        # 2. Create DEV-XX in CentralCompetency so simulate action can match DEV-XX to check overlap
+        CentralCompetency.objects.create(
+            post_code='DEV-XX',
+            post_title='توسعه‌دهنده پایتون',
+            code='COMP-XX-1',
+            title='Python Programming',
+            competency_type='SK',
+            importance=1,
+            level=3
+        )
+        CentralCompetency.objects.create(
+            post_code='DEV-XX',
+            post_title='توسعه‌دهنده پایتون',
+            code='COMP-XX-2',
+            title='Django Web Framework',
+            competency_type='SK',
+            importance=1,
+            level=3
+        )
+
+        # 3. Simulate DEV-01. Since DEV-XX has an active job opportunity, it should be highlighted as active!
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ارزیابی‌های مشترک پیشنهادی')
+        self.assertContains(response, 'توسعه‌دهنده پایتون')
+        self.assertContains(response, '100٪')
+        self.assertContains(response, 'فرصت شغلی فعال در جریان')
+        self.assertContains(response, 'ارزیابی مهارتی مشترک')
+
+    def test_simulator_auto_loads_cached_ai(self):
+        from apps.jobs.models import AIPostRecommendation
+        url = reverse('recruitment_patterns')
+        
+        # 1. Without cache: simulate action should render the manual advice button
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'تولید سناریو و راهبرد استخدامی هوشمند')
+        
+        # 2. Add cached recommendation
+        AIPostRecommendation.objects.create(
+            post_code='DEV-01',
+            opt_advice=[{"text": "Cached Advice"}],
+            scenario="Cached Scenario",
+            questions=["Cached Question"],
+            benchmark_mappings=[]
+        )
+        
+        # 3. With cache: simulate action should render the cached advice directly and NOT render the manual button
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cached Advice')
+        self.assertContains(response, 'Cached Scenario')
+        self.assertNotContains(response, 'تولید سناریو و راهبرد استخدامی هوشمند')
+
+    def test_ai_strategy_print_view(self):
+        url = reverse('job_ai_strategy_print')
+        response = self.client.get(url, {'post_code': 'DEV-01'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'توصیه‌های بهینه‌سازی شایستگی‌ها')
+        self.assertContains(response, 'حالت پیش‌فرض آفلاین')
+
+    def test_ai_competency_filtering(self):
+        from apps.jobs.views import get_ai_recommendation
+        class MockComp:
+            def __init__(self, title, competency_type, importance=1, level=3, code='C-01'):
+                self.title = title
+                self.competency_type = competency_type
+                self.importance = importance
+                self.level = level
+                self.code = code
+
+        comps = [
+            MockComp('Leadership Skills', 'GE'),
+            MockComp('امنیت سایبری', 'KN'),
+            MockComp('برنامه‌نویسی پایتون', 'KN'),
+        ]
+
+        result = get_ai_recommendation('TEST-P', 'Test Post', comps, refresh=True)
+        questions = result['questions']
+        self.assertTrue(any('برنامه‌نویسی پایتون' in q for q in questions))
+        self.assertFalse(any('Leadership Skills' in q for q in questions))
+        self.assertFalse(any('امنیت سایبری' in q for q in questions))
+
+    def test_ai_advise_caching_and_refresh(self):
+        from apps.jobs.models import AIPostRecommendation, AISetting
+        url = reverse('recruitment_patterns')
+        
+        # Verify no cache initially exists
+        self.assertEqual(AIPostRecommendation.objects.filter(post_code='DEV-01').count(), 0)
+
+        # Create active live API setting
+        setting = AISetting.objects.create(
+            api_key='fake-api-key',
+            base_url='http://localhost:8000',
+            model_name='gpt-4o',
+            is_active=True
+        )
+
+        from unittest.mock import patch, MagicMock
+        mock_response_content = (
+            '{"choices": [{"message": {"content": "{\\"opt_advice\\": [{\\"text\\": \\"Advice Live\\", \\"weights\\": {\\"EXAM\\": 40}}], \\"scenario\\": \\"Scenario Live\\", \\"questions\\": [\\"Question Live\\"], \\"benchmark_mappings\\": [{\\"competency\\": \\"Comp Live\\", \\"framework\\": \\"Framework Live\\", \\"dimension\\": \\"Dim Live\\", \\"tool\\": \\"Tool Live\\", \\"rationale\\": \\"Rationale Live\\"}]}"}}]}'
+        )
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.read.return_value = mock_response_content.encode('utf-8')
+        mock_response.__enter__.return_value = mock_response
+
+        with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
+            # 1. Fetch live advice - should call the API and write to cache
+            response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'DEV-01'})
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Advice Live')
+            self.assertContains(response, 'Framework Live')
+            mock_urlopen.assert_called_once()
+            
+            # Verify cache entry created
+            self.assertEqual(AIPostRecommendation.objects.filter(post_code='DEV-01').count(), 1)
+            rec = AIPostRecommendation.objects.get(post_code='DEV-01')
+            self.assertEqual(rec.scenario, 'Scenario Live')
+            self.assertEqual(rec.benchmark_mappings, [
+                {"competency": "Comp Live", "framework": "Framework Live", "dimension": "Dim Live", "tool": "Tool Live", "rationale": "Rationale Live"}
+            ])
+
+            # 2. Fetch again without refresh - should read from cache and NOT call urlopen again
+            mock_urlopen.reset_mock()
+            response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'DEV-01'})
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Advice Live')
+            self.assertContains(response, 'Framework Live')
+            self.assertContains(response, 'لود شده از کش')
+            mock_urlopen.assert_not_called()
+
+            # 3. Fetch again with refresh=True - should bypass cache and call urlopen again
+            mock_urlopen.reset_mock()
+            response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'DEV-01', 'refresh': 'true'})
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Advice Live')
+            self.assertContains(response, 'Framework Live')
+            mock_urlopen.assert_called_once()
+
+    def test_simulator_similar_posts_peer_filtering(self):
+        from apps.jobs.models import CentralCompetency
+        
+        CentralCompetency.objects.create(
+            post_code='FE-01', post_title='کارشناس فرانت‌اند', code='KN-FE-01', title='Python Programming',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        
+        CentralCompetency.objects.create(
+            post_code='NET-01', post_title='کاردان شبکه', code='KN-NET-01', title='Python Programming',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        
+        CentralCompetency.objects.create(
+            post_code='BE-01', post_title='کارشناس بک‌اند', code='KN-BE-01', title='Python Programming',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        
+        # Simulate FE-01 (category: 'کارشناس')
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'FE-01'})
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify that similar_posts context variable contains the peer but excludes other categories
+        similar_post_codes = [sp['post_code'] for sp in response.context['similar_posts']]
+        self.assertIn('BE-01', similar_post_codes)
+        self.assertNotIn('NET-01', similar_post_codes)
+        self.assertNotIn('DEV-01', similar_post_codes)
+
+
+class AISettingViewAndApiTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.admin = User.objects.create_superuser(username='admin_test2', password='password123')
+        self.admin.profile.role = 'ADMIN'
+        self.admin.profile.save()
+        
+        self.non_admin = User.objects.create_user(username='normal_test', password='password123')
+        self.non_admin.profile.role = 'RECRUITMENT_SPECIALIST'
+        self.non_admin.profile.save()
+
+    def test_ai_settings_access_restricted(self):
+        # Normal user shouldn't access
+        self.client.login(username='normal_test', password='password123')
+        url = reverse('ai_setting')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        
+    def test_ai_settings_admin_access(self):
+        # Admin should access
+        self.client.login(username='admin_test2', password='password123')
+        url = reverse('ai_setting')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'پیکربندی سرویس دهنده هوش مصنوعی')
+        
+    def test_ai_settings_save(self):
+        self.client.login(username='admin_test2', password='password123')
+        url = reverse('ai_setting')
+        post_data = {
+            'action': 'save',
+            'api_key': 'test-api-key',
+            'base_url': 'https://api.openai.com/v1',
+            'model_name': 'gpt-4o',
+            'is_active': 'on'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302) # Redirects back
+        
+        # Verify saved in DB
+        from apps.jobs.models import AISetting
+        setting = AISetting.get_active_setting()
+        self.assertIsNotNone(setting)
+        self.assertEqual(setting.api_key, 'test-api-key')
+        self.assertEqual(setting.base_url, 'https://api.openai.com/v1')
+        self.assertEqual(setting.model_name, 'gpt-4o')
+
+    def test_ai_settings_test_connection_fail(self):
+        self.client.login(username='admin_test2', password='password123')
+        url = reverse('ai_setting')
+        
+        # Test with empty API key
+        post_data = {
+            'action': 'test_connection',
+            'api_key': '',
+            'base_url': 'https://api.openai.com/v1',
+            'model_name': 'gpt-4o'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'لطفاً کلید API را وارد کنید')
+
+    def test_ai_settings_test_connection_mock_success(self):
+        self.client.login(username='admin_test2', password='password123')
+        url = reverse('ai_setting')
+        post_data = {
+            'action': 'test_connection',
+            'api_key': 'mock_key',
+            'base_url': 'https://api.openai.com/v1',
+            'model_name': 'gpt-4o'
+        }
+        
+        # Mock urllib.request.urlopen
+        from unittest.mock import patch, MagicMock
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"choices": [{"message": {"content": "Connected"}}]}'
+        
+        with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
+            response = self.client.post(url, post_data)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'اتصال زنده با موفقیت برقرار شد')
+            mock_urlopen.assert_called_once()
+
+    def test_ai_advise_action_live_api_mock(self):
+        # 1. Save an active AISetting in DB
+        from apps.jobs.models import AISetting, CentralCompetency
+        AISetting.objects.create(
+            api_key='live-key',
+            base_url='https://api.avalai.ir/v1',
+            model_name='gpt-4o',
+            is_active=True
+        )
+        
+        # Create competency for DEV-02 (isolated test)
+        CentralCompetency.objects.create(
+            post_code='DEV-02', post_title='طراح سیستم', code='KN-99', title='System Design',
+            competency_type='KN', category_raw='KN- دانش', cluster_raw='3-عمومی', importance=1, level=3
+        )
+        
+        self.client.login(username='admin_test2', password='password123')
+        url = reverse('recruitment_patterns')
+        
+        from unittest.mock import patch, MagicMock
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"choices": [{"message": {"content": "{\\"opt_advice\\": [\\"Live Tip 1\\", \\"Live Tip 2\\", \\"Live Tip 3\\"], \\"scenario\\": \\"Live Scenario\\", \\"questions\\": [\\"Live Q1\\", \\"Live Q2\\", \\"Live Q3\\"]}"}}]}'
+        
+        with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
+            response = self.client.get(url, {'action': 'ai_advise', 'post_code': 'DEV-02'})
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Live API')
+            self.assertContains(response, 'Live Tip 1')
+            self.assertContains(response, 'Live Scenario')
+            self.assertContains(response, 'Live Q1')
+            mock_urlopen.assert_called_once()
+
+
+class SmartTalentMatchingTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from apps.accounts.models import UserProfile
+        from apps.jobs.models import CentralCompetency, JobOpportunity, JobOpportunityCompetency
+        from apps.candidates.models import Candidate, JobApplication
+        
+        # Setup users
+        self.admin = User.objects.create_superuser(username='matching_admin', password='password123')
+        self.admin.profile.role = UserProfile.ROLE_ADMIN
+        self.admin.profile.save()
+        self.client.login(username='matching_admin', password='password123')
+
+        # 1. Create Target Post Competencies in CentralCompetency bank
+        # Functional competencies (KN, SK, AB)
+        CentralCompetency.objects.create(
+            post_code='TARGET-POST', post_title='شغل هدف', code='TC-01', title='مهارت برنامه‌نویسی پایتون',
+            competency_type='SK', importance=1, level=3
+        )
+        CentralCompetency.objects.create(
+            post_code='TARGET-POST', post_title='شغل هدف', code='TC-02', title='دانش طراحی الگوریتم',
+            competency_type='KN', importance=1, level=2
+        )
+        CentralCompetency.objects.create(
+            post_code='TARGET-POST', post_title='شغل هدف', code='TC-03', title='توانایی کار تیمی',
+            competency_type='AB', importance=2, level=2
+        )
+        # Organizational competency (should be ignored by matches)
+        CentralCompetency.objects.create(
+            post_code='TARGET-POST', post_title='شغل هدف', code='TC-04', title='تاب‌آوری',
+            competency_type='GE', importance=2, level=2
+        )
+
+        # 2. Create Similar Job Opportunity (JOB-A: 2 shared out of 3 functional -> 67% overlap >= 50%)
+        self.job_a = JobOpportunity.objects.create(
+            request_number='REQ-JOBA', title='توسعه‌دهنده پایتون ارشد', code='JOB-A', status=JobOpportunity.STATUS_PUBLISHED
+        )
+        JobOpportunityCompetency.objects.create(
+            job=self.job_a, code='JA-01', title='مهارت برنامه‌نویسی پایتون', competency_type='SK', importance=1, level=3
+        )
+        JobOpportunityCompetency.objects.create(
+            job=self.job_a, code='JA-02', title='دانش طراحی الگوریتم', competency_type='KN', importance=1, level=3
+        )
+
+        # 3. Create Dissimilar Job Opportunity (JOB-B: 1 shared out of 3 functional -> 33% overlap < 50%)
+        self.job_b = JobOpportunity.objects.create(
+            request_number='REQ-JOBB', title='کارشناس امنیت شبکه', code='JOB-B', status=JobOpportunity.STATUS_PUBLISHED
+        )
+        JobOpportunityCompetency.objects.create(
+            job=self.job_b, code='JB-01', title='دانش طراحی الگوریتم', competency_type='KN', importance=1, level=3
+        )
+
+        # 4. Create Job C for final acceptance test
+        self.job_c = JobOpportunity.objects.create(
+            request_number='REQ-JOBC', title='شغل نهایی', code='JOB-C', status=JobOpportunity.STATUS_CLOSED
+        )
+
+        # 5. Create Candidates
+        # Candidate 1: Ali (JOB-A, final_score = 80.0)
+        self.cand_ali = Candidate.objects.create(
+            first_name='علی', last_name='رضایی', phone_number='09121111111', national_id='1111111111'
+        )
+        JobApplication.objects.create(
+            job=self.job_a, candidate=self.cand_ali, status=JobApplication.STATUS_IN_PROGRESS, final_score=80.0
+        )
+
+        # Candidate 2: Reza (JOB-A, final_score = 90.0)
+        self.cand_reza = Candidate.objects.create(
+            first_name='رضا', last_name='احمدی', phone_number='09122222222', national_id='2222222222'
+        )
+        JobApplication.objects.create(
+            job=self.job_a, candidate=self.cand_reza, status=JobApplication.STATUS_IN_PROGRESS, final_score=90.0
+        )
+
+        # Candidate 3: Sara (JOB-A, final_score = 95.0, but accepted in JOB-C)
+        self.cand_sara = Candidate.objects.create(
+            first_name='سارا', last_name='کریمی', phone_number='09123333333', national_id='3333333333'
+        )
+        JobApplication.objects.create(
+            job=self.job_a, candidate=self.cand_sara, status=JobApplication.STATUS_IN_PROGRESS, final_score=95.0
+        )
+        # Accepted in JOB-C
+        JobApplication.objects.create(
+            job=self.job_c, candidate=self.cand_sara, status=JobApplication.STATUS_SELECTED, final_score=100.0
+        )
+
+        # Candidate 4: Gholi (JOB-B, final_score = 99.0)
+        self.cand_gholi = Candidate.objects.create(
+            first_name='قلی', last_name='قلی‌پور', phone_number='09124444444', national_id='4444444444'
+        )
+        JobApplication.objects.create(
+            job=self.job_b, candidate=self.cand_gholi, status=JobApplication.STATUS_IN_PROGRESS, final_score=99.0
+        )
+
+    def test_optimized_talent_matching(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {'action': 'simulate', 'post_code': 'TARGET-POST'})
+        self.assertEqual(response.status_code, 200)
+        
+        talents = response.context['talents']
+        # Sara (selected in Job C) and Gholi (overlap 33% < 50%) must be excluded
+        # Ali and Reza must be present
+        self.assertEqual(len(talents), 2)
+        
+        # Sorted by final_score descending -> Reza (90%) then Ali (80%)
+        self.assertEqual(talents[0]['id'], self.cand_reza.id)
+        self.assertEqual(talents[0]['source_job_score'], 90)
+        self.assertEqual(talents[0]['source_job_title'], 'توسعه‌دهنده پایتون ارشد')
+        self.assertEqual(talents[0]['match_percent'], 67) # 2/3 * 100
+        self.assertIn('دانش طراحی الگوریتم', talents[0]['shared_competencies'])
+        self.assertIn('مهارت برنامه‌نویسی پایتون', talents[0]['shared_competencies'])
+
+        self.assertEqual(talents[1]['id'], self.cand_ali.id)
+        self.assertEqual(talents[1]['source_job_score'], 80)
+
+    def test_ai_match_talent_scores_endpoint_offline_fallback(self):
+        url = reverse('recruitment_patterns')
+        response = self.client.get(url, {
+            'action': 'ai_match_talent_scores',
+            'post_code': 'TARGET-POST',
+            'candidate_id': self.cand_reza.id
+        })
+        self.assertEqual(response.status_code, 200)
+        
+        # Test rendered components of the modal layout
+        self.assertTemplateUsed(response, 'jobs/partials/ai_talent_suitability_match.html')
+        self.assertContains(response, 'رضا احمدی')
+        self.assertContains(response, 'توسعه‌دهنده پایتون ارشد')
+        self.assertContains(response, '90٪')
+        self.assertContains(response, '67٪ همپوشانی شایستگی‌ها')
+        # Offline fallback text
+        self.assertContains(response, 'صلاحیت عمومی کاندیدا در این بخش‌ها مطلوب')
+
+    def test_ai_match_talent_scores_endpoint_live(self):
+        from apps.jobs.models import AISetting
+        AISetting.objects.create(
+            api_key='fake-api-key',
+            base_url='http://localhost:8000',
+            model_name='gpt-4o',
+            is_active=True
+        )
+
+        url = reverse('recruitment_patterns')
+        
+        from unittest.mock import patch, MagicMock
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"choices": [{"message": {"content": "Live AI analysis for transferability."}}]}'
+        
+        with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
+            response = self.client.get(url, {
+                'action': 'ai_match_talent_scores',
+                'post_code': 'TARGET-POST',
+                'candidate_id': self.cand_reza.id
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, 'jobs/partials/ai_talent_suitability_match.html')
+            self.assertContains(response, 'Live AI analysis for transferability.')
+            mock_urlopen.assert_called_once()
+
+
+class JobOpportunityStageSyncTests(TestCase):
+    def setUp(self):
+        from apps.jobs.models import JobOpportunity, JobOpportunityStage
+        from apps.candidates.models import Candidate, JobApplication
+        
+        # 1. Create a JobOpportunity
+        self.job = JobOpportunity.objects.create(
+            title='مهندس DevOps',
+            code='DEVOPS-01',
+            status=JobOpportunity.STATUS_PUBLISHED
+        )
+        
+        # 2. Add initial stages: SCREENING (seq 1), EXAM (seq 2)
+        self.stage_screening = JobOpportunityStage.objects.create(
+            job=self.job,
+            name='غربالگری اولیه',
+            weight=10,
+            sequence=1,
+            stage_type='SCREENING'
+        )
+        self.stage_exam = JobOpportunityStage.objects.create(
+            job=self.job,
+            name='آزمون کتبی فنی',
+            weight=40,
+            sequence=2,
+            stage_type='EXAM'
+        )
+        
+        # 3. Create Candidate & Application
+        self.cand = Candidate.objects.create(
+            first_name='بابک',
+            last_name='بابایی',
+            phone_number='09129999999',
+            national_id='9999999999'
+        )
+        self.app = JobApplication.objects.create(
+            job=self.job,
+            candidate=self.cand,
+            status=JobApplication.STATUS_IN_PROGRESS
+        )
+        # JobApplication creation automatically recalculates and sets current_stage to first stage (screening)
+        # and creates ApplicationStageState records for all stages.
+
+    def test_sync_application_stages_workflow_and_scores(self):
+        from apps.jobs.models import JobOpportunityStage
+        from apps.candidates.models import ApplicationStageState
+        from django.utils import timezone
+        
+        # Verify initial states
+        states = self.app.stage_states.filter(is_deleted=False)
+        self.assertEqual(states.count(), 2)
+        
+        scr_state = states.get(stage__stage_type='SCREENING')
+        self.assertEqual(scr_state.status, ApplicationStageState.STATUS_PENDING)
+        
+        # Complete screening stage
+        scr_state.status = ApplicationStageState.STATUS_COMPLETED
+        scr_state.score = 100.0
+        scr_state.save()
+        
+        # Re-fetch app to see current_stage changed to EXAM
+        self.app.recalculate_current_stage(save=True)
+        self.assertEqual(self.app.current_stage, self.stage_exam)
+        
+        # Now, simulate a workflow/competency update:
+        # Soft delete the EXAM stage and add an INTERVIEW stage instead.
+        self.stage_exam.is_deleted = True
+        self.stage_exam.deleted_at = timezone.now()
+        self.stage_exam.save()
+        
+        stage_interview = JobOpportunityStage.objects.create(
+            job=self.job,
+            name='مصاحبه عمومی و تخصصی',
+            weight=50,
+            sequence=2,
+            stage_type='INTERVIEW'
+        )
+        
+        # Call the sync method on the job
+        self.job.sync_application_stages()
+        
+        # Verify changes:
+        # 1. Screen state should still exist, point to the screening stage, and retain its status/score
+        states_after = self.app.stage_states.filter(is_deleted=False)
+        self.assertEqual(states_after.count(), 2) # SCREENING and INTERVIEW
+        
+        scr_state_after = states_after.get(stage__stage_type='SCREENING')
+        self.assertEqual(scr_state_after.status, ApplicationStageState.STATUS_COMPLETED)
+        self.assertEqual(scr_state_after.score, 100.0)
+        
+        # 2. Exam state should be soft-deleted
+        self.assertFalse(self.app.stage_states.filter(stage__stage_type='EXAM', is_deleted=False).exists())
+        
+        # 3. Interview state should be created as PENDING
+        int_state_after = states_after.get(stage__stage_type='INTERVIEW')
+        self.assertEqual(int_state_after.status, ApplicationStageState.STATUS_PENDING)
+        self.assertEqual(int_state_after.score, 0.0)
+        
+        # 4. Re-fetch app to verify its current_stage is now updated to INTERVIEW
+        self.app.refresh_from_db()
+        self.assertEqual(self.app.current_stage, stage_interview)
+
+
+
+
+
+
 
 
 

@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" class="{% if user.is_authenticated and user.profile %}size-{{ user.profile.font_size|default:'medium' }}{% else %}size-medium{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}سامانه پیجو (Payjo){% endblock %}</title>
     <!-- Bootstrap RTL 5.3.3 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
-    <!-- Google Fonts / Vazirmatn -->
+    <!-- Google Fonts / Vazirmatn & Webfont CDNs -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.2/dist/font-face.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/samim-font@v4.0.5/dist/font-face.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/ahangarha/yekanbakh/yekanbakh.css" rel="stylesheet" type="text/css" />
     <!-- Custom Style -->
-    <link rel="stylesheet" href="/static/css/custom.css">
+    <link rel="stylesheet" href="/static/css/custom.css?v=1.4.5">
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <style>
@@ -19,24 +22,57 @@
         [aria-expanded="true"] .menu-arrow {
             transform: rotate(-90deg) !important;
         }
+        .logo-img {
+            height: 34px;
+            width: auto;
+            object-fit: contain;
+            transition: transform 0.2s ease-in-out;
+        }
+        .logo-img:hover {
+            transform: scale(1.08);
+        }
         .submenu-list .nav-link {
             padding: 6px 12px !important;
             margin: 2px 4px !important;
             font-size: 0.75rem !important;
             border-radius: 4px !important;
         }
+        /* Bypass browser CSS caching by defining the fixed sidebar styles inline */
+        .sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            height: 100vh !important;
+            min-width: 230px !important;
+            max-width: 230px !important;
+            overflow-y: auto !important;
+            z-index: 1030 !important;
+            background-color: var(--secondary-color) !important; /* Dynamically linked to theme variable */
+        }
+        /* Custom Scrollbar for Sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 5px !important;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 10px !important;
+            /* width parameter is controlled via parent */
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <div class="d-flex">
-        <!-- Sidebar -->
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="{% if user.is_authenticated and user.profile %}theme-{{ user.profile.theme|default:'indigo' }} font-{{ user.profile.font_family|default:'vazir' }}{% else %}theme-indigo font-vazir{% endif %}">
+    <!-- Sidebar -->
         {% if user.is_authenticated %}
         <aside class="sidebar d-flex flex-column flex-shrink-0 p-3">
-            <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center w-100 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-rocket-takeoff-fill me-2 text-primary" viewBox="0 0 16 16">
-                    <path d="M12.17 9.53c-.077-.193-.213-.37-.413-.513-.48-.344-1.181-.617-2.03-.812a8 8 0 0 0-.77-.136 2.5 2.5 0 0 1-.044-.389c-.014-.244.008-.562.1-.92.117-.459.324-.937.58-1.33.254-.39.518-.629.74-.75a.75.75 0 0 0-.166-1.397c-.074-.015-.178-.01-.303.022a4 4 0 0 0-2.518 1.62c-.226.27-.47.662-.647 1.064-.179.407-.299.824-.34 1.157a3 3 0 0 1-.027.31c-.328.027-.645.075-.945.143-.836.19-1.52.457-1.99.789-.2.14-.337.315-.415.508L0 16l6.83-3.415c.08.196.223.385.441.523.511.324 1.25.568 2.142.748.892.18 1.874.249 2.766.19a8 8 0 0 0 .809-.092l5.012 2.506-1.077-7.535zM7.447 11.238a.5.5 0 0 1-.447-.553c.048-.386.136-.837.28-1.303.146-.47.362-.93.633-1.3.267-.367.545-.584.773-.667a.5.5 0 0 1 .632.632c-.083.228-.3.506-.667.773-.37.271-.83.487-1.3.633-.466.144-.917.232-1.303.28a.5.5 0 0 1-.073.006z"/>
-                </svg>
+            <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center w-100 py-3 gap-2">
+                <img src="/static/logo.png" alt="سامانه پیجو" class="logo-img">
                 <span class="fs-5 font-semibold text-white">سامانه پیجو</span>
             </a>
             <hr class="border-secondary">
@@ -204,72 +240,109 @@
                 </li>
                 {% endif %}
 
-                <!-- ایمپورت سوابق (اکسل) -->
-                {% if user.profile.is_recruitment_staff %}
+                <!-- تنظیمات سیستم (منوی بازشو) -->
+                <hr class="border-secondary m-0 my-2">
                 <li>
-                    <a href="{% url 'import_upload' %}" class="nav-link {% if 'import' in request.path %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75z" />
+                    <a href="#settings-menu" 
+                       class="nav-link d-flex align-items-center justify-content-between {% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'sms-panel' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}text-white{% endif %}" 
+                       data-bs-toggle="collapse" 
+                       role="button" 
+                       aria-expanded="{% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'sms-panel' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}true{% else %}false{% endif %}" 
+                       aria-controls="settings-menu">
+                        <span class="d-flex align-items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.991l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869L9.594 3.94z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            تنظیمات سیستم
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="menu-arrow">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                         </svg>
-                        ایمپورت سوابق (اکسل)
                     </a>
-                </li>
-                {% endif %}
+                    
+                    <div class="collapse {% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'sms-panel' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}show{% endif %}" id="settings-menu">
+                        <ul class="nav flex-column ps-3 mt-1 gap-1 submenu-list">
+                            <!-- شخصی‌سازی (همه کاربران) -->
+                            <li>
+                                <a href="{% url 'user_preferences' %}" class="nav-link {% if 'preferences' in request.path %}active text-white{% endif %}">
+                                    شخصی‌سازی ظاهر
+                                </a>
+                            </li>
+                            
+                            <!-- ایمپورت سوابق (کارشناس جذب و ادمین) -->
+                            {% if user.profile.is_recruitment_staff %}
+                            <li>
+                                <a href="{% url 'import_upload' %}" class="nav-link {% if 'import' in request.path %}active text-white{% endif %}">
+                                    ایمپورت سوابق (اکسل)
+                                </a>
+                            </li>
+                            {% endif %}
 
-                <!-- دسترسی مدیر سیستم -->
-                {% if user.profile.role == 'ADMIN' %}
-                <hr class="border-secondary">
-                <span class="text-xs text-muted px-4 py-2 d-block">بخش مدیریت سیستم</span>
-                <li>
-                    <a href="{% url 'user_list' %}" class="nav-link {% if 'users' in request.path %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-                        </svg>
-                        مدیریت کاربران (RBAC)
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'system_backup' %}" class="nav-link {% if 'system-backup' in request.path %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                        </svg>
-                        پشتیبان‌گیری و بازگردانی
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'sms_panel' %}" class="nav-link {% if 'sms-panel' in request.path %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                        </svg>
-                        مدیریت پیامک‌ها
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'data_integrity_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'data_integrity_dashboard' %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                        </svg>
-                        پایش سلامت داده‌ها
-                    </a>
-                </li>
-                {% endif %}
+                            <!-- مدیریت کاربران (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'user_list' %}" class="nav-link {% if 'users' in request.path %}active text-white{% endif %}">
+                                    مدیریت کاربران (RBAC)
+                                </a>
+                            </li>
+                            {% endif %}
 
-                {% if user.profile.can_view_audit_logs %}
-                <li>
-                    <a href="{% url 'audit_log_list' %}" class="nav-link {% if request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        لاگ‌های ممیزی (Audit Logs)
-                    </a>
+                            <!-- پشتیبان‌گیری و بازگردانی (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'system_backup' %}" class="nav-link {% if 'system-backup' in request.path %}active text-white{% endif %}">
+                                    پشتیبان‌گیری و بازگردانی
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- مدیریت پیامک‌ها (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'sms_panel' %}" class="nav-link {% if 'sms-panel' in request.path %}active text-white{% endif %}">
+                                    مدیریت پیامک‌ها
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- پایش سلامت داده‌ها (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'data_integrity_dashboard' %}" class="nav-link {% if 'data-integrity' in request.path %}active text-white{% endif %}">
+                                    پایش سلامت داده‌ها
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- تنظیمات هوش مصنوعی (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'ai_setting' %}" class="nav-link {% if 'settings/ai' in request.path %}active text-white{% endif %}">
+                                    تنظیمات هوش مصنوعی
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- لاگ‌های ممیزی (ادمین و حسابرس) -->
+                            {% if user.profile.can_view_audit_logs %}
+                            <li>
+                                <a href="{% url 'audit_log_list' %}" class="nav-link {% if 'audit-logs' in request.path %}active text-white{% endif %}">
+                                    لاگ‌های ممیزی (Audit Logs)
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
                 </li>
-                {% endif %}
+
+
             </ul>
         </aside>
         {% endif %}
 
-        <!-- Content Area -->
-        <div class="flex-grow-1 d-flex flex-column min-vh-100">
+        <!-- Content Area with right margin spacing to accommodate the fixed sidebar layout -->
+        <div class="min-vh-100 d-flex flex-column" {% if user.is_authenticated %}style="margin-right: 230px;"{% endif %}>
             <!-- Navbar -->
             {% if user.is_authenticated %}
             <nav class="navbar navbar-custom navbar-expand-lg d-flex justify-content-between align-items-center">
@@ -309,7 +382,6 @@
                 <span class="text-muted text-xs" style="color: #94a3b8 !important;">نوشته شده جهت پیشنهاد توسط امید صالحی</span>
             </footer>
         </div>
-    </div>
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

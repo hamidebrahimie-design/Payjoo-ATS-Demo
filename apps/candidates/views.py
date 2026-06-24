@@ -4270,7 +4270,7 @@ class CandidatesByStageListView(LoginRequiredMixin, RoleRequiredMixin, ListView)
         queryset = JobApplication.objects.filter(
             status=JobApplication.STATUS_IN_PROGRESS,
             is_deleted=False
-        ).select_related('candidate', 'job', 'current_stage').order_by('-updated_at')
+        ).exclude(job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']).select_related('candidate', 'job', 'current_stage').order_by('-updated_at')
 
         # 1. Search Query
         q = self.request.GET.get('q', '').strip()
@@ -4296,7 +4296,10 @@ class CandidatesByStageListView(LoginRequiredMixin, RoleRequiredMixin, ListView)
         # 4. Stage Type Filter
         stage_type = self.request.GET.get('stage_type', '').strip()
         if stage_type:
-            queryset = queryset.filter(current_stage__stage_type=stage_type)
+            if stage_type == 'SCREENING':
+                queryset = queryset.filter(Q(current_stage__stage_type='SCREENING') | Q(current_stage__isnull=True))
+            else:
+                queryset = queryset.filter(current_stage__stage_type=stage_type)
 
         return queryset
 
@@ -4356,9 +4359,14 @@ class CandidatesByStageListView(LoginRequiredMixin, RoleRequiredMixin, ListView)
         context['stage_types'] = STAGE_TYPE_CHOICES
         
         # Calculate stats for the summary cards
-        active_apps = JobApplication.objects.filter(status=JobApplication.STATUS_IN_PROGRESS, is_deleted=False)
+        active_apps = JobApplication.objects.filter(
+            status=JobApplication.STATUS_IN_PROGRESS, 
+            is_deleted=False
+        ).exclude(job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED'])
         context['total_in_progress'] = active_apps.count()
-        context['screening_count'] = active_apps.filter(current_stage__stage_type='SCREENING').count()
+        
+        from django.db.models import Q
+        context['screening_count'] = active_apps.filter(Q(current_stage__stage_type='SCREENING') | Q(current_stage__isnull=True)).count()
         context['exam_count'] = active_apps.filter(current_stage__stage_type='EXAM').count()
         context['skill_count'] = active_apps.filter(current_stage__stage_type='SKILL_TEST').count()
         context['interview_count'] = active_apps.filter(current_stage__stage_type='INTERVIEW').count()
