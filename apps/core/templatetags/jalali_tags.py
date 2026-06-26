@@ -1,6 +1,7 @@
 import jdatetime
 from django import template
 from datetime import datetime, date
+from django.utils import timezone
 
 register = template.Library()
 
@@ -11,7 +12,8 @@ def to_jalali(value):
     try:
         if isinstance(value, datetime):
             # Convert to local timezone first if timezone-aware
-            # jdatetime handles aware datetimes or naive
+            if timezone.is_aware(value):
+                value = timezone.localtime(value)
             jd = jdatetime.datetime.fromgregorian(datetime=value)
             return jd.strftime('%Y/%m/%d - %H:%M')
         elif isinstance(value, date):

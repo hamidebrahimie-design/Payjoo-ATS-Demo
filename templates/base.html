@@ -37,18 +37,61 @@
             font-size: 0.75rem !important;
             border-radius: 4px !important;
         }
-        /* Bypass browser CSS caching by defining the fixed sidebar styles inline */
-        .sidebar {
-            position: fixed !important;
-            top: 0 !important;
-            right: 0 !important;
-            height: 100vh !important;
-            min-width: 230px !important;
-            max-width: 230px !important;
-            overflow-y: auto !important;
-            z-index: 1030 !important;
-            background-color: var(--secondary-color) !important; /* Dynamically linked to theme variable */
+        /* Sidebar layout & responsiveness */
+        @media (min-width: 992px) {
+            .sidebar {
+                position: fixed !important;
+                top: 0 !important;
+                right: 0 !important;
+                height: 100vh !important;
+                min-width: 230px !important;
+                max-width: 230px !important;
+                overflow-y: auto !important;
+                z-index: 1030 !important;
+                background-color: var(--secondary-color) !important;
+                display: flex !important;
+            }
+            .content-wrapper {
+                margin-right: 230px !important;
+            }
         }
+        
+        @media (max-width: 991.98px) {
+            .sidebar {
+                position: fixed !important;
+                top: 0 !important;
+                right: -230px !important;
+                height: 100vh !important;
+                min-width: 230px !important;
+                max-width: 230px !important;
+                overflow-y: auto !important;
+                z-index: 1040 !important;
+                background-color: var(--secondary-color) !important;
+                display: flex !important;
+                transition: right 0.25s ease-in-out !important;
+            }
+            .sidebar.show {
+                right: 0 !important;
+            }
+            .content-wrapper {
+                margin-right: 0 !important;
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1035;
+                backdrop-filter: blur(2px);
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
         /* Custom Scrollbar for Sidebar */
         .sidebar::-webkit-scrollbar {
             width: 5px !important;
@@ -59,7 +102,6 @@
         .sidebar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.15) !important;
             border-radius: 10px !important;
-            /* width parameter is controlled via parent */
         }
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3) !important;
@@ -71,11 +113,18 @@
     <!-- Sidebar -->
         {% if user.is_authenticated %}
         <aside class="sidebar d-flex flex-column flex-shrink-0 p-3">
-            <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center w-100 py-3 gap-2">
-                <img src="/static/logo.png" alt="سامانه پیجو" class="logo-img">
-                <span class="fs-5 font-semibold text-white">سامانه پیجو</span>
-            </a>
-            <hr class="border-secondary">
+            <div class="d-flex align-items-center justify-content-between mb-2 w-100 py-2">
+                <a href="{% url 'dashboard' %}" class="d-flex align-items-center text-white text-decoration-none gap-2">
+                    <img src="/static/logo.png" alt="سامانه پیجو" class="logo-img">
+                    <span class="fs-5 font-semibold text-white">سامانه پیجو</span>
+                </a>
+                <button class="btn btn-link text-white p-0 d-lg-none" id="sidebarClose" style="text-decoration: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <hr class="border-secondary m-0 mb-3">
             
             <ul class="nav nav-pills flex-column mb-auto">
                 <li>
@@ -135,11 +184,19 @@
                 <!-- برنامه‌ریزی جذب (دسترسی کارشناسان جذب و ادمین) -->
                 {% if user.profile.is_recruitment_staff %}
                 <li>
-                    <a href="{% url 'planning_dashboard' %}" class="nav-link {% if 'planning' in request.path %}active{% endif %}">
+                    <a href="{% url 'planning_dashboard' %}" class="nav-link {% if 'planning' in request.path and 'analytics' not in request.path %}active{% endif %}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M12 3v2.25m5.25-2.25v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
                         </svg>
                         برنامه‌ریزی جذب
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'analytics_dashboard' %}" class="nav-link {% if 'analytics' in request.path %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+                        </svg>
+                        داشبورد تحلیلی و گزارشات
                     </a>
                 </li>
                 {% endif %}
@@ -324,6 +381,16 @@
                             </li>
                             {% endif %}
 
+                            <!-- تنظیمات سازمان (ادمین) -->
+                            {% if user.profile.role == 'ADMIN' %}
+                            <li>
+                                <a href="{% url 'organization_setting' %}" class="nav-link {% if 'settings/organization' in request.path %}active text-white{% endif %}">
+                                    تنظیمات سازمان
+                                </a>
+                            </li>
+                            {% endif %}
+
+
                             <!-- لاگ‌های ممیزی (ادمین و حسابرس) -->
                             {% if user.profile.can_view_audit_logs %}
                             <li>
@@ -342,23 +409,36 @@
         {% endif %}
 
         <!-- Content Area with right margin spacing to accommodate the fixed sidebar layout -->
-        <div class="min-vh-100 d-flex flex-column" {% if user.is_authenticated %}style="margin-right: 230px;"{% endif %}>
+        <div class="min-vh-100 d-flex flex-column {% if user.is_authenticated %}content-wrapper{% endif %}">
             <!-- Navbar -->
             {% if user.is_authenticated %}
             <nav class="navbar navbar-custom navbar-expand-lg d-flex justify-content-between align-items-center">
-                <div class="navbar-brand font-semibold text-secondary">
-                    سامانه هوشمند جذب و استخدام پیجو
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-link text-dark p-0 d-lg-none" id="sidebarToggle" style="text-decoration: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
+                    </button>
+                    <div class="navbar-brand font-semibold text-secondary m-0 d-none d-sm-block" style="font-size: 0.95rem;">
+                        سامانه هوشمند جذب و استخدام پیجو
+                    </div>
+                    <div class="navbar-brand font-semibold text-secondary m-0 d-block d-sm-none" style="font-size: 0.85rem;">
+                        سامانه پیجو
+                    </div>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="badge badge-role-{{ user.profile.role|lower }} px-3 py-2 rounded-pill font-medium">
+                <div class="d-flex align-items-center gap-2 gap-sm-3">
+                    <span class="badge badge-role-{{ user.profile.role|lower }} px-2 py-1.5 px-sm-3 py-sm-2 rounded-pill font-medium text-xs">
                         {{ user.profile.get_role_display }}
                     </span>
-                    <span class="text-secondary font-medium">
+                    <span class="text-secondary font-medium d-none d-md-inline">
                         {{ user.get_full_name|default:user.username }} خوش آمدید
+                    </span>
+                    <span class="text-secondary font-medium d-inline d-md-none text-xs">
+                        {{ user.get_full_name|default:user.username }}
                     </span>
                     <form action="{% url 'logout' %}" method="post" class="m-0">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger">خروج</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs">خروج</button>
                     </form>
                 </div>
             </nav>
@@ -383,8 +463,32 @@
             </footer>
         </div>
     
+    <!-- Sidebar Overlay -->
+    {% if user.is_authenticated %}
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    {% endif %}
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% if user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const closeBtn = document.getElementById('sidebarClose');
+
+            function toggleSidebar() {
+                if (sidebar) sidebar.classList.toggle('show');
+                if (overlay) overlay.classList.toggle('show');
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', toggleSidebar);
+            if (overlay) overlay.addEventListener('click', toggleSidebar);
+        });
+    </script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

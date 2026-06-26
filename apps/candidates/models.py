@@ -314,6 +314,7 @@ class ApplicationStageState(SoftDeleteModel):
     score_discrepancy_alert = models.BooleanField(default=False, verbose_name="هشدار اختلاف فاحش نمرات")
     is_conditional_pass = models.BooleanField(default=False, verbose_name="قبول ارفاقی / ارجاع مشروط")
     evaluation_date = models.DateField(null=True, blank=True, verbose_name="تاریخ ارزیابی")
+    evaluation_time = models.CharField(max_length=5, default="10:00", blank=True, null=True, verbose_name="ساعت ارزیابی")
     is_manually_edited = models.BooleanField(default=False, verbose_name="ویرایش شده به صورت دستی")
 
     class Meta:
@@ -387,7 +388,7 @@ class ApplicationStageState(SoftDeleteModel):
         # Skip this for screening stages as they do not have numeric scores
         if self.stage.stage_type == 'SCREENING':
             pass
-        elif self.pk and not getattr(self, '_bypass_status_calculation', False) and not getattr(self, '_bypass_stage_score_calculation', False):
+        elif self.pk and not self.is_manually_edited and not getattr(self, '_bypass_status_calculation', False) and not getattr(self, '_bypass_stage_score_calculation', False):
             external_scores = self.external_interviewer_scores.filter(is_deleted=False)
             if external_scores.exists():
                 total_weight = sum(es.weight for es in external_scores)
@@ -667,4 +668,30 @@ class JobDefaultInterviewer(SoftDeleteModel):
 
     def __str__(self):
         return f"{self.interviewer_name} — {self.job.title} (وزن: {self.weight})"
+
+
+class NotificationLog(SoftDeleteModel):
+    NOTIFICATION_TYPES = [
+        ('SMS', 'پیامک'),
+        ('EMAIL', 'ایمیل'),
+    ]
+    STATUS_CHOICES = [
+        ('SENT', 'ارسال شده'),
+        ('FAILED', 'خطا در ارسال'),
+    ]
+    notification_type = models.CharField(max_length=10, choices=NOTIFICATION_TYPES, verbose_name="نوع اعلان")
+    recipient = models.CharField(max_length=255, verbose_name="گیرنده")
+    subject = models.CharField(max_length=255, verbose_name="عنوان / موضوع")
+    body = models.TextField(verbose_name="متن پیام")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='SENT', verbose_name="وضعیت ارسال")
+    error_message = models.TextField(blank=True, null=True, verbose_name="متن خطا")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ارسال")
+
+    class Meta:
+        verbose_name = "لاگ اعلان"
+        verbose_name_plural = "لاگ‌های اعلانات"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_notification_type_display()} به {self.recipient} - {self.get_status_display()}"
 

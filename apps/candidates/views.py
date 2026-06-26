@@ -554,6 +554,7 @@ class UpdateApplicationStageStateView(LoginRequiredMixin, RoleRequiredMixin, Vie
         notes_val = request.POST.get('notes', '')
         is_conditional_pass_val = request.POST.get('is_conditional_pass') == 'true' or request.POST.get('is_conditional_pass') == 'on'
         date_val = request.POST.get('date', '').strip()
+        time_val = request.POST.get('time', '10:00').strip()
 
         try:
             state.score = float(score_val)
@@ -570,6 +571,7 @@ class UpdateApplicationStageStateView(LoginRequiredMixin, RoleRequiredMixin, Vie
         else:
             state.evaluation_date = None
 
+        state.evaluation_time = time_val or "10:00"
         state._bypass_stage_score_calculation = True
         state.is_manually_edited = True
         state.save()
@@ -1364,12 +1366,20 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                             date_val = request.POST.get(f'date_{sid}', '').strip()
                             is_conditional_pass_val = request.POST.get(f'is_conditional_pass_{sid}') in ['true', 'on']
                             
-                            if state.stage.stage_type != 'SCREENING' and not state.stage.competencies.exists():
+                            if state.stage.stage_type != 'SCREENING':
                                 score_val = request.POST.get(f'score_{sid}', '0')
                                 try:
-                                    state.score = float(score_val)
+                                    score_float = float(score_val)
                                 except ValueError:
-                                    state.score = 0.0
+                                    score_float = 0.0
+                                
+                                if state.stage.competencies.exists():
+                                    if abs(state.score - score_float) > 0.01:
+                                        state.score = score_float
+                                        state.is_manually_edited = True
+                                else:
+                                    state.score = score_float
+                                    state.is_manually_edited = True
                             elif state.stage.stage_type == 'SCREENING':
                                 state.score = 0.0
                                 
@@ -2155,6 +2165,8 @@ class AssessmentCenterSheetView(LoginRequiredMixin, RoleRequiredMixin, View):
                     cs_obj.save()
 
             iscore.save()
+            state.is_manually_edited = False
+            state.save()
 
         if source == 'score_entry':
             stages = list(state.application.job.stages.filter(is_deleted=False).order_by('sequence'))

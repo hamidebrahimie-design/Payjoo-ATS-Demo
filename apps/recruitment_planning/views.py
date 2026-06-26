@@ -1341,5 +1341,362 @@ class ViewJobStagePlanView(LoginRequiredMixin, RoleRequiredMixin, View):
         return render(request, 'recruitment_planning/partials/stage_plan_view.html', context)
 
 
+class AnalyticsDashboardView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN, UserProfile.ROLE_RECRUITMENT_DIRECTOR, UserProfile.ROLE_RECRUITMENT_SPECIALIST]
+
+    def get(self, request):
+        from apps.candidates.models import JobApplication, ApplicationStageState, Candidate
+        from django.contrib.auth.models import User
+        from django.db.models import Q, Count
+        from django.utils import timezone
+        from datetime import datetime
+        import datetime as dt
+        
+        # Get list of all jobs for the dropdown filter
+        jobs_list = JobOpportunity.objects.filter(is_deleted=False).order_by('title')
+        
+        selected_job_id = request.GET.get('job_id')
+        selected_job = None
+        if selected_job_id:
+            try:
+                selected_job = JobOpportunity.objects.get(id=int(selected_job_id), is_deleted=False)
+            except (ValueError, TypeError, JobOpportunity.DoesNotExist):
+                pass
+                
+        # 1. Conversion Funnel (قیف تبدیل)
+        funnel_data = []
+        if selected_job:
+            # Funnel for specific job
+            stages = list(selected_job.stages.filter(is_deleted=False).order_by('sequence'))
+            job_apps = JobApplication.objects.filter(job=selected_job, is_deleted=False).prefetch_related('stage_states', 'stage_states__stage')
+            total_apps = job_apps.count()
+            
+            funnel_data.append({
+                'stage_name': 'کل متقاضیان',
+                'reached': total_apps,
+                'passed': total_apps,
+                'pass_rate': 100.0,
+                'conversion_rate': 100.0
+            })
+            
+            for stage in stages:
+                reached_count = 0
+                passed_count = 0
+                for app in job_apps:
+                    # An application reached this stage if all prior stages are completed or conditional pass
+                    prior_states = [s for s in app.stage_states.all() if s.stage.sequence < stage.sequence and not s.is_deleted]
+                    reached = all(s.status == 'COMPLETED' or s.is_conditional_pass for s in prior_states)
+                    if reached:
+                        reached_count += 1
+                        state = next((s for s in app.stage_states.all() if s.stage_id == stage.id and not s.is_deleted), None)
+                        if state and (state.status == 'COMPLETED' or state.is_conditional_pass):
+                            passed_count += 1
+                
+                pass_rate = round((passed_count / reached_count) * 100, 1) if reached_count > 0 else 0.0
+                conversion_rate = round((passed_count / total_apps) * 100, 1) if total_apps > 0 else 0.0
+                
+                funnel_data.append({
+                    'stage_name': stage.name,
+                    'reached': reached_count,
+                    'passed': passed_count,
+                    'pass_rate': pass_rate,
+                    'conversion_rate': conversion_rate
+                })
+        else:
+            # Global funnel using standard stage types
+            global_apps = JobApplication.objects.filter(is_deleted=False).prefetch_related('stage_states', 'stage_states__stage')
+            total_apps = global_apps.count()
+            
+            reached_screening = total_apps
+            passed_screening = 0
+            reached_exam = 0
+            passed_exam = 0
+            reached_skill = 0
+            passed_skill = 0
+            reached_interview = 0
+            passed_interview = 0
+            reached_assessment = 0
+            passed_assessment = 0
+            reached_selected = 0
+            passed_selected = 0
+            
+            for app in global_apps:
+                states = {s.stage.stage_type: s for s in app.stage_states.all() if not s.is_deleted}
+                
+                scr_ok = True
+                if 'SCREENING' in states:
+                    scr_ok = states['SCREENING'].status == 'COMPLETED' or states['SCREENING'].is_conditional_pass
+                
+                exam_ok = scr_ok
+                if 'EXAM' in states:
+                    exam_ok = scr_ok and (states['EXAM'].status == 'COMPLETED' or states['EXAM'].is_conditional_pass)
+                    
+                skill_ok = exam_ok
+                if 'SKILL_TEST' in states:
+                    skill_ok = exam_ok and (states['SKILL_TEST'].status == 'COMPLETED' or states['SKILL_TEST'].is_conditional_pass)
+                    
+                intv_ok = skill_ok
+                if 'INTERVIEW' in states:
+                    intv_ok = skill_ok and (states['INTERVIEW'].status == 'COMPLETED' or states['INTERVIEW'].is_conditional_pass)
+                    
+                asmt_ok = intv_ok
+                if 'ASSESSMENT' in states:
+                    asmt_ok = intv_ok and (states['ASSESSMENT'].status == 'COMPLETED' or states['ASSESSMENT'].is_conditional_pass)
+                
+                selected_ok = app.status == 'SELECTED'
+                
+                if 'SCREENING' in states:
+                    if scr_ok: passed_screening += 1
+                else:
+                    passed_screening += 1
+                    
+                if scr_ok:
+                    reached_exam += 1
+                    if 'EXAM' in states:
+                        if exam_ok: passed_exam += 1
+                    else:
+                        passed_exam += 1
+                        
+                if exam_ok:
+                    reached_skill += 1
+                    if 'SKILL_TEST' in states:
+                        if skill_ok: passed_skill += 1
+                    else:
+                        passed_skill += 1
+                        
+                if skill_ok:
+                    reached_interview += 1
+                    if 'INTERVIEW' in states:
+                        if intv_ok: passed_interview += 1
+                    else:
+                        passed_interview += 1
+                        
+                if intv_ok:
+                    reached_assessment += 1
+                    if 'ASSESSMENT' in states:
+                        if asmt_ok: passed_assessment += 1
+                    else:
+                        passed_assessment += 1
+                        
+                if asmt_ok:
+                    reached_selected += 1
+                    if selected_ok: passed_selected += 1
+            
+            funnel_data = [
+                {'stage_name': 'کل متقاضیان', 'reached': total_apps, 'passed': total_apps, 'pass_rate': 100.0, 'conversion_rate': 100.0},
+                {'stage_name': 'غربالگری اولیه', 'reached': reached_screening, 'passed': passed_screening, 'pass_rate': round((passed_screening / reached_screening) * 100, 1) if reached_screening > 0 else 0.0, 'conversion_rate': round((passed_screening / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+                {'stage_name': 'آزمون کتبی', 'reached': reached_exam, 'passed': passed_exam, 'pass_rate': round((passed_exam / reached_exam) * 100, 1) if reached_exam > 0 else 0.0, 'conversion_rate': round((passed_exam / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+                {'stage_name': 'آزمون مهارتی', 'reached': reached_skill, 'passed': passed_skill, 'pass_rate': round((passed_skill / reached_skill) * 100, 1) if reached_skill > 0 else 0.0, 'conversion_rate': round((passed_skill / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+                {'stage_name': 'مصاحبه حضوری', 'reached': reached_interview, 'passed': passed_interview, 'pass_rate': round((passed_interview / reached_interview) * 100, 1) if reached_interview > 0 else 0.0, 'conversion_rate': round((passed_interview / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+                {'stage_name': 'کانون ارزیابی', 'reached': reached_assessment, 'passed': passed_assessment, 'pass_rate': round((passed_assessment / reached_assessment) * 100, 1) if reached_assessment > 0 else 0.0, 'conversion_rate': round((passed_assessment / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+                {'stage_name': 'جذب نهایی', 'reached': reached_selected, 'passed': passed_selected, 'pass_rate': round((passed_selected / reached_selected) * 100, 1) if reached_selected > 0 else 0.0, 'conversion_rate': round((passed_selected / total_apps) * 100, 1) if total_apps > 0 else 0.0},
+            ]
+
+        # 2. Trend Chart (۶ ماه گذشته)
+        today_j = jdatetime.date.today()
+        trend_months = []
+        y, m = today_j.year, today_j.month
+        for _ in range(6):
+            trend_months.append((y, m))
+            m -= 1
+            if m < 1:
+                m = 12
+                y -= 1
+        trend_months.reverse()
+        
+        JALALI_MONTH_NAMES = ["", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"]
+        
+        trend_labels = []
+        applied_trend = []
+        hired_trend = []
+        rejected_trend = []
+        
+        for ty, tm in trend_months:
+            trend_labels.append(f"{JALALI_MONTH_NAMES[tm]} {ty}")
+            g_start, g_end = get_jalali_month_range(ty, tm)
+            
+            apps_cnt = JobApplication.objects.filter(created_at__date__range=(g_start, g_end), is_deleted=False).count()
+            applied_trend.append(apps_cnt)
+            
+            hires_cnt = JobApplication.objects.filter(
+                status='SELECTED',
+                is_deleted=False
+            ).filter(
+                Q(admission_date__range=(g_start, g_end)) |
+                Q(admission_date__isnull=True, updated_at__date__range=(g_start, g_end))
+            ).count()
+            hired_trend.append(hires_cnt)
+            
+            rej_cnt = JobApplication.objects.filter(
+                status='REJECTED',
+                is_deleted=False,
+                updated_at__date__range=(g_start, g_end)
+            ).count()
+            rejected_trend.append(rej_cnt)
+            
+        # 3. Recruiter Performance (عملکرد کارشناسان)
+        recruiters = User.objects.filter(profile__is_deleted=False).exclude(profile__role='CANDIDATE').select_related('profile')
+        recruiter_stats = []
+        
+        from apps.recruitment_planning.models import JobStagePlan, StageTypeConfiguration
+        
+        for rec in recruiters:
+            rec_jobs = JobOpportunity.objects.filter(assigned_recruiter=rec, is_deleted=False)
+            total_jobs = rec_jobs.count()
+            active_jobs = rec_jobs.exclude(status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']).count()
+            
+            rec_apps = JobApplication.objects.filter(job__assigned_recruiter=rec, is_deleted=False)
+            total_apps = rec_apps.count()
+            hires_count = rec_apps.filter(status='SELECTED').count()
+            
+            closed_jobs = rec_jobs.filter(status='CLOSED')
+            fill_times = []
+            for j in closed_jobs:
+                pub_date = j.start_date or j.created_at.date()
+                selected_app = j.applications.filter(status='SELECTED', is_deleted=False).order_by('updated_at').first()
+                if selected_app:
+                    close_date = selected_app.updated_at.date()
+                else:
+                    close_date = j.updated_at.date()
+                fill_times.append((close_date - pub_date).days)
+            avg_time_to_fill = round(sum(fill_times) / len(fill_times), 1) if fill_times else None
+            
+            active_apps = rec_apps.filter(status='IN_PROGRESS').exclude(job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']).select_related('job')
+            total_active = active_apps.count()
+            delayed_count = 0
+            
+            for app in active_apps:
+                job = app.job
+                stage = job.stages.filter(stage_type=job.status, is_deleted=False).first()
+                if not stage:
+                    stage = app.current_stage or job.stages.filter(is_deleted=False).order_by('sequence').first()
+                if not stage:
+                    continue
+                    
+                stage_plan = JobStagePlan.objects.filter(
+                    plan__job=job,
+                    stage=stage,
+                    plan__is_deleted=False,
+                    is_deleted=False
+                ).first()
+                if stage_plan:
+                    sla_days = stage_plan.sla_days
+                else:
+                    config = StageTypeConfiguration.objects.filter(stage_type=stage.stage_type, is_deleted=False).first()
+                    sla_days = config.default_sla_days if config else 5
+                    
+                active_since = None
+                if stage.sequence == 1:
+                    active_since = timezone.make_aware(datetime.combine(job.start_date, datetime.min.time())) if job.start_date else app.created_at
+                else:
+                    prev_state = app.stage_states.filter(
+                        stage__sequence__lt=stage.sequence,
+                        status__in=['COMPLETED', 'FAILED'],
+                        is_deleted=False
+                    ).order_by('-stage__sequence').first()
+                    if prev_state:
+                        active_since = timezone.make_aware(datetime.combine(prev_state.evaluation_date, datetime.min.time())) if prev_state.evaluation_date else prev_state.updated_at
+                    else:
+                        active_since = timezone.make_aware(datetime.combine(job.start_date, datetime.min.time())) if job.start_date else app.created_at
+                
+                if active_since:
+                    days_waiting = (timezone.now() - active_since).days
+                    if days_waiting > sla_days:
+                        delayed_count += 1
+                        
+            sla_compliance = round(((total_active - delayed_count) / total_active) * 100, 1) if total_active > 0 else 100.0
+            
+            recruiter_stats.append({
+                'recruiter': rec,
+                'name': rec.get_full_name() or rec.username,
+                'total_jobs': total_jobs,
+                'active_jobs': active_jobs,
+                'total_apps': total_apps,
+                'hires_count': hires_count,
+                'avg_time_to_fill': avg_time_to_fill if avg_time_to_fill is not None else '-',
+                'sla_compliance': sla_compliance
+            })
+
+        # 4. Score Distribution (توزیع نمرات)
+        stage_types = [
+            ('EXAM', 'آزمون کتبی'),
+            ('SKILL_TEST', 'آزمون مهارتی'),
+            ('INTERVIEW', 'مصاحبه حضوری'),
+            ('ASSESSMENT', 'کانون ارزیابی')
+        ]
+        score_distributions = {}
+        for code, label in stage_types:
+            states = ApplicationStageState.objects.filter(
+                stage__stage_type=code,
+                score__gt=0,
+                is_deleted=False
+            )
+            buckets = [0, 0, 0, 0, 0, 0]
+            for state in states:
+                val = state.score
+                if val < 50:
+                    buckets[0] += 1
+                elif val < 60:
+                    buckets[1] += 1
+                elif val < 70:
+                    buckets[2] += 1
+                elif val < 80:
+                    buckets[3] += 1
+                elif val < 90:
+                    buckets[4] += 1
+                else:
+                    buckets[5] += 1
+            score_distributions[code] = {
+                'label': label,
+                'data': buckets,
+                'total_scores': sum(buckets)
+            }
+
+        # ۵. گزارش اعلانات ارسالی (ایمیل و پیامک)
+        from apps.candidates.models import NotificationLog
+        from django.core.paginator import Paginator
+        
+        log_type = request.GET.get('log_type', '')
+        log_status = request.GET.get('log_status', '')
+        log_q = request.GET.get('log_q', '')
+        
+        logs_query = NotificationLog.objects.filter(is_deleted=False)
+        if log_type in ['SMS', 'EMAIL']:
+            logs_query = logs_query.filter(notification_type=log_type)
+        if log_status in ['SENT', 'FAILED']:
+            logs_query = logs_query.filter(status=log_status)
+        if log_q:
+            logs_query = logs_query.filter(
+                Q(recipient__icontains=log_q) |
+                Q(subject__icontains=log_q) |
+                Q(body__icontains=log_q) |
+                Q(error_message__icontains=log_q)
+            )
+            
+        paginator = Paginator(logs_query, 20)  # ۲۰ لاگ در هر صفحه
+        page_number = request.GET.get('page', 1)
+        log_page_obj = paginator.get_page(page_number)
+
+        context = {
+            'jobs_list': jobs_list,
+            'selected_job': selected_job,
+            'funnel_data': funnel_data,
+            'trend_labels': trend_labels,
+            'applied_trend': applied_trend,
+            'hired_trend': hired_trend,
+            'rejected_trend': rejected_trend,
+            'recruiter_stats': recruiter_stats,
+            'score_distributions': score_distributions,
+            
+            # متغیرهای مربوط به تب اعلانات
+            'log_page_obj': log_page_obj,
+            'log_type': log_type,
+            'log_status': log_status,
+            'log_q': log_q,
+            'active_tab': request.GET.get('tab', 'charts'),
+        }
+        return render(request, 'recruitment_planning/analytics.html', context)
+
+
 
 

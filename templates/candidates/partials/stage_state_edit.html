@@ -17,6 +17,10 @@
             <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">تاریخ انجام</label>
             <input type="text" name="date" id="date_{{ state.id }}" value="{{ state.actual_evaluation_date|to_jalali }}" placeholder="امروز" class="form-control form-control-sm text-center jalali-datepicker-input text-xs" style="font-size: 11px; padding: 2px 4px; border-radius: 6px;" autocomplete="off">
         </div>
+        <div class="mb-1">
+            <label class="text-muted text-xxs d-block mb-0.5" style="font-size: 9px;">ساعت انجام</label>
+            <input type="text" name="time" value="{{ state.evaluation_time|default:'10:00' }}" placeholder="10:00" class="form-control form-control-sm text-center text-xs" style="font-size: 11px; padding: 2px 4px; border-radius: 6px;">
+        </div>
         <div class="mb-1 form-check d-flex align-items-center gap-1.5 ps-0">
             <input type="checkbox" name="is_conditional_pass" id="is_conditional_pass_{{ state.id }}" class="form-check-input" {% if state.is_conditional_pass %}checked{% endif %} style="width: 12px; height: 12px; margin: 0;">
             <label for="is_conditional_pass_{{ state.id }}" class="text-danger text-xxs font-semibold cursor-pointer mb-0" style="font-size: 9px; line-height: 1;">ارجاع مشروط (مردود)</label>

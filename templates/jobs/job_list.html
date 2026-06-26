@@ -48,12 +48,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
         <h3 class="font-semibold text-secondary mb-1">فرصت‌های شغلی</h3>
         <p class="text-muted text-sm m-0">تعریف فرصت‌های شغلی جدید و تنظیم مراحل و وزن‌های پویای فرآیند ارزیابی متقاضیان</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'job_export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
                 <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
@@ -394,32 +394,78 @@
                             {% endif %}
                         </td>
                         <td class="pe-4 text-end">
-                            {% if user.profile.is_recruitment_staff %}
-                            <a href="{% url 'job_pipeline' job.id %}" class="btn btn-sm btn-outline-info me-1">پایپلاین ارزیابی</a>
-                            {% endif %}
-                            {% if user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
-                            <a href="{% url 'job_opportunity_report' job.id %}" target="_blank" class="btn btn-sm btn-outline-info me-1" title="شناسنامه فرصت شغلی (PDF)">📊</a>
-                            <a href="{% url 'job_print_doc' job.id %}" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="چاپ سند آزمون">🖨️</a>
-                            {% endif %}
-                            {% if user.profile.is_recruitment_staff or user.profile.role == 'ADMIN' or user.profile.role == 'JOB_CLASSIFICATION_USER' %}
-                            <a href="{% url 'job_competency_config' job.id %}" class="btn btn-sm btn-outline-primary me-1" title="تنظیم شایستگی‌ها و ارزیابی">⚙️ شایستگی‌ها</a>
-                            {% endif %}
-                            {% if job.selected_competencies.exists %}
-                            <a href="{% url 'job_assessment_plan_print' job.id %}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="چاپ Assessment Plan">📄 Assessment Plan</a>
-                            {% endif %}
-                            {% if user.profile.can_manage_jobs %}
-                            <a href="{% url 'job_edit' job.id %}" class="btn btn-sm btn-outline-primary me-1">ویرایش</a>
-                            <button hx-get="{% url 'job_delete_confirm' job.id %}" 
-                                    hx-target="#deleteJobModalContainer" 
-                                    class="btn btn-sm btn-outline-danger"
-                                    id="btn-delete-job-{{ job.id }}">
-                                حذف
-                            </button>
-                            {% else %}
-                            {% if not user.profile.is_recruitment_staff %}
-                            <span class="text-muted text-xs">بدون دسترسی</span>
-                            {% endif %}
-                            {% endif %}
+                            <div class="d-flex align-items-center justify-content-end gap-1.5">
+                                {% if user.profile.is_recruitment_staff %}
+                                <a href="{% url 'job_pipeline' job.id %}" class="btn btn-xs btn-primary-custom font-semibold py-1 px-2.5 rounded-pill shadow-sm">
+                                    🎯 پایپلاین
+                                </a>
+                                {% endif %}
+
+                                <div class="dropdown">
+                                    <button class="btn btn-xs btn-light border dropdown-toggle font-semibold py-1 px-2.5 rounded-pill shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        ⚙️ گزینه‌ها
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end text-sm p-1 shadow border-slate" style="border-radius: 10px; min-width: 190px;">
+                                        {% if user.profile.is_recruitment_staff or user.profile.role == 'ADMIN' or user.profile.role == 'JOB_CLASSIFICATION_USER' %}
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_competency_config' job.id %}">
+                                                <span>⚙️</span> تنظیم شایستگی‌ها
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        {% if user.profile.can_manage_jobs %}
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_edit' job.id %}">
+                                                <span>✏️</span> ویرایش اطلاعات
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if job.selected_competencies.exists or user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
+                                        <li><hr class="dropdown-divider my-1 opacity-10"></li>
+                                        <span class="dropdown-header text-xxs font-bold text-muted px-3 py-0.5" style="letter-spacing: 0.5px;">گزارشات و چاپ</span>
+                                        {% endif %}
+
+                                        {% if user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_opportunity_report' job.id %}" target="_blank">
+                                                <span>📊</span> شناسنامه جذب (PDF)
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_doc' job.id %}" target="_blank">
+                                                <span>🖨️</span> سند آزمون استخدامی
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_ad' job.id %}" target="_blank">
+                                                <span>📢</span> چاپ آگهی استخدامی
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if job.selected_competencies.exists %}
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_assessment_plan_print' job.id %}" target="_blank">
+                                                <span>📄</span> Assessment Plan
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if user.profile.can_manage_jobs %}
+                                        <li><hr class="dropdown-divider my-1 opacity-10"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger rounded d-flex align-items-center gap-2 py-1.5 w-100 text-start" 
+                                                    hx-get="{% url 'job_delete_confirm' job.id %}" 
+                                                    hx-target="#deleteJobModalContainer">
+                                                <span>❌</span> حذف فرصت شغلی
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

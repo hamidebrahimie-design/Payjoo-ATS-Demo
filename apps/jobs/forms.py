@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory, BaseInlineFormSet
-from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate, AISetting
+from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate, AISetting, OrganizationSetting
 
 class JobOpportunityForm(forms.ModelForm):
     start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}))
@@ -232,3 +232,69 @@ class AISettingForm(forms.ModelForm):
             'model_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'gpt-4o'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
         }
+
+
+class OrganizationSettingForm(forms.ModelForm):
+    class Meta:
+        model = OrganizationSetting
+        fields = [
+            'name', 'logo',
+            'reg_email_enabled', 'reg_email_subject', 'reg_email_body', 'reg_sms_enabled', 'reg_sms_body',
+            'exam_email_enabled', 'exam_email_subject', 'exam_email_body', 'exam_sms_enabled', 'exam_sms_body',
+            'interview_email_enabled', 'interview_email_subject', 'interview_email_body', 'interview_sms_enabled', 'interview_sms_body',
+            'offer_email_enabled', 'offer_email_subject', 'offer_email_body', 'offer_sms_enabled', 'offer_sms_body',
+            'reject_email_enabled', 'reject_email_subject', 'reject_email_body', 'reject_sms_enabled', 'reject_sms_body',
+            'email_provider', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_use_tls', 'smtp_use_ssl', 'smtp_sender_email',
+            'sms_provider', 'sms_api_key', 'sms_sender_number', 'sms_custom_url',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: هلدینگ توسعه فناوری اطلاعات'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            
+            # Booleans
+            'reg_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'reg_sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'exam_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'exam_sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'interview_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'interview_sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'offer_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'offer_sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'reject_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'reject_sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+
+            # Email Subjects
+            'reg_email_subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'موضوع ایمیل ثبت‌نام'}),
+            'exam_email_subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'موضوع ایمیل دعوت به آزمون'}),
+            'interview_email_subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'موضوع ایمیل دعوت به مصاحبه'}),
+            'offer_email_subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'موضوع ایمیل پیشنهاد همکاری'}),
+            'reject_email_subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'موضوع ایمیل رد رزومه'}),
+
+            # Template Bodies
+            'reg_email_body': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 6, 'style': 'font-size: 11px; direction: ltr;'}),
+            'reg_sms_body': forms.Textarea(attrs={'class': 'form-control text-start', 'rows': 3, 'style': 'font-size: 11px;'}),
+            'exam_email_body': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 6, 'style': 'font-size: 11px; direction: ltr;'}),
+            'exam_sms_body': forms.Textarea(attrs={'class': 'form-control text-start', 'rows': 3, 'style': 'font-size: 11px;'}),
+            'interview_email_body': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 6, 'style': 'font-size: 11px; direction: ltr;'}),
+            'interview_sms_body': forms.Textarea(attrs={'class': 'form-control text-start', 'rows': 3, 'style': 'font-size: 11px;'}),
+            'offer_email_body': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 6, 'style': 'font-size: 11px; direction: ltr;'}),
+            'offer_sms_body': forms.Textarea(attrs={'class': 'form-control text-start', 'rows': 3, 'style': 'font-size: 11px;'}),
+            'reject_email_body': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 6, 'style': 'font-size: 11px; direction: ltr;'}),
+            'reject_sms_body': forms.Textarea(attrs={'class': 'form-control text-start', 'rows': 3, 'style': 'font-size: 11px;'}),
+
+            # Connectors
+            'email_provider': forms.Select(attrs={'class': 'form-select'}),
+            'smtp_host': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: smtp.mailgun.org'}),
+            'smtp_port': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '587'}),
+            'smtp_user': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'username@domain.com'}),
+            'smtp_password': forms.PasswordInput(render_value=True, attrs={'class': 'form-control', 'placeholder': '••••••••'}),
+            'smtp_use_tls': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'smtp_use_ssl': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),
+            'smtp_sender_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'no-reply@company.com'}),
+            
+            'sms_provider': forms.Select(attrs={'class': 'form-select'}),
+            'sms_api_key': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کلید API / رمز عبور'}),
+            'sms_sender_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 100020003000'}),
+            'sms_custom_url': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'https://api.yourdomain.com/send-sms'}),
+        }
+

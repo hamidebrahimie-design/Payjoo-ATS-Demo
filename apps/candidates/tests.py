@@ -6,7 +6,7 @@ from datetime import date
 import jdatetime
 
 from apps.accounts.models import UserProfile
-from apps.jobs.models import WorkflowTemplate, WorkflowStageTemplate, JobOpportunity, JobOpportunityStage
+from apps.jobs.models import WorkflowTemplate, WorkflowStageTemplate, JobOpportunity, JobOpportunityStage, OrganizationSetting
 from apps.candidates.models import Candidate, CandidateEducation, CandidateExperience, JobApplication, ApplicationStageState, CandidateSkill, CandidateLanguage
 from apps.candidates.forms import CandidateForm, CandidateEducationFormSet, CandidateExperienceFormSet, JobApplicationForm
 
@@ -2744,6 +2744,124 @@ class CandidateModuleTests(TestCase):
         
         state.refresh_from_db()
         self.assertEqual(state.notes, "توضیحات مصاحبه گروهی")
+
+
+from django.core import mail
+
+class AutomatedNotificationTests(TestCase):
+    def setUp(self):
+        # Create a recruiter user
+        self.recruiter = User.objects.create_user(username='notify_recruiter', password='password123')
+        self.recruiter.profile.role = UserProfile.ROLE_RECRUITMENT_SPECIALIST
+        self.recruiter.profile.save()
+
+        # Create a WorkflowTemplate with default stages
+        self.workflow = WorkflowTemplate.objects.create(
+            name='فرآیند اعلانات',
+            description='تست اعلانات خودکار'
+        )
+        self.stage_template_1 = WorkflowStageTemplate.objects.create(
+            workflow=self.workflow,
+            name='آزمون کتبی',
+            default_weight=50,
+            sequence=1,
+            stage_type='EXAM'
+        )
+        self.stage_template_2 = WorkflowStageTemplate.objects.create(
+            workflow=self.workflow,
+            name='مصاحبه فنی',
+            default_weight=50,
+            sequence=2,
+            stage_type='INTERVIEW'
+        )
+
+        # Create a JobOpportunity
+        self.job = JobOpportunity.objects.create(
+            request_number='REQ-NOTIFY-001',
+            title='برنامه‌نویس پایتون',
+            code='PY-01',
+            department='فناوری اطلاعات',
+            assigned_recruiter=self.recruiter,
+            workflow=self.workflow,
+            status=JobOpportunity.STATUS_PUBLISHED,
+            description='توضیحات شغل'
+        )
+
+        # Create a Candidate
+        self.candidate = Candidate.objects.create(
+            first_name='سعید',
+            last_name='راد',
+            email='saeed@example.com',
+            phone_number='09120001122',
+            national_id='0022334455'
+        )
+        
+        # Ensure active organization setting exists
+        self.org_setting = OrganizationSetting.get_active_setting()
+        self.org_setting.name = "شرکت تست سیستم"
+        self.org_setting.save()
+
+    def test_registration_notification_triggers_on_apply(self):
+        """تست اینکه ایجاد درخواست جدید، ایمیل ثبت‌نام ارسال می‌کند"""
+        mail.outbox.clear()
+        
+        # Apply for job
+        JobApplication.objects.create(job=self.job, candidate=self.candidate)
+        
+        # Verify email sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['saeed@example.com'])
+        self.assertIn("دریافت رزومه با موفقیت انجام شد", email.subject)
+        self.assertIn("سعید راد", email.body)
+        self.assertIn("برنامه‌نویس پایتون", email.body)
+        self.assertIn("شرکت تست سیستم", email.body)
+
+    def test_exam_invitation_notification_triggers_on_pending(self):
+        """تست اینکه تغییر وضعیت مرحله آزمون به در انتظار، ایمیل دعوت ارسال می‌کند"""
+        app = JobApplication.objects.create(job=self.job, candidate=self.candidate)
+        mail.outbox.clear()
+        
+        # Find exam stage state
+        exam_stage = self.job.stages.get(stage_type='EXAM')
+        state = app.stage_states.get(stage=exam_stage)
+        
+        # Update stage to PENDING and set date/time
+        state.evaluation_date = date(2026, 7, 1)
+        state.evaluation_time = "14:30"
+        state.status = ApplicationStageState.STATUS_PENDING
+        state.save()
+        
+        # Verify email sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['saeed@example.com'])
+        self.assertIn("دعوت به آزمون", email.subject)
+        
+        import jdatetime
+        jd_expected = jdatetime.date.fromgregorian(year=2026, month=7, day=1).strftime('%Y/%m/%d')
+        self.assertIn(jd_expected, email.body)
+        self.assertIn("14:30", email.body)
+
+    def test_offer_and_rejection_notifications(self):
+        """تست اعلانات نهایی قبولی و رد رزومه"""
+        app = JobApplication.objects.create(job=self.job, candidate=self.candidate)
+        
+        # 1. Job Offer notification
+        mail.outbox.clear()
+        app.status = JobApplication.STATUS_SELECTED
+        app.save()
+        
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("پیشنهاد همکاری", mail.outbox[0].subject)
+        
+        # 2. Rejection notification
+        mail.outbox.clear()
+        app.status = JobApplication.STATUS_REJECTED
+        app.save()
+        
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("تقدیر و تشکر", mail.outbox[0].subject)
 
 
 

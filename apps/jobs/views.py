@@ -526,6 +526,48 @@ class JobOpportunityPrintDocView(LoginRequiredMixin, RoleRequiredMixin, DetailVi
         return context
 
 
+class JobOpportunityPrintAdView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
+    model = JobOpportunity
+    template_name = 'jobs/job_print_ad.html'
+    context_object_name = 'job'
+    allowed_roles = [
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_RECRUITMENT_DIRECTOR,
+        UserProfile.ROLE_RECRUITMENT_SPECIALIST,
+        UserProfile.ROLE_JOB_CLASSIFICATION_USER,
+        UserProfile.ROLE_DEPARTMENT_USER,
+        UserProfile.ROLE_READ_ONLY_AUDITOR,
+    ]
+
+    def get_queryset(self):
+        return JobOpportunity.objects.filter(is_deleted=False).prefetch_related('stages')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        competencies = self.object.selected_competencies.filter(is_deleted=False)
+        context['selected_competencies'] = competencies
+        
+        # Group competencies for modern, structured UI sections
+        context['grouped_competencies'] = {
+            'knowledge': competencies.filter(competency_type='KN'),
+            'skills': competencies.filter(competency_type='SK'),
+            'abilities': competencies.filter(competency_type='AB'),
+            'behavioral': competencies.filter(competency_type='GE'),
+            'others': competencies.exclude(competency_type__in=['KN', 'SK', 'AB', 'GE'])
+        }
+        
+        from django.urls import reverse
+        relative_url = reverse('careers_apply', args=[self.object.pk])
+        context['apply_url'] = self.request.build_absolute_uri(relative_url)
+
+        from apps.jobs.models import OrganizationSetting
+        context['org_setting'] = OrganizationSetting.get_active_setting()
+        return context
+
+
+
+
+
 class JobOpportunityBulkStatusView(LoginRequiredMixin, RoleRequiredMixin, View):
     allowed_roles = [
         UserProfile.ROLE_ADMIN,
@@ -2400,3 +2442,74 @@ class JobAIStrategyPrintView(LoginRequiredMixin, RoleRequiredMixin, View):
         }
         
         return render(request, 'jobs/print_ai_strategy.html', context)
+
+
+class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
+    allowed_roles = [UserProfile.ROLE_ADMIN]
+    template_name = 'jobs/organization_setting.html'
+
+    def get(self, request):
+        from apps.jobs.models import OrganizationSetting, JobOpportunity
+        from apps.jobs.forms import OrganizationSettingForm
+        from apps.accounts.models import SMSTemplate
+        from apps.candidates.models import JobApplication, ApplicationStageState
+        
+        setting = OrganizationSetting.get_active_setting()
+        form = OrganizationSettingForm(instance=setting)
+        
+        # اطلاعات مورد نیاز برای تب مدیریت پیامک‌های دستی
+        templates = SMSTemplate.objects.filter(is_deleted=False)
+        jobs = JobOpportunity.objects.filter(is_deleted=False)
+        app_statuses = JobApplication.STATUS_CHOICES
+        stage_statuses = ApplicationStageState.STATUS_CHOICES
+        
+        context = {
+            'form': form,
+            'setting': setting,
+            'templates': templates,
+            'jobs': jobs,
+            'app_statuses': app_statuses,
+            'stage_statuses': stage_statuses,
+        }
+        
+        edit_id = request.GET.get('edit_template')
+        if edit_id:
+            try:
+                context['edit_template'] = SMSTemplate.objects.get(id=edit_id, is_deleted=False)
+            except SMSTemplate.DoesNotExist:
+                pass
+                
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        from apps.jobs.models import OrganizationSetting
+        from apps.jobs.forms import OrganizationSettingForm
+        from django.contrib import messages
+        
+        setting = OrganizationSetting.get_active_setting()
+        form = OrganizationSettingForm(request.POST, request.FILES, instance=setting)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تنظیمات سازمان با موفقیت ذخیره شد.")
+            return redirect('organization_setting')
+        
+        # اگر خطا وجود داشت کل کانتکست گت را لود می‌کنیم تا تب‌ها خراب نشوند
+        from apps.jobs.models import JobOpportunity
+        from apps.accounts.models import SMSTemplate
+        from apps.candidates.models import JobApplication, ApplicationStageState
+        
+        templates = SMSTemplate.objects.filter(is_deleted=False)
+        jobs = JobOpportunity.objects.filter(is_deleted=False)
+        app_statuses = JobApplication.STATUS_CHOICES
+        stage_statuses = ApplicationStageState.STATUS_CHOICES
+        
+        context = {
+            'form': form,
+            'setting': setting,
+            'templates': templates,
+            'jobs': jobs,
+            'app_statuses': app_statuses,
+            'stage_statuses': stage_statuses,
+        }
+        return render(request, self.template_name, context)
+

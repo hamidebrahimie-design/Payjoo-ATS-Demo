@@ -12,6 +12,7 @@ from .views import (
     ExportJobsExcelView,
     WorkflowStagesPreviewView,
     JobOpportunityPrintDocView,
+    JobOpportunityPrintAdView,
     JobOpportunityBulkStatusView,
     CentralCompetencyListView,
     CentralCompetencyUploadView,
@@ -23,8 +24,10 @@ from .views import (
     CustomCompetenciesReportView,
     SearchCompetenciesApiView,
     AISettingView,
-    JobAIStrategyPrintView
+    JobAIStrategyPrintView,
+    OrganizationSettingView
 )
+
 
 urlpatterns = [
     path('', JobOpportunityListView.as_view(), name='job_list'),
@@ -33,6 +36,7 @@ urlpatterns = [
     path('<int:pk>/delete/', JobOpportunityDeleteView.as_view(), name='job_delete'),
     path('<int:pk>/delete/confirm/', JobOpportunityDeleteConfirmView.as_view(), name='job_delete_confirm'),
     path('<int:pk>/print/', JobOpportunityPrintDocView.as_view(), name='job_print_doc'),
+    path('<int:pk>/print-ad/', JobOpportunityPrintAdView.as_view(), name='job_print_ad'),
     path('export/excel/', ExportJobsExcelView.as_view(), name='job_export_excel'),
     path('bulk-status-update/', JobOpportunityBulkStatusView.as_view(), name='job_bulk_status_update'),
     
@@ -47,6 +51,8 @@ urlpatterns = [
     path('competencies/patterns/', RecruitmentPatternDashboardView.as_view(), name='recruitment_patterns'),
     path('competencies/custom-report/', CustomCompetenciesReportView.as_view(), name='custom_competencies_report'),
     path('competencies/settings/ai/', AISettingView.as_view(), name='ai_setting'),
+    path('settings/organization/', OrganizationSettingView.as_view(), name='organization_setting'),
+
     path('api/posts/search/', SearchPostsApiView.as_view(), name='search_posts_api'),
     path('api/posts/detail/', SearchPostsDetailApiView.as_view(), name='post_detail_api'),
     path('api/competencies/search/', SearchCompetenciesApiView.as_view(), name='search_competencies_api'),

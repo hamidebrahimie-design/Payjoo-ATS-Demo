@@ -628,3 +628,190 @@ class AIPostRecommendation(SoftDeleteModel):
 
     def __str__(self):
         return f"پیشنهاد AI برای پست {self.post_code}"
+
+
+class OrganizationSetting(SoftDeleteModel):
+    name = models.CharField(max_length=200, default="سامانه جذب و استخدام پیجو", verbose_name="نام سازمان")
+    logo = models.FileField(upload_to='org_logos/', blank=True, null=True, verbose_name="لوگوی سازمان")
+
+    # ۱. ثبت‌نام و ورود اولیه به سامانه (ثبت‌نام)
+    reg_email_enabled = models.BooleanField(default=True, verbose_name="ارسال ایمیل ثبت‌نام فعال باشد")
+    reg_email_subject = models.CharField(max_length=255, default="دریافت رزومه با موفقیت انجام شد", verbose_name="موضوع ایمیل ثبت‌نام")
+    reg_email_body = models.TextField(
+        default="""<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; padding: 20px; line-height: 1.6; color: #1e293b;">
+    <h2 style="color: #4f46e5;">دریافت رزومه با موفقیت انجام شد</h2>
+    <p>جناب/سرکار خانم <strong>{{ candidate_name }}</strong> عزیز، سلام؛</p>
+    <p>از علاقه‌مندی شما به همکاری با <strong>{{ company_name }}</strong> سپاسگزاریم.</p>
+    <p>رزومه شما برای فرصت شغلی <strong>«{{ job_title }}»</strong> دریافت گردید و در حال حاضر در مرحله غربالگری اولیه قرار دارد.</p>
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #4f46e5; margin: 20px 0;">
+        <strong>اطلاعات پیگیری وضعیت:</strong><br/>
+        برای مشاهده وضعیت لحظه‌ای پرونده خود، دریافت بازخوردها و شرکت در آزمون‌های آنلاین آتی، می‌توانید به پنل اختصاصی متقاضیان مراجعه نمایید.<br/>
+        <a href="{{ link }}" style="display: inline-block; margin-top: 10px; background-color: #4f46e5; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px;">ورود به پنل متقاضی</a>
+    </div>
+    <p>در صورت تایید رزومه شما، مراحل بعدی از طریق پیامک و ایمیل اطلاع‌رسانی خواهد شد.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+    <small style="color: #64748b;">تیم جذب و استخدام {{ company_name }}</small>
+</div>""",
+        verbose_name="متن ایمیل ثبت‌نام (HTML)"
+    )
+    reg_sms_enabled = models.BooleanField(default=True, verbose_name="ارسال پیامک ثبت‌نام فعال باشد")
+    reg_sms_body = models.TextField(
+        default="{{ candidate_name }} عزیز، رزومه شما برای شغل \"{{ job_title }}\" در {{ company_name }} دریافت شد.\nبرای پیگیری وضعیت و آزمون‌ها به پنل خود مراجعه کنید:\n{{ link }}",
+        verbose_name="متن پیامک ثبت‌نام"
+    )
+
+    # ۲. دعوت به آزمون کتبی / تخصصی
+    exam_email_enabled = models.BooleanField(default=True, verbose_name="ارسال ایمیل دعوت به آزمون فعال باشد")
+    exam_email_subject = models.CharField(max_length=255, default="دعوت به آزمون کتبی / تخصصی", verbose_name="موضوع ایمیل دعوت به آزمون")
+    exam_email_body = models.TextField(
+        default="""<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; padding: 20px; line-height: 1.6; color: #1e293b;">
+    <h2 style="color: #4f46e5;">دعوت به آزمون کتبی / تخصصی</h2>
+    <p>متقاضی گرامی <strong>{{ candidate_name }}</strong> عزیز، سلام؛</p>
+    <p>پس از بررسی اولیه رزومه شما برای فرصت شغلی <strong>«{{ job_title }}»</strong>، بدین‌وسیله از شما جهت شرکت در مرحله **آزمون تخصصی** دعوت به عمل می‌آید.</p>
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #f59e0b; margin: 20px 0;">
+        <strong>جزییات برگزاری آزمون:</strong>
+        <ul>
+            <li><strong>تاریخ برگزاری:</strong> {{ date }}</li>
+            <li><strong>ساعت شروع:</strong> {{ time }}</li>
+            <li><strong>مدت زمان آزمون:</strong> ۹۰ دقیقه</li>
+            <li><strong>نوع آزمون:</strong> آنلاین (تستی و تشریحی)</li>
+        </ul>
+        <a href="{{ link }}" style="display: inline-block; margin-top: 10px; background-color: #4f46e5; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px;">ورود به سامانه آزمون آنلاین</a>
+    </div>
+    <p style="color: #ef4444; font-weight: bold;">⚠️ نکته مهم: لینک فوق فقط در بازه زمانی اعلام شده فعال خواهد بود.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+    <small style="color: #64748b;">تیم جذب و استخدام {{ company_name }}</small>
+</div>""",
+        verbose_name="متن ایمیل دعوت به آزمون (HTML)"
+    )
+    exam_sms_enabled = models.BooleanField(default=True, verbose_name="ارسال پیامک دعوت به آزمون فعال باشد")
+    exam_sms_body = models.TextField(
+        default="متقاضی گرامی {{ candidate_name }}، دعوت‌نامه شرکت در آزمون کتبی شغل \"{{ job_title }}\" برای شما صادر شد.\nزمان آزمون: {{ date }} ساعت {{ time }}\nجزییات بیشتر و لینک شرکت در آزمون در ایمیل شما و پنل پیجو:\n{{ link }}",
+        verbose_name="متن پیامک دعوت به آزمون"
+    )
+
+    # ۳. دعوت به مصاحبه (حضوری یا آنلاین)
+    interview_email_enabled = models.BooleanField(default=True, verbose_name="ارسال ایمیل دعوت به مصاحبه فعال باشد")
+    interview_email_subject = models.CharField(max_length=255, default="دعوت به جلسه مصاحبه تخصصی", verbose_name="موضوع ایمیل دعوت به مصاحبه")
+    interview_email_body = models.TextField(
+        default="""<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; padding: 20px; line-height: 1.6; color: #1e293b;">
+    <h2 style="color: #4f46e5;">دعوت به جلسه مصاحبه تخصصی</h2>
+    <p>جناب/سرکار خانم <strong>{{ candidate_name }}</strong> عزیز، سلام؛</p>
+    <p>با توجه به نتایج مثبت ارزیابی‌های قبلی شما برای فرصت شغلی <strong>«{{ job_title }}»</strong>، از شما دعوت می‌شود در جلسه مصاحبه با تیم فنی و مدیران ارشد شرکت نمایید.</p>
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #10b981; margin: 20px 0;">
+        <strong>مشخصات جلسه مصاحبه:</strong>
+        <ul>
+            <li><strong>تاریخ مصاحبه:</strong> {{ date }}</li>
+            <li><strong>ساعت برگزاری:</strong> {{ time }}</li>
+            <li><strong>نوع جلسه:</strong> آنلاین (تصویری)</li>
+            <li><strong>لینک ورود به اتاق جلسه:</strong> <a href="{{ link }}">{{ link }}</a></li>
+        </ul>
+    </div>
+    <p>پیشنهاد می‌شود ۱۰ دقیقه قبل از ساعت مقرر، اتصالات سیستم خود (دوربین و میکروفون) را بررسی نمایید. در صورت نیاز به هماهنگی مجدد با ایمیل یا شماره تماس کارشناس جذب مربوطه تماس حاصل فرمایید.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+    <small style="color: #64748b;">تیم جذب و استخدام {{ company_name }}</small>
+</div>""",
+        verbose_name="متن ایمیل دعوت به مصاحبه (HTML)"
+    )
+    interview_sms_enabled = models.BooleanField(default=True, verbose_name="ارسال پیامک دعوت به مصاحبه فعال باشد")
+    interview_sms_body = models.TextField(
+        default="جناب/سرکار خانم {{ candidate_name }}، جلسه مصاحبه شما برای موقعیت شغلی \"{{ job_title }}\" تنظیم شد.\nزمان: {{ date }} ساعت {{ time }}\nجزییات و لینک اتصال آنلاین (یا لوکیشن حضوری) به ایمیل شما ارسال شد.\n{{ company_name }}",
+        verbose_name="متن پیامک دعوت به مصاحبه"
+    )
+
+    # ۴. قبولی نهایی و پیشنهاد همکاری (Job Offer)
+    offer_email_enabled = models.BooleanField(default=True, verbose_name="ارسال ایمیل پیشنهاد همکاری فعال باشد")
+    offer_email_subject = models.CharField(max_length=255, default="🎉 تبریک! پذیرش نهایی و پیشنهاد همکاری در {{ company_name }}", verbose_name="موضوع ایمیل پیشنهاد همکاری")
+    offer_email_body = models.TextField(
+        default="""<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; padding: 20px; line-height: 1.6; color: #1e293b;">
+    <h2 style="color: #10b981;">🎉 تبریک! پذیرش نهایی و پیشنهاد همکاری در {{ company_name }}</h2>
+    <p>همکار آینده ما، جناب/سرکار خانم <strong>{{ candidate_name }}</strong> عزیز، سلام؛</p>
+    <p>بسیار خرسندیم که به اطلاع شما برسانیم فرآیند ارزیابی‌های شما با موفقیت کامل سپری شده و شایستگی شما برای احراز فرصت شغلی <strong>«{{ job_title }}»</strong> مورد تایید نهایی قرار گرفته است.</p>
+    <p>ما مشتاقانه منتظر پیوستن شما به تیم پویای <strong>{{ company_name }}</strong> هستیم.</p>
+    <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin: 20px 0;">
+        <strong>گام بعدی چیست؟</strong><br/>
+        پیش‌نویس تفاهم‌نامه و آفر فرم همکاری (شامل جزییات حقوق، بیمه، ساعات کاری و مزایا) پیوست این ایمیل شده و در پنل شما قرار گرفته است. خواهشمند است حداکثر تا تاریخ {{ date }} فرم امضا شده را از طریق لینک زیر برای ما ارسال نمایید.<br/>
+        <a href="{{ link }}" style="display: inline-block; margin-top: 10px; background-color: #10b981; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;">بررسی و امضای پیشنهاد همکاری</a>
+    </div>
+    <p>در صورت وجود هرگونه ابهام یا سوال، کارشناس جذب ما <strong>{{ recruiter_name }}</strong> آماده پاسخگویی به شماست.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+    <small style="color: #64748b;">مدیریت منابع انسانی {{ company_name }}</small>
+</div>""",
+        verbose_name="متن ایمیل پیشنهاد همکاری (HTML)"
+    )
+    offer_sms_enabled = models.BooleanField(default=True, verbose_name="ارسال پیامک پیشنهاد همکاری فعال باشد")
+    offer_sms_body = models.TextField(
+        default="تبریک فراوان {{ candidate_name }} عزیز! 🎉\nشما در فرآیند جذب \"{{ job_title }}\" پذیرفته شدید.\nآفر فرم (پیشنهاد همکاری) به ایمیل شما ارسال شد. لطفا نسبت به بررسی و امضای آن اقدام کنید:\n{{ link }}\n{{ company_name }}",
+        verbose_name="متن پیامک پیشنهاد همکاری"
+    )
+
+    # ۵. عدم پذیرش / مردودی (Rejection)
+    reject_email_enabled = models.BooleanField(default=True, verbose_name="ارسال ایمیل رد رزومه فعال باشد")
+    reject_email_subject = models.CharField(max_length=255, default="تقدیر و تشکر از حضور در فرآیند ارزیابی", verbose_name="موضوع ایمیل رد رزومه")
+    reject_email_body = models.TextField(
+        default="""<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; padding: 20px; line-height: 1.6; color: #1e293b;">
+    <h2 style="color: #ef4444;">تقدیر و تشکر از حضور در فرآیند ارزیابی</h2>
+    <p>جناب/سرکار خانم <strong>{{ candidate_name }}</strong> عزیز، سلام؛</p>
+    <p>از اینکه وقت گرانبهای خود را برای شرکت در فرآیند استخدام موقعیت شغلی <strong>«{{ job_title }}»</strong> در اختیار <strong>{{ company_name }}</strong> قرار دادید، صمیمانه سپاسگزاریم.</p>
+    <p>پس از بررسی‌های دقیق و مصاحبه‌های انجام شده با کاندیداهای محترم، متاسفانه در این دوره امکان پذیرش و همکاری با شما فراهم نگردید. انتخاب نهایی بر اساس تطابق حداکثری نیازهای فعلی تیم با سوابق فنی صورت گرفته و این به معنی نفی شایستگی‌های ارزشمند شما نیست.</p>
+    <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #ef4444; margin: 20px 0;">
+        <strong>نگاهداشت رزومه در بانک استعدادها:</strong><br/>
+        سوابق ارزنده شما در بانک استعدادهای (Talent Pool) ما آرشیو می‌شود تا در صورت تعریف فرصت‌های شغلی جدید و متناسب با تخصصتان، در اولویت تماس مجدد همکاران ما قرار بگیرید.
+    </div>
+    <p>برای شما در تمام مراحل زندگی حرفه‌ای آرزوی موفقیت و پیروزی داریم.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+    <small style="color: #64748b;">تیم جذب و استخدام {{ company_name }}</small>
+</div>""",
+        verbose_name="متن ایمیل رد رزومه (HTML)"
+    )
+    reject_sms_enabled = models.BooleanField(default=True, verbose_name="ارسال پیامک رد رزومه فعال باشد")
+    reject_sms_body = models.TextField(
+        default="{{ candidate_name }} عزیز، از وقتی که برای ارزیابی شغل \"{{ job_title }}\" در {{ company_name }} گذاشتید سپاسگزاریم.\nمتاسفانه در این دوره امکان همکاری فراهم نشد. رزومه شما در بانک استعدادهای ما ذخیره می‌گردد.\nنامه رسمی و جزئیات بیشتر به ایمیل شما ارسال شد.",
+        verbose_name="متن پیامک رد رزومه"
+    )
+
+    # --- تنظیمات درگاه‌های ارتباطی (SMTP & SMS Gateways) ---
+    
+    # تنظیمات SMTP (ایمیل)
+    EMAIL_PROVIDER_CHOICES = [
+        ('CUSTOM', 'ایجاد دستی (SMTP سفارشی)'),
+        ('GMAIL', 'گوگل (Gmail)'),
+        ('OUTLOOK', 'اوتلوک (Outlook)'),
+    ]
+    email_provider = models.CharField(max_length=30, choices=EMAIL_PROVIDER_CHOICES, default='CUSTOM', verbose_name="سرویس‌دهنده ایمیل")
+    smtp_host = models.CharField(max_length=255, default="", blank=True, verbose_name="آدرس سرور SMTP (مثال: smtp.gmail.com)")
+    smtp_port = models.IntegerField(default=587, verbose_name="پورت SMTP")
+    smtp_user = models.CharField(max_length=255, default="", blank=True, verbose_name="نام کاربری SMTP (ایمیل)")
+    smtp_password = models.CharField(max_length=255, default="", blank=True, verbose_name="کلمه عبور SMTP")
+    smtp_use_tls = models.BooleanField(default=True, verbose_name="استفاده از TLS")
+    smtp_use_ssl = models.BooleanField(default=False, verbose_name="استفاده از SSL")
+    smtp_sender_email = models.EmailField(default="", blank=True, verbose_name="ایمیل فرستنده پیش‌فرض")
+
+    # تنظیمات پنل پیامک (SMS Gateway)
+    SMS_PROVIDER_CHOICES = [
+        ('MOCK', 'شبیه‌ساز (ثبت در فایل لاگ سیستم)'),
+        ('KAVENEGAR', 'پنل کاوه نگار (Kavenegar)'),
+        ('MELIPAYAMAK', 'پنل ملی پیامک (Melipayamak)'),
+        ('FARAPAYAMAK', 'پنل فراپیامک (Farapayamak)'),
+        ('OTHER', 'سایر پیام‌رسان‌ها (پیام‌رسان‌های دیگر)'),
+        ('CUSTOM', 'ایجاد دستی درگاه (تنظیم آدرس API اختصاصی)'),
+    ]
+    sms_provider = models.CharField(max_length=30, choices=SMS_PROVIDER_CHOICES, default='MOCK', verbose_name="ارائه‌دهنده پنل پیامک")
+    sms_api_key = models.CharField(max_length=255, default="", blank=True, verbose_name="کلید API / کلمه عبور پنل")
+    sms_sender_number = models.CharField(max_length=50, default="", blank=True, verbose_name="شماره خط اختصاصی فرستنده")
+    sms_custom_url = models.CharField(max_length=500, default="", blank=True, verbose_name="آدرس API اختصاصی / دستی")
+
+    class Meta:
+        verbose_name = "تنظیمات سازمان"
+        verbose_name_plural = "تنظیمات سازمان"
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_active_setting(cls):
+        setting = cls.objects.filter(is_deleted=False).first()
+        if not setting:
+            setting = cls.objects.create(name="سامانه جذب و استخدام پیجو")
+        return setting
+

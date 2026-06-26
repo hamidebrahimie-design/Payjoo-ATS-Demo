@@ -1226,7 +1226,7 @@ class SMSPanelDashboardView(LoginRequiredMixin, RoleRequiredMixin, TemplateView)
                 except SMSTemplate.DoesNotExist:
                     messages.error(request, "قالب یافت نشد.")
                     
-        return redirect('sms_panel')
+        return redirect(reverse('organization_setting') + '?tab=sms-manual')
 
 
 class JobStagesOptionsView(LoginRequiredMixin, RoleRequiredMixin, View):
@@ -1384,11 +1384,11 @@ class SMSExportExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
 
         if not template_body:
             messages.error(request, "قالب پیامک مشخص نشده یا خالی است.")
-            return redirect('sms_panel')
+            return redirect(reverse('organization_setting') + '?tab=sms-manual')
 
         if not candidate_ids:
             messages.error(request, "هیچ متقاضی انتخاب نشده است.")
-            return redirect('sms_panel')
+            return redirect(reverse('organization_setting') + '?tab=sms-manual')
 
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
