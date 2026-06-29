@@ -789,6 +789,20 @@ from django.contrib.auth.models import User
 from .forms import CandidateSignUpForm
 
 class CandidateSignUpView(View):
+    def dispatch(self, request, *args, **kwargs):
+        from apps.core.license import get_system_license_limits
+        from apps.candidates.models import Candidate
+        limits = get_system_license_limits(request)
+        current_candidates = Candidate.objects.filter(is_deleted=False).count()
+        self.limit_reached = current_candidates >= limits['max_candidates']
+        
+        if self.limit_reached and request.method == 'POST':
+            from django.contrib import messages
+            messages.error(request, "ظرفیت ثبت‌نام متقاضیان تکمیل شده است. جهت ارتقا لایسنس با مدیر سیستم تماس بگیرید.")
+            return redirect('login')
+            
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request):
         if request.user.is_authenticated:
             return redirect('candidate_dashboard')
@@ -806,6 +820,7 @@ class CandidateSignUpView(View):
             'language_formset': language_formset,
             'skill_formset': skill_formset,
             'certificate_formset': certificate_formset,
+            'limit_reached': self.limit_reached,
         })
 
     def post(self, request):
@@ -3016,6 +3031,14 @@ class ImportCandidatesView(LoginRequiredMixin, RoleRequiredMixin, View):
                             
                         candidate = existing_candidate
                     else:
+                        # Check candidate limit
+                        from apps.core.license import get_system_license_limits
+                        limits = get_system_license_limits(request)
+                        current_candidates = Candidate.objects.filter(is_deleted=False).count()
+                        if current_candidates >= limits['max_candidates']:
+                            errors.append(f"ردیف {idx} ({first_name} {last_name}): ظرفیت مجاز تعداد متقاضیان تکمیل شده است. لایسنس خود را ارتقا دهید.")
+                            continue
+
                         # Create new Django User
                         user = User.objects.filter(username=national_id).first()
                         if not user:

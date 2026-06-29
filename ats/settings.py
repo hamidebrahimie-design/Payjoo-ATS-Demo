@@ -145,3 +145,9 @@ try:
 except Exception:
     APP_VERSION = '1.3.3'
 
+
+# Licensing Configurations
+# Override this secret key in production environment variables (e.g. PAYJOO_LICENSE_SECRET_KEY)
+import os
+PAYJOO_LICENSE_SECRET_KEY = os.environ.get('PAYJOO_LICENSE_SECRET_KEY', 'payjoo_ats_licensing_sec_2026')
+

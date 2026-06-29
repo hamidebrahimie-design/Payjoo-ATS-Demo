@@ -246,10 +246,12 @@ class OrganizationSettingForm(forms.ModelForm):
             'reject_email_enabled', 'reject_email_subject', 'reject_email_body', 'reject_sms_enabled', 'reject_sms_body',
             'email_provider', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_use_tls', 'smtp_use_ssl', 'smtp_sender_email',
             'sms_provider', 'sms_api_key', 'sms_sender_number', 'sms_custom_url',
+            'license_key',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: هلدینگ توسعه فناوری اطلاعات'}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'license_key': forms.Textarea(attrs={'class': 'form-control text-start font-monospace', 'rows': 4, 'style': 'font-size: 11px; direction: ltr;', 'placeholder': 'Paste your base64 license key here...'}),
             
             # Booleans
             'reg_email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'cursor: pointer;'}),

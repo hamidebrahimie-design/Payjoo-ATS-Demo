@@ -68,6 +68,12 @@ def parse_competencies_excel(file_path):
         if col_map[req] == -1:
             raise ValueError(f"ستون حیاتی '{req}' (یا معادل فارسی آن) در اکسل پیدا نشد.")
 
+    # License limits check for posts
+    from apps.core.license import get_system_license_limits
+    limits = get_system_license_limits()
+    max_posts = limits['max_posts']
+    active_post_codes = set(CentralCompetency.objects.filter(is_deleted=False).values_list('post_code', flat=True).distinct())
+
     created_count = 0
     updated_count = 0
     skipped_count = 0
@@ -92,6 +98,12 @@ def parse_competencies_excel(file_path):
             if not post_code or not code or not title or not category_raw:
                 skipped_count += 1
                 continue
+                
+            # Check limits on active post codes
+            if post_code not in active_post_codes:
+                if len(active_post_codes) >= max_posts:
+                    raise ValueError(f"سقف مجاز تعداد پست‌های بانک شایستگی نسخه جاری تکمیل شده است (حداکثر {int(max_posts)} پست). جهت ارتقا لایسنس با مدیر سیستم تماس بگیرید.")
+                active_post_codes.add(post_code)
                 
             # Parse competency type from category_raw (first two letters, e.g. KN, SK, AB...)
             comp_type = category_raw[:2].upper()

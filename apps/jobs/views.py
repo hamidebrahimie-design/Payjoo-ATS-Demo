@@ -191,6 +191,17 @@ class JobOpportunityCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView
     model = JobOpportunity
     form_class = JobOpportunityForm
     template_name = 'jobs/job_form.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        from apps.core.license import get_system_license_limits
+        limits = get_system_license_limits(request)
+        current_jobs = JobOpportunity.objects.filter(is_deleted=False).count()
+        if current_jobs >= limits['max_jobs']:
+            from django.contrib import messages
+            from django.shortcuts import redirect
+            messages.error(request, "تعداد فرصت‌های شغلی فعال شما به حداکثر حد مجاز نسخه جاری رسیده است. برای تعریف فرصت جدید، لطفاً لایسنس خود را ارتقا دهید.")
+            return redirect('job_list')
+        return super().dispatch(request, *args, **kwargs)
     allowed_roles = [
         UserProfile.ROLE_ADMIN,
         UserProfile.ROLE_RECRUITMENT_DIRECTOR,
@@ -2549,6 +2560,9 @@ class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
         app_statuses = JobApplication.STATUS_CHOICES
         stage_statuses = ApplicationStageState.STATUS_CHOICES
         
+        from apps.core.license import get_license_usage_stats
+        license_stats = get_license_usage_stats(request)
+        
         context = {
             'form': form,
             'setting': setting,
@@ -2556,6 +2570,7 @@ class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
             'jobs': jobs,
             'app_statuses': app_statuses,
             'stage_statuses': stage_statuses,
+            'license_stats': license_stats,
         }
         
         edit_id = request.GET.get('edit_template')
@@ -2575,7 +2590,14 @@ class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
         setting = OrganizationSetting.get_active_setting()
         form = OrganizationSettingForm(request.POST, request.FILES, instance=setting)
         if form.is_valid():
-            form.save()
+            instance = form.save(commit=False)
+            # Force update organization name if a valid license key is present
+            if instance.license_key:
+                from apps.core.license import verify_license_key
+                license_stats = verify_license_key(instance.license_key, current_host=request.get_host())
+                if license_stats['is_valid']:
+                    instance.name = license_stats['licensee']
+            instance.save()
             messages.success(request, "تنظیمات سازمان با موفقیت ذخیره شد.")
             return redirect('organization_setting')
         
@@ -2583,11 +2605,13 @@ class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
         from apps.jobs.models import JobOpportunity
         from apps.accounts.models import SMSTemplate
         from apps.candidates.models import JobApplication, ApplicationStageState
+        from apps.core.license import get_license_usage_stats
         
         templates = SMSTemplate.objects.filter(is_deleted=False)
         jobs = JobOpportunity.objects.filter(is_deleted=False)
         app_statuses = JobApplication.STATUS_CHOICES
         stage_statuses = ApplicationStageState.STATUS_CHOICES
+        license_stats = get_license_usage_stats(request)
         
         context = {
             'form': form,
@@ -2596,6 +2620,7 @@ class OrganizationSettingView(LoginRequiredMixin, RoleRequiredMixin, View):
             'jobs': jobs,
             'app_statuses': app_statuses,
             'stage_statuses': stage_statuses,
+            'license_stats': license_stats,
         }
         return render(request, self.template_name, context)
 

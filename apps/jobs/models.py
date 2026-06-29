@@ -857,6 +857,7 @@ class OrganizationSetting(SoftDeleteModel):
     sms_api_key = models.CharField(max_length=255, default="", blank=True, verbose_name="کلید API / کلمه عبور پنل")
     sms_sender_number = models.CharField(max_length=50, default="", blank=True, verbose_name="شماره خط اختصاصی فرستنده")
     sms_custom_url = models.CharField(max_length=500, default="", blank=True, verbose_name="آدرس API اختصاصی / دستی")
+    license_key = models.TextField(default="", blank=True, verbose_name="کلید لایسنس سیستم")
 
     class Meta:
         verbose_name = "تنظیمات سازمان"
