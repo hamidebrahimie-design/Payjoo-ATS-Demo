@@ -1639,14 +1639,14 @@ class CandidateModuleTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['candidates']), 2) # remaining 2 items
 
-    def test_score_entry_pagination(self):
-        """تست صفحه‌بندی (Pagination) در صفحه ورود نمرات"""
+    def test_score_entry_no_pagination(self):
+        """تست عدم وجود صفحه‌بندی در صفحه ورود نمرات و نمایش همزمان تمام متقاضیان"""
         from apps.candidates.models import Candidate, JobApplication
         
         # Get the first stage of the job
         active_stage = self.job.stages.filter(is_deleted=False).order_by('sequence').first()
         self.assertIsNotNone(active_stage)
-
+ 
         # Create 12 candidates and applications
         for i in range(12):
             candidate = Candidate.objects.create(
@@ -1660,20 +1660,15 @@ class CandidateModuleTests(TestCase):
                 job=self.job,
                 candidate=candidate
             )
-
+ 
         self.client.login(username='recruiter_user', password='password123')
         
-        # Request page 1
+        # Request score entry list
         url = reverse('candidate_score_entry') + f'?job_id={self.job.id}&stage_id={active_stage.id}'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context['is_paginated'])
-        self.assertEqual(len(response.context['pending_states']), 10)
-
-        # Request page 2
-        response = self.client.get(url + '&page=2')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['pending_states']), 2)
+        self.assertFalse(response.context['is_paginated'])
+        self.assertEqual(len(response.context['pending_states']), 12)
 
     def test_import_score_entry_excel_success(self):
         """تست ورود موفقیت‌آمیز نمرات و وضعیت داوطلبان از فایل اکسل"""
@@ -1906,9 +1901,9 @@ class CandidateModuleTests(TestCase):
         self.assertEqual(state2.score, 0.0)
         self.assertEqual(state2.status, ApplicationStageState.STATUS_PENDING)
 
-    def test_score_entry_autosave_on_pagination(self):
-        """تست ذخیره‌سازی خودکار نمرات هنگام جابجایی بین صفحات با استفاده از HTMX"""
-        # Create 12 candidates to ensure 2 pages
+    def test_score_entry_save_all_candidates_no_pagination(self):
+        """تست نمایش همه داوطلبان به صورت یکپارچه بدون صفحه‌بندی و ذخیره‌سازی موفق نمرات"""
+        # Create 12 candidates to ensure we would have multiple pages in old logic
         active_stage = self.job.stages.order_by('sequence').first()
         states_list = []
         for i in range(12):
@@ -1924,8 +1919,6 @@ class CandidateModuleTests(TestCase):
             
         self.client.login(username='recruiter_user', password='password123')
         
-        # Target state is one of the candidates on page 1 (which will be saved during page change)
-        # The candidates are ordered by last_name, so we can identify a state to update
         state_to_save = states_list[0]
         
         post_data = {
@@ -1934,23 +1927,24 @@ class CandidateModuleTests(TestCase):
             'eval_status': 'ALL',
             f'score_{state_to_save.id}': '88.5',
             f'status_{state_to_save.id}': 'COMPLETED',
-            f'notes_{state_to_save.id}': 'توضیحات ذخیره خودکار پیجینگ',
+            f'notes_{state_to_save.id}': 'توضیحات ذخیره نمره بدون صفحه‌بندی',
         }
         
-        # We simulate clicking page 2 link, which posts the current page's scores and requests page 2
-        url = reverse('candidate_score_entry') + '?page=2'
+        # Post the scores
+        url = reverse('candidate_score_entry')
         response = self.client.post(url, post_data, HTTP_HX_REQUEST='true')
         
         self.assertEqual(response.status_code, 200)
-        # Verify page 2 contains 2 candidates (total 12, 10 per page)
-        self.assertEqual(len(response.context['pending_states']), 2)
-        self.assertEqual(response.context['page_obj'].number, 2)
+        # Verify all 12 candidates are displayed on the single page
+        self.assertEqual(len(response.context['pending_states']), 12)
+        self.assertFalse(response.context['is_paginated'])
+        self.assertIsNone(response.context['page_obj'])
         
-        # Verify page 1 state's score was saved
+        # Verify state's score was saved
         state_to_save.refresh_from_db()
         self.assertEqual(state_to_save.score, 88.5)
         self.assertEqual(state_to_save.status, 'COMPLETED')
-        self.assertEqual(state_to_save.notes, 'توضیحات ذخیره خودکار پیجینگ')
+        self.assertEqual(state_to_save.notes, 'توضیحات ذخیره نمره بدون صفحه‌بندی')
 
     def test_score_entry_failed_prior_filtering(self):
         """تست فیلتر شدن و نمایش متقاضیانی که در مراحل قبلی مردود شده‌اند در لیست ورود نمرات"""

@@ -1234,12 +1234,11 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                         models.Q(application__candidate__national_id__icontains=q)
                     )
                     
-                ordered_states = pending_states_qs.order_by('application__candidate__last_name')
-                paginator = Paginator(ordered_states, 10)
-                page_number = request.GET.get('page')
-                page_obj = paginator.get_page(page_number)
-                pending_states = list(page_obj)
-                is_paginated = page_obj.has_other_pages()
+                ordered_states = pending_states_qs.order_by('-application__final_score', 'application__candidate__last_name')
+                pending_states = list(ordered_states)
+                is_paginated = False
+                page_obj = None
+                paginator = None
                 
                 applications = [state.application for state in pending_states]
             else:
@@ -1265,13 +1264,12 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                 elif eval_status == 'COMPLETED_FAILED':
                     applications_qs = applications_qs.filter(status__in=[JobApplication.STATUS_SELECTED, JobApplication.STATUS_RESERVE, JobApplication.STATUS_REJECTED])
 
-                applications_qs = applications_qs.order_by('candidate__last_name')
-                paginator = Paginator(applications_qs, 10)
-                page_number = request.GET.get('page')
-                page_obj = paginator.get_page(page_number)
-                is_paginated = page_obj.has_other_pages()
+                applications_qs = applications_qs.order_by('-final_score', 'candidate__last_name')
+                is_paginated = False
+                page_obj = None
+                paginator = None
                 
-                applications = list(page_obj)
+                applications = list(applications_qs)
                 pending_states = applications
             
             for app in applications:
@@ -1473,12 +1471,11 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                         models.Q(application__candidate__national_id__icontains=q)
                     )
                     
-                ordered_states = pending_states_qs.order_by('application__candidate__last_name')
-                paginator = Paginator(ordered_states, 10)
-                page_number = request.GET.get('page') or request.POST.get('page')
-                page_obj = paginator.get_page(page_number)
-                pending_states = list(page_obj)
-                is_paginated = page_obj.has_other_pages()
+                ordered_states = pending_states_qs.order_by('-application__final_score', 'application__candidate__last_name')
+                pending_states = list(ordered_states)
+                is_paginated = False
+                page_obj = None
+                paginator = None
                 
                 applications = [state.application for state in pending_states]
             else:
@@ -1504,13 +1501,12 @@ class ScoreEntryListView(LoginRequiredMixin, RoleRequiredMixin, View):
                 elif eval_status == 'COMPLETED_FAILED':
                     applications_qs = applications_qs.filter(status__in=[JobApplication.STATUS_SELECTED, JobApplication.STATUS_RESERVE, JobApplication.STATUS_REJECTED])
 
-                applications_qs = applications_qs.order_by('candidate__last_name')
-                paginator = Paginator(applications_qs, 10)
-                page_number = request.GET.get('page') or request.POST.get('page')
-                page_obj = paginator.get_page(page_number)
-                is_paginated = page_obj.has_other_pages()
+                applications_qs = applications_qs.order_by('-final_score', 'candidate__last_name')
+                is_paginated = False
+                page_obj = None
+                paginator = None
                 
-                applications = list(page_obj)
+                applications = list(applications_qs)
                 pending_states = applications
                 
             for app in applications:

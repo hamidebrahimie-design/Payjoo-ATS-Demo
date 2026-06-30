@@ -9,6 +9,22 @@
         font-family: 'Vazirmatn', sans-serif !important;
         z-index: 9999 !important;
     }
+    
+    /* Premium table sorting styles */
+    .sortable-header {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        position: relative;
+    }
+    .sortable-header:hover {
+        background-color: #f1f5f9 !important;
+    }
+    .sort-icon {
+        font-size: 0.75rem;
+        display: inline-block;
+        vertical-align: middle;
+        transition: color 0.2s ease;
+    }
 </style>
 {% endblock %}
 
@@ -196,6 +212,159 @@
             initializeDatepickers();
         }
     });
+
+    // Delegated event listener for sorting headers
+    document.addEventListener('click', function(e) {
+        const th = e.target.closest('th.sortable-header');
+        if (th) {
+            const table = th.closest('table');
+            const colIndex = Array.from(th.parentNode.children).indexOf(th);
+            sortTable(table, colIndex, th);
+        }
+    });
+
+    function sortTable(table, colIndex, headerElement) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
+        if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td[colspan]'))) {
+            return; // No data rows to sort
+        }
+
+        // Check if we are reversing the sort
+        const currentDir = headerElement.getAttribute('data-sort-dir') || 'none';
+        let newDir = 'asc';
+        if (currentDir === 'asc') {
+            newDir = 'desc';
+        }
+
+        // Reset all headers' icons and directions
+        const headers = table.querySelectorAll('th');
+        headers.forEach(th => {
+            th.setAttribute('data-sort-dir', 'none');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) {
+                icon.innerHTML = '⇅';
+                icon.className = 'sort-icon text-muted ms-1';
+            }
+        });
+
+        // Set direction on active header
+        headerElement.setAttribute('data-sort-dir', newDir);
+        const activeIcon = headerElement.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (newDir === 'asc') {
+                activeIcon.innerHTML = '▲';
+                activeIcon.className = 'sort-icon text-primary ms-1';
+            } else {
+                activeIcon.innerHTML = '▼';
+                activeIcon.className = 'sort-icon text-primary ms-1';
+            }
+        }
+
+        // Sort logic
+        rows.sort((a, b) => {
+            let valA = getCellValue(a, colIndex);
+            let valB = getCellValue(b, colIndex);
+
+            let isNum = typeof valA === 'number' && typeof valB === 'number';
+            if (isNum) {
+                return newDir === 'asc' ? valA - valB : valB - valA;
+            } else {
+                valA = valA.toString().trim();
+                valB = valB.toString().trim();
+                return newDir === 'asc' ? valA.localeCompare(valB, 'fa') : valB.localeCompare(valA, 'fa');
+            }
+        });
+
+        // Re-append sorted rows to tbody
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function parseArabicPersianFloat(str) {
+        if (!str) return 0;
+        const persianDigits = [/۰/g, /۱/g, /۲/g, /۳/g, /۴/g, /۵/g, /۶/g, /۷/g, /۸/g, /۹/g];
+        const arabicDigits  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
+        let cleaned = str.toString().trim();
+        for (let i = 0; i < 10; i++) {
+            cleaned = cleaned.replace(persianDigits[i], i).replace(arabicDigits[i], i);
+        }
+        cleaned = cleaned.replace(/,/g, '.').replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function getCellValue(row, colIndex) {
+        const cells = row.querySelectorAll(':scope > td');
+        if (colIndex >= cells.length) return '';
+        const cell = cells[colIndex];
+
+        // 1. Column 0: Candidate name
+        if (colIndex === 0) {
+            const nameDiv = cell.querySelector('.font-semibold.text-secondary');
+            return nameDiv ? nameDiv.textContent.trim() : '';
+        }
+
+        // 2. Column N-1 (second to last): Cumulative Score
+        if (colIndex === cells.length - 2) {
+            const scoreSpan = cell.querySelector('span.text-primary') || cell;
+            return parseArabicPersianFloat(scoreSpan.textContent);
+        }
+
+        // 3. Column N (last): Final Decision
+        if (colIndex === cells.length - 1) {
+            const select = cell.querySelector('select');
+            if (select) {
+                const val = select.value;
+                if (val === 'SELECTED') return 4;
+                if (val === 'RESERVE') return 3;
+                if (val === 'IN_PROGRESS') return 2;
+                if (val === 'REJECTED') return 1;
+                return val;
+            }
+            const badge = cell.querySelector('.badge');
+            if (badge) {
+                const txt = badge.textContent.trim();
+                if (txt.includes('پذیرفته شده نهایی') || txt.includes('SELECTED')) return 4;
+                if (txt.includes('ذخیره') || txt.includes('RESERVE')) return 3;
+                if (txt.includes('در حال بررسی') || txt.includes('IN_PROGRESS')) return 2;
+                if (txt.includes('رد شده') || txt.includes('REJECTED')) return 1;
+                return txt;
+            }
+            return cell.textContent.trim();
+        }
+
+        // 4. Middle columns: Stage scores/statuses
+        // Check if there is a number input
+        const numInput = cell.querySelector('input[type="number"]');
+        if (numInput) {
+            return parseArabicPersianFloat(numInput.value);
+        }
+
+        // Check if there is a select dropdown (could be screening status or stage status)
+        const select = cell.querySelector('select');
+        if (select) {
+            const val = select.value;
+            if (val === 'COMPLETED') return 3;
+            if (val === 'PENDING') return 2;
+            if (val === 'FAILED') return 1;
+            return val;
+        }
+
+        // Check if read-only score-based stage
+        const scoreSpan = cell.querySelector('span.font-bold');
+        if (scoreSpan) {
+            return parseArabicPersianFloat(scoreSpan.textContent);
+        }
+
+        // Check if read-only screening or status text
+        const textSpan = cell.querySelector('.badge') || cell.querySelector('.font-semibold') || cell;
+        const txt = textSpan.textContent.trim();
+        if (txt.includes('قبول') || txt.includes('COMPLETED')) return 3;
+        if (txt.includes('در انتظار') || txt.includes('PENDING')) return 2;
+        if (txt.includes('رد') || txt.includes('FAILED')) return 1;
+
+        return txt;
+    }
 
     // هنگام باز شدن هر مودال، همه popupهای کاما‌دیت‌پیکر را پنهان کن
     // تا از خروج از modal overlay جلوگیری شود
