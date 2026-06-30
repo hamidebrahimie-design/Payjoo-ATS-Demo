@@ -98,6 +98,13 @@
                     </a>
                 </li>
                 {% endif %}
+                {% if job.has_exam_stage %}
+                <li>
+                    <a class="dropdown-item rounded d-flex align-items-center gap-2 py-2" href="{% url 'job_exam_specification_print' job.id %}" target="_blank">
+                        <span>📝</span> سند مرکز آزمون
+                    </a>
+                </li>
+                {% endif %}
             </ul>
         </div>
 

@@ -2195,6 +2195,49 @@ class JobAssessmentPlanPrintView(LoginRequiredMixin, RoleRequiredMixin, DetailVi
         return context
 
 
+class JobExamSpecificationPrintView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
+    model = JobOpportunity
+    template_name = 'jobs/exam_specification_print.html'
+    context_object_name = 'job'
+    pk_url_kwarg = 'job_id'
+    allowed_roles = [
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_RECRUITMENT_DIRECTOR,
+        UserProfile.ROLE_RECRUITMENT_SPECIALIST,
+        UserProfile.ROLE_JOB_CLASSIFICATION_USER,
+        UserProfile.ROLE_DEPARTMENT_USER,
+        UserProfile.ROLE_READ_ONLY_AUDITOR,
+    ]
+
+    def get_queryset(self):
+        return JobOpportunity.objects.filter(is_deleted=False).prefetch_related('stages', 'stages__competencies')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Fetch the written exam stage(s)
+        exam_stages = self.object.stages.filter(stage_type='EXAM', is_deleted=False).order_by('sequence')
+        context['exam_stages'] = exam_stages
+        
+        # If there are exam stages, collect competencies and map their levels/importance
+        exam_competencies = []
+        for stage in exam_stages:
+            for comp in stage.competencies.filter(is_deleted=False):
+                # Find matching JobOpportunityCompetency snapshot to get the required level and importance
+                jc = self.object.selected_competencies.filter(title=comp.name, is_deleted=False).first()
+                exam_competencies.append({
+                    'code': jc.code if jc else 'N/A',
+                    'name': comp.name,
+                    'stage_name': stage.name,
+                    'weight': comp.weight,
+                    'level': jc.get_level_display() if jc else 'نامشخص',
+                    'importance': jc.get_importance_display() if jc else 'نامشخص',
+                    'type': jc.get_competency_type_display() if jc else 'نامشخص'
+                })
+        
+        context['exam_competencies'] = exam_competencies
+        return context
+
+
 class SearchPostsApiView(LoginRequiredMixin, RoleRequiredMixin, View):
     allowed_roles = [
         UserProfile.ROLE_ADMIN,

@@ -327,6 +327,50 @@ class JobOpportunityAndWorkflowTests(TestCase):
         self.assertContains(response_with_plan, '1405/03/18') # 2026-06-08 is 1405-03-18
         self.assertContains(response_with_plan, '1405/03/23') # 2026-06-13 is 1405-03-23
 
+    def test_job_exam_specification_print_view(self):
+        """تست نمایش صفحه چاپ سند مشخصات آزمون کتبی به همراه شایستگی‌ها"""
+        job = JobOpportunity.objects.create(
+            request_number='REQ-1402-992',
+            title='مهندس برق نورد گرم',
+            code='EE-992',
+            department='نورد گرم',
+            description='مدیریت سیستم‌های برق'
+        )
+        stage_exam = JobOpportunityStage.objects.create(
+            job=job,
+            name='آزمون کتبی',
+            weight=40,
+            sequence=1,
+            stage_type='EXAM'
+        )
+        
+        # Create an assessment competency linked to the exam stage
+        from apps.jobs.models import AssessmentCompetency, JobOpportunityCompetency
+        AssessmentCompetency.objects.create(
+            stage=stage_exam,
+            name='نقشه‌خوانی برق صنعتی',
+            weight=100
+        )
+        
+        # Link to JobOpportunityCompetency snapshot
+        JobOpportunityCompetency.objects.create(
+            job=job,
+            title='نقشه‌خوانی برق صنعتی',
+            code='KNEL0012',
+            competency_type='KN',
+            importance=1, # محوری
+            level=3 # تسلط
+        )
+        
+        self.client.login(username='recruiter_test', password='password123')
+        
+        url = reverse('job_exam_specification_print', kwargs={'job_id': job.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'سند مشخصات و ساختار آزمون کتبی')
+        self.assertContains(response, 'نقشه‌خوانی برق صنعتی')
+        self.assertContains(response, 'KNEL0012')
+
     def test_job_opportunity_empty_stages_assigned_workflow(self):
         """تست اختصاص مراحل پیش‌فرض به فرصت شغلی ویرایش شده که فاقد مرحله بوده است"""
         # Create job opportunity with NO workflow template

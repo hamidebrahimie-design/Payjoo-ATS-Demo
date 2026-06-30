@@ -177,6 +177,11 @@ class JobOpportunity(SoftDeleteModel):
         # 3. Fallback to first stage
         return self.stages.filter(is_deleted=False).order_by('sequence').first()
 
+    @property
+    def has_exam_stage(self):
+        return self.stages.filter(stage_type='EXAM', is_deleted=False).exists()
+
+
 
     def get_status_from_stage_name(self, stage_name):
         name_lower = stage_name.lower()

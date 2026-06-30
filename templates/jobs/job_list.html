@@ -453,6 +453,14 @@
                                         </li>
                                         {% endif %}
 
+                                        {% if job.has_exam_stage %}
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_exam_specification_print' job.id %}" target="_blank">
+                                                <span>📝</span> سند مرکز آزمون (A4)
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
                                         {% if user.profile.can_manage_jobs %}
                                         <li><hr class="dropdown-divider my-1 opacity-10"></li>
                                         <li>
