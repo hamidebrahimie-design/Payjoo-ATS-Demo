@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseRedirect
 from django.db import transaction, models
 from django.core.exceptions import PermissionDenied
+import jdatetime
 
 from apps.accounts.permissions import RoleRequiredMixin
 from apps.accounts.models import UserProfile
@@ -2425,6 +2426,7 @@ class AssessmentCenterDetailReportView(LoginRequiredMixin, RoleRequiredMixin, Vi
             'iscores': iscores,
             'comp_rows': comp_rows,
             'competencies': competencies,
+            'today_jalali': jdatetime.date.today().strftime('%Y/%m/%d'),
         })
 
 
@@ -2769,7 +2771,7 @@ class ExportAssessmentCenterExcelView(LoginRequiredMixin, RoleRequiredMixin, Vie
                 state.score if state.score is not None else "",
                 passing_score,
                 status_display,
-                state.updated_at.strftime('%Y-%m-%d %H:%M') if state.updated_at else ""
+                jdatetime.datetime.fromgregorian(datetime=state.updated_at).strftime('%Y/%m/%d %H:%M') if state.updated_at else ""
             ])
             
         from apps.core.utils import export_to_excel_response
@@ -4109,7 +4111,7 @@ class ResolveDiscrepancyView(LoginRequiredMixin, RoleRequiredMixin, View):
                 user_name = log.user.get_full_name() if log.user and log.user.get_full_name() else (log.user.username if log.user else 'سیستم')
                 log_rows_html += f"""
                 <tr id="action-log-row-{log.id}">
-                    <td class="ps-3 text-xs">{log.timestamp.strftime('%Y/%m/%d %H:%M')}</td>
+                    <td class="ps-3 text-xs">{jdatetime.datetime.fromgregorian(datetime=log.timestamp).strftime('%Y/%m/%d %H:%M') if log.timestamp else '-'}</td>
                     <td class="text-xs">{user_name}</td>
                     <td class="text-xs font-semibold">{log.get_action_type_display()}</td>
                     <td class="text-xs">{log.model_name} (ID: {log.object_id})</td>

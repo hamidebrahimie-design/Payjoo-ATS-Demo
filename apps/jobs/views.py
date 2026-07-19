@@ -11,6 +11,7 @@ from apps.accounts.permissions import RoleRequiredMixin
 from apps.accounts.models import UserProfile
 from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate, CompetencyModel
 from .forms import JobOpportunityForm, JobOpportunityFormSet, WorkflowTemplateForm, WorkflowStageTemplateFormSet
+import jdatetime
 
 def normalize_digits(s):
     if not s:
@@ -516,7 +517,7 @@ class ExportJobsExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
                 stages_str,
                 job.candidate_count,
                 job.get_status_display(),
-                job.created_at.strftime('%Y-%m-%d %H:%M') if job.created_at else ""
+                jdatetime.datetime.fromgregorian(datetime=job.created_at).strftime('%Y/%m/%d %H:%M') if job.created_at else ""
             ])
             
         from apps.core.utils import export_to_excel_response
@@ -2455,7 +2456,7 @@ class CustomCompetenciesReportView(LoginRequiredMixin, RoleRequiredMixin, ListVi
             for idx, c in enumerate(queryset, 1):
                 recruiter = c.job.assigned_recruiter
                 recruiter_name = recruiter.get_full_name() if recruiter else '-'
-                created_date = c.created_at.strftime('%Y-%m-%d')
+                created_date = jdatetime.datetime.fromgregorian(datetime=c.created_at).strftime('%Y/%m/%d') if c.created_at else ''
                 writer.writerow([
                     idx,
                     c.title,
