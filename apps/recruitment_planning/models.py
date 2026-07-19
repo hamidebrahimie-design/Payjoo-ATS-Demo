@@ -12,7 +12,7 @@ class StageTypeConfiguration(SoftDeleteModel):
     )
     default_sla_days = models.PositiveIntegerField(
         default=5, 
-        verbose_name="SLA پیش‌فرض (روز کاری)"
+        verbose_name="مهلت استاندارد انجام (روز کاری)"
     )
     monthly_capacity = models.PositiveIntegerField(
         default=100, 
