@@ -1,0 +1,61 @@
+{# templates/includes/sidebar.html #}
+{% load static %}
+<aside class="sidebar d-flex flex-column flex-shrink-0 p-3">
+    {# Logo #}
+    <a href="{% url 'dashboard' %}" class="d-flex align-items-center gap-2 text-white text-decoration-none mb-4">
+        <img src="{% static 'favicon.ico' %}" alt="پیجو" width="28" height="28">
+        <span class="font-bold" style="font-size: 1rem;">سامانه پیجو</span>
+    </a>
+
+    {# User info #}
+    <div class="text-white text-opacity-75 text-xs mb-3 px-2">
+        {{ request.user.get_full_name|default:request.user.username }}
+        <span class="d-block text-white text-opacity-50 text-xxs">{{ request.user.profile.get_role_display }}</span>
+    </div>
+
+    {# Navigation #}
+    <ul class="nav nav-pills flex-column gap-1">
+        {% for item in main_menu %}
+            {% if item.children %}
+                {# ── Submenu (collapsible) ── #}
+                <li class="nav-item">
+                    <a href="#submenu-{{ forloop.counter }}"
+                       class="nav-link d-flex align-items-center justify-content-between text-white text-opacity-75
+                              {% if item.expanded %}text-white{% endif %}"
+                       data-bs-toggle="collapse" role="button" aria-expanded="{{ item.expanded|yesno:'true,false' }}">
+                        <span class="d-flex align-items-center gap-2">
+                            <span>{{ item.icon }}</span>
+                            <span>{{ item.label }}</span>
+                        </span>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"
+                             class="menu-arrow" style="transition: transform 0.25s;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+                        </svg>
+                    </a>
+                    <div class="collapse {% if item.expanded %}show{% endif %}" id="submenu-{{ forloop.counter }}">
+                        <ul class="nav flex-column ps-3 mt-1 gap-1 submenu-list">
+                            {% for child in item.children %}
+                                <li>
+                                    <a href="{% url child.url_name %}"
+                                       class="nav-link {% if child.active %}active text-white{% endif %}">
+                                        {{ child.label }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </li>
+            {% else %}
+                {# ── Single item ── #}
+                <li class="nav-item">
+                    <a href="{% url item.url_name %}"
+                       class="nav-link d-flex align-items-center gap-2 text-white text-opacity-75
+                              {% if item.active %}active text-white{% endif %}">
+                        <span>{{ item.icon }}</span>
+                        <span>{{ item.label }}</span>
+                    </a>
+                </li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+</aside>
