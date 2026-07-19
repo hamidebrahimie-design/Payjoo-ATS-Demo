@@ -27,7 +27,7 @@
         بازگشت به داشبورد برنامه‌ریزی
     </a>
     <h3 class="font-bold text-secondary mb-1">تنظیمات الگوریتم برنامه‌ریزی و ظرفیت‌ها</h3>
-    <p class="text-muted text-sm m-0">تعیین پارامترهای پیش‌فرض محاسبه تقویم کاری، SLA اختصاصی و مدیریت روزهای تعطیل سال</p>
+    <p class="text-muted text-sm m-0">تعیین پارامترهای پیش‌فرض محاسبه تقویم کاری، مهلت استاندارد اختصاصی و مدیریت روزهای تعطیل سال</p>
 </div>
 
 <div class="row g-4">
@@ -81,7 +81,7 @@
 
                 <div class="text-start mt-4">
                     <button type="submit" class="btn btn-primary font-bold px-4 py-2" style="border-radius: 8px;">
-                        ذخیره تنظیمات پارامترها
+                        ذخیره تنظیمات
                     </button>
                 </div>
             </form>
@@ -92,7 +92,7 @@
     <div class="col-lg-5">
         <div class="card config-card border-0 p-4 shadow-xs">
             <h5 class="font-bold text-secondary mb-3">مدیریت روزهای تعطیل رسمی</h5>
-            <p class="text-muted text-xxs mb-3">تعطیلات زیر در زمان محاسبه تاریخ پایان برنامه‌ریزی هر مرحله جذب رد خواهند شد.</p>
+            <p class="text-muted text-xxs mb-3">این ایام در محاسبه مدت زمان استخدام و تاریخ پایان فرآیند محاسبه نخواهد شد.</p>
             
             <!-- فرم افزودن تعطیلی -->
             <form action="{% url 'planning_config' %}" method="post" class="p-3 bg-light rounded-3 mb-4" style="border-radius: 10px;">
@@ -118,7 +118,7 @@
             </form>
 
             <!-- لیست تعطیلات ثبت شده -->
-            <div class="overflow-y-auto pe-1" style="max-height: 250px;">
+            <div style="max-height: 300px; overflow-y: auto; overflow-x: visible;">
                 <table class="table align-middle table-sm">
                     <thead>
                         <tr>
@@ -130,16 +130,14 @@
                     <tbody>
                         {% for h in holidays %}
                         <tr>
-                            <td class="text-xs text-secondary">{{ h.title }}</td>
-                            <td class="text-xs font-bold text-secondary text-center">{{ h.date|to_jalali }}</td>
+                            <td class="text-xs font-medium text-body">{{ h.title }}</td>
+                            <td class="text-xs font-bold text-body text-center">{{ h.date|to_jalali|to_persian_digits }}</td>
                             <td class="text-end">
                                 <form action="{% url 'planning_config' %}" method="post" class="m-0 d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="delete_holiday">
                                     <input type="hidden" name="holiday_id" value="{{ h.id }}">
-                                    <button type="submit" class="btn btn-xs btn-outline-danger p-1" style="border-radius: 6px;" onclick="return confirm('آیا از حذف این تعطیلی مطمئن هستید؟');">
-                                        ❌ حذف
-                                    </button>
+                                    <button type="submit" class="btn btn-xs btn-outline-danger py-0.5 px-2" style="border-radius: 6px; font-size: 0.75rem;" onclick="return confirm('آیا از حذف این تعطیلی مطمئن هستید؟');">حذف</button>
                                 </form>
                             </td>
                         </tr>

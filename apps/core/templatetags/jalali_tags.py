@@ -5,13 +5,43 @@ from django.utils import timezone
 
 register = template.Library()
 
+WESTERN_TO_PERSIAN = str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹')
+
+@register.filter(name='to_persian_digits')
+def to_persian_digits(value):
+    if not value:
+        return ''
+    try:
+        return str(value).translate(WESTERN_TO_PERSIAN)
+    except Exception:
+        return value
+
 @register.filter(name='to_jalali')
 def to_jalali(value):
     if not value:
         return ''
     try:
         if isinstance(value, datetime):
-            # Convert to local timezone first if timezone-aware
+            if timezone.is_aware(value):
+                value = timezone.localtime(value)
+            jd = jdatetime.datetime.fromgregorian(datetime=value)
+            result = jd.strftime('%Y/%m/%d - %H:%M')
+        elif isinstance(value, date):
+            jd = jdatetime.date.fromgregorian(date=value)
+            result = jd.strftime('%Y/%m/%d')
+        else:
+            return value
+        return result.translate(WESTERN_TO_PERSIAN)
+    except Exception:
+        return value
+
+@register.filter(name='to_jalali_en')
+def to_jalali_en(value):
+    """Same as to_jalali but with Western (English) digits for form inputs."""
+    if not value:
+        return ''
+    try:
+        if isinstance(value, datetime):
             if timezone.is_aware(value):
                 value = timezone.localtime(value)
             jd = jdatetime.datetime.fromgregorian(datetime=value)

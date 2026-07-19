@@ -3,7 +3,7 @@
     <form hx-post="{% url 'update_admission_date' app.id %}" hx-target="#admission-date-cell-{{ app.id }}" hx-swap="outerHTML" class="m-0 d-flex gap-1 align-items-center">
         {% csrf_token %}
         <input type="text" name="admission_date" id="admission_date_{{ app.id }}" 
-               value="{% if app.admission_date %}{{ app.admission_date|to_jalali }}{% endif %}" 
+               value="{% if app.admission_date %}{{ app.admission_date|to_jalali_en }}{% endif %}" 
                placeholder="تاریخ پذیرش" 
                class="form-control form-control-sm text-center jalali-datepicker-input text-xs" 
                style="font-size: 11px; padding: 2px 4px; border-radius: 6px; max-width: 90px;" 

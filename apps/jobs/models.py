@@ -92,7 +92,7 @@ class JobOpportunity(SoftDeleteModel):
         ('فولاد سنگان', 'فولاد سنگان'),
         ('غیره', 'غیره'),
     ]
-    factory = models.CharField(max_length=100, choices=FACTORY_CHOICES, default='', verbose_name="کارخانه")
+    factory = models.CharField(max_length=100, choices=FACTORY_CHOICES, default='', blank=True, verbose_name="کارخانه")
     department = models.CharField(max_length=100, verbose_name="بخش / دپارتمان")
     unit = models.CharField(max_length=100, blank=True, verbose_name="واحد سازمانی")
     CATEGORY_CHOICES = [

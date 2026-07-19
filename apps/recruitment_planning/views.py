@@ -432,7 +432,7 @@ class PlanningConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
             g_date = parse_jalali_to_gregorian(date_str)
             
             if title and g_date:
-                Holiday.objects.get_or_create(
+                Holiday.objects.update_or_create(
                     date=g_date,
                     defaults={'title': title, 'is_deleted': False}
                 )
@@ -442,7 +442,11 @@ class PlanningConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
         elif action == 'delete_holiday':
             holiday_id = request.POST.get('holiday_id')
             if holiday_id:
-                Holiday.objects.filter(pk=holiday_id).update(is_deleted=True)
+                try:
+                    holiday = Holiday.objects.get(pk=holiday_id, is_deleted=False)
+                    holiday.delete()
+                except Holiday.DoesNotExist:
+                    pass
             return redirect('planning_config')
 
         return redirect('planning_config')
