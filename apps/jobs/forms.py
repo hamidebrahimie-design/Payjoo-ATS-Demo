@@ -15,17 +15,18 @@ class JobOpportunityForm(forms.ModelForm):
     class Meta:
         model = JobOpportunity
         fields = [
-            'request_number', 'title', 'code', 'department', 'unit', 'job_category',
+            'request_number', 'title', 'code', 'factory', 'department', 'unit', 'job_category',
             'headcount', 'recruitment_type', 'assigned_recruiter',
             'workflow', 'status', 'start_date', 'end_date', 'description', 'requirements', 'notes'
         ]
         widgets = {
             'request_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: REQ-1402-001'}),
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: کارشناس ارشد برنامه‌نویسی Python'}),
+            'factory': forms.Select(attrs={'class': 'form-select'}),
             'department': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: مهندسی نرم‌افزار'}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: بخش توسعه فرانت‌اند'}),
             'job_category': forms.Select(attrs={'class': 'form-select'}),
-            'headcount': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'headcount': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 9999, 'maxlength': 4, 'style': 'max-width: 120px'}),
             'recruitment_type': forms.Select(attrs={'class': 'form-select'}),
             'assigned_recruiter': forms.Select(attrs={'class': 'form-select'}),
             'workflow': forms.Select(attrs={'class': 'form-select'}),
@@ -71,6 +72,18 @@ class JobOpportunityForm(forms.ModelForm):
         if not CentralCompetency.objects.filter(post_code=code, is_deleted=False).exists():
             raise ValidationError("پست سازمانی انتخاب شده در بانک شایستگی‌ها وجود ندارد.")
         return code
+
+    def clean_request_number(self):
+        request_number = self.cleaned_data.get('request_number')
+        if not request_number:
+            return request_number
+        # Check uniqueness among non-deleted records (exclude current instance if editing)
+        qs = JobOpportunity.objects.filter(request_number=request_number, is_deleted=False)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("این شماره درخواست قبلاً ثبت شده است. لطفاً شماره دیگری وارد کنید.")
+        return request_number
 
     def clean_start_date(self):
         val = self.cleaned_data.get('start_date')

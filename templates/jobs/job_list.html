@@ -118,12 +118,14 @@
                 </select>
             </div>
 
-            <!-- نوع استخدام -->
+            <!-- کارخانه -->
             <div class="col-6 col-md-4 col-lg-3">
-                <label for="id_recruitment_type" class="form-label text-xs font-bold text-muted mb-1">👥 نوع استخدام</label>
-                <select name="recruitment_type" id="id_recruitment_type" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه موارد">
-                    {% for code, label in recruitment_choices %}
-                        <option value="{{ code }}" {% if code in filters.recruitment_type %}selected{% endif %}>{{ label }}</option>
+                <label for="id_factory" class="form-label text-xs font-bold text-muted mb-1">🏭 کارخانه</label>
+                <select name="factory" id="id_factory" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه کارخانه‌ها">
+                    {% for code, label in factory_choices %}
+                        {% if code %}
+                        <option value="{{ code }}" {% if code in filters.factory %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
                     {% endfor %}
                 </select>
             </div>
@@ -134,16 +136,6 @@
                 <select name="job_category" id="id_job_category" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه رده‌ها">
                     {% for code, label in category_choices %}
                         <option value="{{ code }}" {% if code in filters.job_category %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- منبع ایجاد -->
-            <div class="col-6 col-md-4 col-lg-3">
-                <label for="id_source" class="form-label text-xs font-bold text-muted mb-1">📥 منبع ایجاد</label>
-                <select name="source" id="id_source" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه منابع">
-                    {% for code, label in source_choices %}
-                        <option value="{{ code }}" {% if code in filters.source %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -178,8 +170,28 @@
                     <tr>
                         <th class="ps-4 align-middle">
                             <a href="{% sort_url 'code' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                کد / شماره درخواست
+                                کد پست
                                 {% if current_sort == 'code' %}
+                                    {% if current_order == 'asc' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                                        </svg>
+                                    {% else %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    {% endif %}
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="align-middle">
+                            <a href="{% sort_url 'request_number' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
+                                شماره درخواست
+                                {% if current_sort == 'request_number' %}
                                     {% if current_order == 'asc' %}
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
@@ -325,8 +337,10 @@
                     {% for job in jobs %}
                     <tr id="job-{{ job.id }}">
                         <td class="ps-4">
-                            <span class="font-medium text-primary d-block">{{ job.code }}</span>
-                            <span class="text-muted text-xs">درخواست: {{ job.request_number }}</span>
+                            <span class="font-medium text-primary">{{ job.code }}</span>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ job.request_number }}</span>
                         </td>
                         <td class="font-semibold">{{ job.title }}</td>
                         <td>

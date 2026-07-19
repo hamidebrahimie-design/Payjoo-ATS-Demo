@@ -38,6 +38,7 @@ def apply_job_filters(queryset, params):
     sources = get_clean_list('source')
     recruitment_types = get_clean_list('recruitment_type')
     job_categories = get_clean_list('job_category')
+    factories = get_clean_list('factory')
     
     if q:
         q_norm = normalize_digits(q)
@@ -60,6 +61,8 @@ def apply_job_filters(queryset, params):
         queryset = queryset.filter(recruitment_type__in=recruitment_types)
     if job_categories:
         queryset = queryset.filter(job_category__in=job_categories)
+    if factories:
+        queryset = queryset.filter(factory__in=factories)
         
     return queryset
 
@@ -111,6 +114,7 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         
         sort_mapping = {
             'code': ['code'],
+            'request_number': ['request_number'],
             'title': ['title'],
             'department': ['department', 'unit'],
             'headcount': ['headcount'],
@@ -159,6 +163,7 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         context['source_choices'] = JobOpportunity.SOURCE_CHOICES
         context['recruitment_choices'] = JobOpportunity.RECRUITMENT_TYPE_CHOICES
         context['category_choices'] = JobOpportunity.CATEGORY_CHOICES
+        context['factory_choices'] = JobOpportunity.FACTORY_CHOICES
         
         def get_clean_list(key):
             vals = self.request.GET.getlist(key)
@@ -175,6 +180,7 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
             'source': get_clean_list('source'),
             'recruitment_type': get_clean_list('recruitment_type'),
             'job_category': get_clean_list('job_category'),
+            'factory': get_clean_list('factory'),
         }
         
         # Count active filters

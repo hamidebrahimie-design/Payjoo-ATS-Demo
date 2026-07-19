@@ -77,6 +77,13 @@
                     {% endif %}
                 </div>
                 <div class="col-md-4">
+                    <label class="form-label font-medium text-secondary">کارخانه</label>
+                    {{ form.factory }}
+                    {% if form.factory.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.factory.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
                     <label class="form-label font-medium text-secondary">بخش / دپارتمان</label>
                     {{ form.department }}
                     {% if form.department.errors %}
@@ -97,14 +104,14 @@
                     <div class="text-danger text-xs mt-1">{{ form.job_category.errors.0 }}</div>
                     {% endif %}
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-2">
                     <label class="form-label font-medium text-secondary">ظرفیت جذب (تعداد)</label>
                     {{ form.headcount }}
                     {% if form.headcount.errors %}
                     <div class="text-danger text-xs mt-1">{{ form.headcount.errors.0 }}</div>
                     {% endif %}
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label font-medium text-secondary">نوع استخدام</label>
                     {{ form.recruitment_type }}
                     {% if form.recruitment_type.errors %}

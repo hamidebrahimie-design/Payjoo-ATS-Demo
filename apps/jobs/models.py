@@ -79,9 +79,20 @@ class JobOpportunity(SoftDeleteModel):
         ('CONTRACTUAL', 'قراردادی / پروژه‌ای'),
     ]
 
-    request_number = models.CharField(max_length=50, verbose_name="شماره درخواست")
+    request_number = models.CharField(max_length=50, db_index=True, verbose_name="شماره درخواست")
     title = models.CharField(max_length=100, verbose_name="عنوان شغل")
     code = models.CharField(max_length=50, verbose_name="کد شغل")
+    FACTORY_CHOICES = [
+        ('', '---------'),
+        ('فولاد مبارکه', 'فولاد مبارکه'),
+        ('مجتمع فولاد و نورد سبا', 'مجتمع فولاد و نورد سبا'),
+        ('فولاد هرمزگان', 'فولاد هرمزگان'),
+        ('فولاد امیرکبیر', 'فولاد امیرکبیر'),
+        ('فولاد سفیددشت', 'فولاد سفیددشت'),
+        ('فولاد سنگان', 'فولاد سنگان'),
+        ('غیره', 'غیره'),
+    ]
+    factory = models.CharField(max_length=100, choices=FACTORY_CHOICES, default='', verbose_name="کارخانه")
     department = models.CharField(max_length=100, verbose_name="بخش / دپارتمان")
     unit = models.CharField(max_length=100, blank=True, verbose_name="واحد سازمانی")
     CATEGORY_CHOICES = [
@@ -130,12 +141,6 @@ class JobOpportunity(SoftDeleteModel):
                 name='unique_request_number_active',
                 violation_error_message="یک فرصت شغلی فعال با این شماره درخواست از قبل وجود دارد."
             ),
-            models.UniqueConstraint(
-                fields=['code'],
-                condition=models.Q(is_deleted=False),
-                name='unique_code_active',
-                violation_error_message="یک فرصت شغلی فعال با این کد شغل از قبل وجود دارد."
-            )
         ]
 
     def __str__(self):
