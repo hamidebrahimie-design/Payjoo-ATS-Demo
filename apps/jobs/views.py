@@ -104,6 +104,15 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def get_paginate_by(self, queryset):
+        per_page = self.request.GET.get('per_page', '10')
+        if per_page == 'all':
+            return 100000  # Large enough to show all records
+        try:
+            return int(per_page)
+        except (ValueError, TypeError):
+            return 10
+
     def get_queryset(self):
         from django.db.models import Count, Q
         queryset = JobOpportunity.objects.filter(is_deleted=False)
@@ -147,12 +156,19 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         # Pass current sorting details to template
         context['current_sort'] = self.request.GET.get('sort', 'created_at').strip()
         context['current_order'] = self.request.GET.get('order', 'desc').strip()
+        context['current_per_page'] = self.request.GET.get('per_page', '10')
         
         # Clean current parameters to attach to pagination links
         query_params = self.request.GET.copy()
         if 'page' in query_params:
             del query_params['page']
         context['query_params'] = query_params.urlencode()
+        
+        # Query params without per_page (for per_page selector links)
+        base_params = query_params.copy()
+        if 'per_page' in base_params:
+            del base_params['per_page']
+        context['base_query_params'] = base_params.urlencode()
         
         # Get unique departments/units for filter dropdowns (only non-empty)
         context['departments'] = JobOpportunity.objects.filter(is_deleted=False).exclude(department='').values_list('department', flat=True).distinct().order_by('department')
