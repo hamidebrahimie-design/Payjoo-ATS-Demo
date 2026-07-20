@@ -236,7 +236,8 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">نام و نام خانوادگی</th>
-                        <th>کد ملی / پرسنلی</th>
+                        <th>کد ملی</th>
+                        <th>کد پرسنلی</th>
                         <th>اطلاعات تماس</th>
                         <th>درخواست‌های فعال</th>
                         <th class="pe-4 text-end">عملیات</th>
@@ -250,15 +251,10 @@
                                 {{ candidate.first_name }} {{ candidate.last_name }}
                             </a>
                         </td>
-                        <td class="font-medium text-muted">
-                            <div>{{ candidate.national_id }}</div>
-                            {% if candidate.personnel_number %}
-                            <div class="text-xs text-primary font-semibold mt-1">پرسنلی: {{ candidate.personnel_number }}</div>
-                            {% endif %}
-                        </td>
+                        <td class="font-medium text-muted">{{ candidate.national_id|default:"-" }}</td>
+                        <td class="font-medium text-muted">{{ candidate.personnel_number|default:"-" }}</td>
                         <td>
                             <div class="text-sm font-semibold">{{ candidate.phone_number }}</div>
-                            <div class="text-muted text-xs mb-1">{{ candidate.email }}</div>
                             
                             <!-- نمایش نمرات ارزیابی‌های قبلی متقاضی -->
                             {% with scores=candidate.stage_scores %}
