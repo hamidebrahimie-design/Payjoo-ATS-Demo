@@ -112,7 +112,7 @@
         <a href="{% url 'sla_delays_dashboard' %}" class="text-decoration-none h-100 d-block">
             <div class="card premium-card kpi-card p-3 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="text-muted text-xs font-semibold">متقاضیان خارج از SLA</span>
+                    <span class="text-muted text-xs font-semibold">متقاضیان خارج از مهلت استاندارد</span>
                     <span class="badge bg-danger bg-opacity-10 text-danger text-xxs px-2 py-1 font-bold">هشدار</span>
                 </div>
                 <div class="fs-3 font-bold text-danger mb-0">{{ delayed_candidates_count }}</div>
@@ -302,15 +302,15 @@
     <!-- متقاضیان معلق و لاگ ممیزی -->
     <div class="col-md-6">
         <div class="row g-3">
-            <!-- متقاضیان خارج از SLA -->
+            <!-- متقاضیان خارج از مهلت استاندارد -->
             <div class="col-12">
                 <div class="card premium-card bg-white border-start border-3 border-danger">
                     <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h5 class="card-title font-semibold text-danger m-0 text-sm">⚠️ متقاضیان خارج از SLA (دارای تأخیر)</h5>
+                        <h5 class="card-title font-semibold text-danger m-0 text-sm">⚠️ متقاضیان خارج از مهلت استاندارد (دارای تأخیر)</h5>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-danger bg-opacity-10 text-danger text-xxs font-bold">{{ delayed_candidates_count }} مورد</span>
                             <a href="{% url 'sla_delays_dashboard' %}" class="btn btn-xs btn-outline-danger font-bold text-xxs py-1 px-2.5" style="border-radius: 6px; font-size: 10px;">
-                                میز کار تأخیرات SLA ←
+                                میز کار تأخیرات مهلت استاندارد ←
                             </a>
                         </div>
                     </div>
@@ -356,7 +356,7 @@
                             </div>
                             <div class="col-6">
                                 <div class="p-2.5 bg-light rounded-3 text-right" style="border: 1px solid #e2e8f0; border-radius: 8px;">
-                                    <span class="text-xxs text-muted d-block mb-1">نرخ انحراف از SLA</span>
+                                    <span class="text-xxs text-muted d-block mb-1">نرخ انحراف از مهلت استاندارد</span>
                                     <strong class="{% if sla_violation_rate > 25 %}text-danger{% elif sla_violation_rate > 10 %}text-warning{% else %}text-success{% endif %} text-xs">
                                         {{ sla_violation_rate }}٪
                                     </strong>

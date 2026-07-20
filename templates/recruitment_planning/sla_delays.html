@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load jalali_tags %}
-{% block title %}میز کار مانیتورینگ تأخیرات SLA | سامانه پیجو{% endblock %}
+{% block title %}میز کار مانیتورینگ تأخیرات مهلت استاندارد | سامانه پیجو{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
@@ -93,8 +93,8 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-end mb-4">
     <div>
-        <h3 class="font-bold text-secondary mb-1">⏳ میز کار مانیتورینگ تأخیرات SLA</h3>
-        <p class="text-muted text-sm m-0">رصد هوشمند تأخیرات متقاضیان فعال بر اساس زمان استاندارد (SLA) مراحل ارزیابی</p>
+        <h3 class="font-bold text-secondary mb-1">⏳ میز کار مانیتورینگ تأخیرات مهلت استاندارد</h3>
+        <p class="text-muted text-sm m-0">رصد هوشمند تأخیرات متقاضیان فعال بر اساس مهلت استاندارد مراحل ارزیابی</p>
     </div>
     <div>
         <a href="{% url 'planning_dashboard' %}" class="btn btn-outline-secondary font-bold text-xs d-flex align-items-center gap-1.5 py-2 px-3" style="border-radius: 8px;">
@@ -117,7 +117,7 @@
     <div class="col-md-3">
         <div class="card kpi-card border-0 p-4 shadow-xs">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-muted text-xs font-semibold">دارای تأخیر SLA</span>
+                <span class="text-muted text-xs font-semibold">دارای تأخیر مهلت استاندارد</span>
                 <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-1 text-xxs font-bold">DELAYED</span>
             </div>
             <h2 class="font-bold text-danger m-0">{{ total_delayed_count }} <small class="text-xs text-muted font-normal">نفر</small></h2>
@@ -237,7 +237,7 @@
                                 <th class="py-3" style="width: 15%;">مرحله جاری</th>
                                 <th class="py-3" style="width: 15%;">تاریخ ورود به مرحله</th>
                                 <th class="py-3 text-center" style="width: 10%;">مدت حضور (روز)</th>
-                                <th class="py-3 text-center" style="width: 8%;">سقف SLA</th>
+                                <th class="py-3 text-center" style="width: 8%;">سقف مهلت استاندارد</th>
                                 <th class="py-3 text-center" style="width: 10%;">میزان تأخیر</th>
                                 <th class="py-3 text-end pe-4" style="width: 12%;">اقدام</th>
                             </tr>
@@ -293,7 +293,7 @@
         <div class="text-muted mb-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="text-success"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
         </div>
-        <h5 class="font-bold text-secondary mb-1">تبریک! هیچ تأخیر SLA فعالی وجود ندارد</h5>
+        <h5 class="font-bold text-secondary mb-1">تبریک! هیچ تأخیر مهلت استاندارد فعالی وجود ندارد</h5>
         <p class="text-muted text-xs m-0">تمامی متقاضیان در بازه زمانی استاندارد در حال بررسی هستند.</p>
     </div>
     {% endfor %}
