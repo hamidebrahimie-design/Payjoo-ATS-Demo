@@ -1,19 +1,19 @@
-{% extends "base.html" %}
+{% extends "base_page.html" %}
 {% block title %}الگوهای فرآیند استخدام{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h3 class="font-semibold text-secondary mb-1">الگوهای فرآیند استخدام</h3>
-        <p class="text-muted text-sm m-0">تعریف فرآیندهای استخدامی استاندارد و تعیین مراحل ارزیابی پیش‌فرض جهت کاهش خطا و افزایش کارایی</p>
-    </div>
-    <a href="{% url 'workflow_add' %}" class="btn btn-primary-custom d-flex align-items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        افزودن الگوی جدید
-    </a>
-</div>
+{% block page_title %}الگوهای فرآیند استخدام{% endblock %}
+
+{% block actions %}
+        <a href="{% url 'workflow_add' %}" class="btn btn-sm btn-primary-custom d-flex align-items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            افزودن الگوی جدید
+        </a>
+{% endblock %}
+
+{% block page_content %}
+<p class="text-muted text-sm mb-4">تعریف فرآیندهای استخدامی استاندارد و تعیین مراحل ارزیابی پیش‌فرض جهت کاهش خطا و افزایش کارایی</p>
 
 <div class="card premium-card">
     <div class="card-body p-0">

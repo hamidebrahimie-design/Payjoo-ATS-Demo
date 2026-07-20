@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_page.html" %}
 {% block title %}{% if object %}ویرایش متقاضی: {{ object.first_name }} {{ object.last_name }}{% else %}افزودن متقاضی جدید{% endif %}{% endblock %}
 
 {% block extra_head %}
@@ -22,7 +22,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block page_content %}
 <div class="mb-4">
     <a href="{% if object %}{% url 'candidate_detail' object.id %}{% else %}{% url 'candidate_list' %}{% endif %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

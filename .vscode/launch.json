@@ -1,0 +1,36 @@
+{
+    "version":  "0.2.0",
+    "configurations":  [
+                           {
+                               "request":  "launch",
+                               "program":  "D:\\Payjoo-ATS-Demo\\runner.py",
+                               "cwd":  "D:\\Payjoo-ATS-Demo",
+                               "console":  "integratedTerminal",
+                               "name":  "Payjoo ATS Server",
+                               "type":  "python",
+                               "python":  "C:\\Users\\PC\\AppData\\Roaming\\LobsterAI\\runtimes\\python-win\\python.exe",
+                               "env":  {
+                                           "DJANGO_SETTINGS_MODULE":  "ats.settings",
+                                           "PYTHONPATH":  "D:\\Payjoo-ATS-Demo"
+                                       }
+                           },
+                           {
+                               "args":  [
+                                            "runserver",
+                                            "0.0.0.0:8000",
+                                            "--noreload"
+                                        ],
+                               "type":  "python",
+                               "cwd":  "D:\\Payjoo-ATS-Demo",
+                               "python":  "C:\\Users\\PC\\AppData\\Roaming\\LobsterAI\\runtimes\\python-win\\python.exe",
+                               "name":  "Payjoo ATS (runserver)",
+                               "module":  "django.core.management",
+                               "env":  {
+                                           "DJANGO_SETTINGS_MODULE":  "ats.settings",
+                                           "PYTHONPATH":  "D:\\Payjoo-ATS-Demo"
+                                       },
+                               "console":  "integratedTerminal",
+                               "request":  "launch"
+                           }
+                       ]
+}

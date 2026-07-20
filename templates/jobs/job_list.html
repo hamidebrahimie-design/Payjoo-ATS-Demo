@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_page.html" %}
 {% load jalali_tags %}
 {% block title %}مدیریت فرصت‌های شغلی{% endblock %}
 
@@ -6,7 +6,6 @@
 <!-- Tom Select CSS -->
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
-    /* Premium RTL styling for Tom Select */
     .ts-wrapper.multi .ts-control > div {
         margin: 2px 0 2px 4px !important;
         padding: 3px 6px !important;
@@ -14,32 +13,13 @@
         color: #1e293b !important;
         border-radius: 4px !important;
     }
-    .ts-dropdown {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    .ts-control {
-        font-size: 0.825rem !important;
-        border-radius: 0.375rem !important;
-        border: 1px solid #dee2e6 !important;
-        padding: 6px 12px !important;
-    }
-    .ts-control input {
-        font-size: 0.825rem !important;
-    }
-    .ts-wrapper.single .ts-control {
-        background-image: none !important;
-    }
-    /* Sorting headers styles */
-    .hover-primary {
-        transition: color 0.15s ease-in-out;
-    }
-    .hover-primary:hover {
-        color: var(--bs-primary) !important;
-    }
-    .animate-bounce-subtle {
-        animation: bounceSubtle 1s infinite alternate;
-    }
+    .ts-dropdown { direction: rtl !important; text-align: right !important; }
+    .ts-control { font-size: 0.825rem !important; border-radius: 0.375rem !important; border: 1px solid #dee2e6 !important; padding: 6px 12px !important; }
+    .ts-control input { font-size: 0.825rem !important; }
+    .ts-wrapper.single .ts-control { background-image: none !important; }
+    .hover-primary { transition: color 0.15s ease-in-out; }
+    .hover-primary:hover { color: var(--bs-primary) !important; }
+    .animate-bounce-subtle { animation: bounceSubtle 1s infinite alternate; }
     @keyframes bounceSubtle {
         from { transform: translateY(0); }
         to { transform: translateY(-1px); }
@@ -47,13 +27,9 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-    <div>
-        <h3 class="font-semibold text-secondary mb-1">فرصت‌های شغلی</h3>
-        <p class="text-muted text-sm m-0">تعریف فرصت‌های شغلی جدید و تنظیم مراحل و وزن‌های پویای فرآیند ارزیابی متقاضیان</p>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
+{% block page_title %}فرصت‌های شغلی{% endblock %}
+
+{% block actions %}
         <a href="{% url 'job_export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16">
                 <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
@@ -75,8 +51,10 @@
             افزودن فرصت شغلی جدید
         </a>
         {% endif %}
-    </div>
-</div>
+{% endblock %}
+
+{% block page_content %}
+<p class="text-muted text-sm mb-4">تعریف فرصت‌های شغلی جدید و تنظیم مراحل و وزن‌های پویای فرآیند ارزیابی متقاضیان</p>
 
 <!-- بخش فیلترهای پیشرفته -->
 <div class="card premium-card mb-4 shadow-sm border-0 bg-light-subtle">

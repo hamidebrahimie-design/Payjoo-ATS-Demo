@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_page.html" %}
 {% load jalali_tags %}
 {% block title %}تنظیمات برنامه‌ریزی جذب | سامانه پیجو{% endblock %}
 
@@ -18,7 +18,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block page_content %}
 <div class="mb-4">
     <a href="{% url 'planning_dashboard' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 mb-2" style="border-radius: 6px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">

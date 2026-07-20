@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_page.html" %}
 {% load jalali_tags %}
 {% block title %}پایپلاین ارزیابی: {{ job.title }}{% endblock %}
 
@@ -40,7 +40,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block page_content %}
 {% if job.has_all_evaluations_completed %}
 <div class="alert alert-success alert-dismissible fade show mb-4 border-2 border-success border-opacity-25 shadow-sm p-4 rounded-3 d-flex align-items-center gap-3" role="alert">
     <div class="bg-success bg-opacity-10 p-2.5 rounded-circle text-success">
