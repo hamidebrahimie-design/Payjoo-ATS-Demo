@@ -144,6 +144,20 @@ class JobOpportunity(SoftDeleteModel):
         null=True, blank=True, verbose_name="پایان غربالگری"
     )
 
+    # -- فاز ۱.۲: کد آزمون و آزمون کتبی --
+    exam_code = models.CharField(
+        max_length=50, blank=True, null=True, verbose_name="کد آزمون"
+    )
+    has_written_exam = models.BooleanField(
+        default=False, verbose_name="آزمون کتبی دارد"
+    )
+    written_exam_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ آزمون کتبی"
+    )
+    written_exam_result_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ اعلام نتایج کتبی"
+    )
+
     class Meta:
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"
