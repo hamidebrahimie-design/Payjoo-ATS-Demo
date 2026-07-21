@@ -44,12 +44,6 @@
             خروجی اکسل
         </a>
         {% if user.profile.can_manage_jobs %}
-        <button type="button" data-bs-toggle="modal" data-bs-target="#bulkStatusModal" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-            </svg>
-            تغییر وضعیت دسته‌جمعی
-        </button>
         <a href="{% url 'job_add' %}" class="btn btn-sm btn-primary-custom d-flex align-items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -544,44 +538,6 @@
     {% endif %}
 </div>
 
-<!-- Modal for Bulk Status Change -->
-{% if user.profile.can_manage_jobs %}
-<div class="modal fade" id="bulkStatusModal" tabindex="-1" aria-labelledby="bulkStatusModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title font-semibold text-secondary text-sm" id="bulkStatusModalLabel">⚙️ تغییر وضعیت دسته‌جمعی فرصت‌های شغلی</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'job_bulk_status_update' %}" method="post">
-                {% csrf_token %}
-                <div class="modal-body py-3">
-                    <p class="text-xs text-muted mb-3">کدهای فرصت شغلی مورد نظر را وارد کرده (هر خط یک کد یا با ویرگول جدا شده) و وضعیت جدید را انتخاب نمایید.</p>
-                    
-                    <div class="mb-3">
-                        <label for="bulk_job_codes" class="form-label text-xs font-bold text-muted mb-1">کدهای فرصت شغلی</label>
-                        <textarea class="form-control text-sm font-monospace" name="job_codes" id="bulk_job_codes" rows="5" placeholder="DEV-100&#10;SYS-101&#10;..." required style="direction: ltr; text-align: left;"></textarea>
-                    </div>
-                    
-                    <div>
-                        <label for="bulk_new_status" class="form-label text-xs font-bold text-muted mb-1">وضعیت جدید</label>
-                        <select class="form-select text-sm" name="new_status" id="bulk_new_status" required>
-                            <option value="">-- انتخاب وضعیت جدید --</option>
-                            {% for code, label in status_choices %}
-                                <option value="{{ code }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 pt-0">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
-                    <button type="submit" class="btn btn-sm btn-primary-custom">اعمال تغییر وضعیت</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
 <div id="deleteJobModalContainer"></div>
 {% endblock %}
 
