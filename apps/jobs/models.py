@@ -169,6 +169,21 @@ class JobOpportunity(SoftDeleteModel):
         null=True, blank=True, verbose_name="تاریخ مصاحبه"
     )
 
+    # -- فاز ۱.۴: کانون و نتیجه نهایی --
+    assessment_referral_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ معرفی به کانون"
+    )
+    assessment_result_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ اعلام نتیجه کانون"
+    )
+    final_result_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ اعلام نتیجه نهایی"
+    )
+    final_result_letter_number = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="شماره نامه اعلام نتیجه نهایی"
+    )
+
     class Meta:
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"
@@ -225,7 +240,110 @@ class JobOpportunity(SoftDeleteModel):
     def has_exam_stage(self):
         return self.stages.filter(stage_type='EXAM', is_deleted=False).exists()
 
+    # -- فاز ۲: @property methods آماری --
+    @property
+    def registered_count(self):
+        """تعداد کل متقاضیان ثبت‌نام کرده"""
+        return self.applications.filter(is_deleted=False).count()
 
+    @property
+    def qualified_count(self):
+        """تعداد متقاضیانی که هنوز در فرآیند هستند (رد نشده‌اند)"""
+        return self.applications.filter(
+            is_deleted=False,
+            status__in=['IN_PROGRESS', 'RESERVE', 'SELECTED']
+        ).count()
+
+    @property
+    def current_stage_name(self):
+        """نام مرحله فعلی بر اساس وضعیت فرصت شغلی"""
+        stage = self.current_stage
+        if stage:
+            return stage.name
+        return dict(self.STATUS_CHOICES).get(self.status, '-')
+
+    @property
+    def written_exam_attendees(self):
+        """تعداد شرکت‌کنندگان در آزمون کتبی"""
+        from django.db.models import Count
+        exam_stages = self.stages.filter(stage_type='EXAM', is_deleted=False)
+        if not exam_stages.exists():
+            return 0
+        exam_stage = exam_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=exam_stage,
+            stage_states__is_deleted=False,
+            stage_states__score__gt=0
+        ).distinct().count()
+
+    @property
+    def written_exam_passed(self):
+        """تعداد قبول‌شدگان آزمون کتبی"""
+        exam_stages = self.stages.filter(stage_type='EXAM', is_deleted=False)
+        if not exam_stages.exists():
+            return 0
+        exam_stage = exam_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=exam_stage,
+            stage_states__is_deleted=False,
+            stage_states__status='COMPLETED'
+        ).distinct().count()
+
+    @property
+    def skill_exam_attendees(self):
+        """تعداد شرکت‌کنندگان در آزمون مهارتی"""
+        skill_stages = self.stages.filter(stage_type='SKILL_TEST', is_deleted=False)
+        if not skill_stages.exists():
+            return 0
+        skill_stage = skill_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=skill_stage,
+            stage_states__is_deleted=False,
+            stage_states__score__gt=0
+        ).distinct().count()
+
+    @property
+    def interview_invited(self):
+        """تعداد دعوت‌شدگان به مصاحبه"""
+        interview_stages = self.stages.filter(stage_type='INTERVIEW', is_deleted=False)
+        if not interview_stages.exists():
+            return 0
+        interview_stage = interview_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=interview_stage,
+            stage_states__is_deleted=False
+        ).distinct().count()
+
+    @property
+    def interview_attendees(self):
+        """تعداد شرکت‌کنندگان در مصاحبه"""
+        interview_stages = self.stages.filter(stage_type='INTERVIEW', is_deleted=False)
+        if not interview_stages.exists():
+            return 0
+        interview_stage = interview_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=interview_stage,
+            stage_states__is_deleted=False,
+            stage_states__score__gt=0
+        ).distinct().count()
+
+    @property
+    def assessment_referred(self):
+        """تعداد معرفی‌شدگان به کانون ارزیابی"""
+        assessment_stages = self.stages.filter(stage_type='ASSESSMENT', is_deleted=False)
+        if not assessment_stages.exists():
+            return 0
+        assessment_stage = assessment_stages.first()
+        return self.applications.filter(
+            is_deleted=False,
+            stage_states__stage=assessment_stage,
+            stage_states__is_deleted=False
+        ).distinct().count()
 
     def get_status_from_stage_name(self, stage_name):
         name_lower = stage_name.lower()

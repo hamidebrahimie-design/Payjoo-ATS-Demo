@@ -1,5 +1,6 @@
 {
     "python.terminal.activateEnvironment":  false,
     "files.autoSave":  "onFocusChange",
-    "python.defaultInterpreterPath":  "C:\\Users\\PC\\AppData\\Roaming\\LobsterAI\\runtimes\\python-win\\python.exe"
+    "python.defaultInterpreterPath": "C:\\Users\\PC\\AppData\\Roaming\\LobsterAI\\runtimes\\python-win\\python.exe",
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }
