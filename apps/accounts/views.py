@@ -7,7 +7,9 @@ from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.http import HttpResponse
-from django.db.models import Count
+from django.db.models import Count, F, Avg, Value, IntegerField, ExpressionWrapper, Q
+from django.core.cache import cache
+import pickle
 
 from .forms import PersianLoginForm, UserCreationForm, UserUpdateForm
 from .models import UserProfile
@@ -142,6 +144,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
+
+        # Cache key includes include_closed param
+        include_closed_param = self.request.GET.get('include_closed', '')
+        include_closed = include_closed_param in ('1', 'true', 'on')
+        data['include_closed'] = include_closed
+        cache_key = f'dashboard_stats_v1_{"closed" if include_closed else "active"}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            data.update(cached)
+            return data
+
         from apps.jobs.models import JobOpportunity
         from apps.candidates.models import Candidate, JobApplication, ApplicationStageState
         from apps.core.models import AuditLog
@@ -163,10 +176,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'selected_candidates': selected_candidates,
         })
         
-        # ۲. توزیع وضعیت فرصت‌های شغلی
+        # ۲. توزیع وضعیت فرصت‌های شغلی — یک کوئری با annotate
+        status_counts = dict(
+            JobOpportunity.objects.filter(is_deleted=False)
+            .values('status')
+            .annotate(count=Count('id'))
+            .values_list('status', 'count')
+        )
+        status_label_map = dict(JobOpportunity.STATUS_CHOICES)
         job_status_distribution = []
-        for status_key, status_label in JobOpportunity.STATUS_CHOICES:
-            count = JobOpportunity.objects.filter(status=status_key, is_deleted=False).count()
+        for status_key, status_label in status_label_map.items():
+            count = status_counts.get(status_key, 0)
             if count > 0:
                 job_status_distribution.append({
                     'label': status_label,
@@ -208,11 +228,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         data['stage_people_stats'] = stage_people_stats
 
         # ۴. محاسبه میانگین زمان حضور در هر مرحله (روز)
-        # پارامتر include_closed: اگر True باشد، متقاضیان اتمام‌یافته هم در محاسبه لحاظ می‌شوند
-        include_closed_param = self.request.GET.get('include_closed', '')
-        include_closed = include_closed_param in ('1', 'true', 'on')
-        data['include_closed'] = include_closed
-
         completed_states_qs = ApplicationStageState.objects.filter(
             status__in=['COMPLETED', 'FAILED'],
             is_deleted=False,
@@ -220,16 +235,38 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'application__job', 'stage'
         ).prefetch_related(
             'application__stage_states__stage'
+        ).annotate(
+            # Compute days: for stage 1 use start_date, for others use prior stage end date
+            stage_duration=ExpressionWrapper(
+                F('evaluation_date') - F('application__created_at__date'),
+                output_field=IntegerField()
+            )
         )
         if not include_closed:
             completed_states_qs = completed_states_qs.exclude(
                 application__job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']
             )
 
-        # Cache application references on stage states to prevent DB lookup when accessing state.application
-        completed_states_list = list(completed_states_qs)
+        # Compute average days per stage type using DB-level aggregation
+        avg_stage_data = completed_states_qs.values('stage__stage_type').annotate(
+            avg_days=Avg(
+                ExpressionWrapper(
+                    F('evaluation_date') - F('application__created_at__date'),
+                    output_field=IntegerField()
+                )
+            ),
+            count=Count('id')
+        )
+        avg_lookup = {item['stage__stage_type']: item for item in avg_stage_data}
+
+        # Compute detailed per-stage times for bottleneck analysis
+        completed_states_list = list(completed_states_qs.only(
+            'id', 'evaluation_date', 'updated_at', 'stage__stage_type', 'stage__sequence',
+            'application__created_at', 'application__job__start_date'
+        ))
         for state in completed_states_list:
             app = state.application
+            # Assign application ref manually to avoid extra queries
             for s in app.stage_states.all():
                 s.application = app
 
@@ -273,6 +310,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         avg_stage_days = []
         for stype in STAGE_TYPE_ORDER:
+            db_data = avg_lookup.get(stype, {})
             durations = stage_times.get(stype)
             if durations:
                 avg_stage_days.append({
@@ -285,8 +323,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 avg_stage_days.append({
                     'stage_type': stype,
                     'stage_name': STAGE_TYPE_LABELS.get(stype, stype),
-                    'avg_days': 0,
-                    'count': 0
+                    'avg_days': round(float(db_data.get('avg_days', 0)), 1) if db_data.get('avg_days') else 0,
+                    'count': db_data.get('count', 0)
                 })
         data['avg_stage_days'] = avg_stage_days
         
@@ -309,25 +347,27 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).exclude(
             job__status__in=['CLOSED', 'CANCELLED', 'SUSPENDED']
         ).select_related(
-            'candidate', 'job', 'job__recruitment_plan', 'current_stage'
+            'candidate', 'job', 'current_stage'
         ).prefetch_related(
-            'job__stages',
             'stage_states__stage',
-            'job__recruitment_plan__stage_plans'
+            'job__stages',
+        ).annotate(
+            days_since_creation=ExpressionWrapper(
+                Value(timezone.now().date()) - F('created_at__date'),
+                output_field=IntegerField()
+            )
+        ).only(
+            'id', 'created_at', 'candidate__id', 'candidate__first_name',
+            'candidate__last_name', 'candidate__phone_number',
+            'job__id', 'job__title', 'job__status', 'job__start_date',
+            'job__department', 'current_stage__id', 'current_stage__name',
+            'current_stage__stage_type', 'current_stage__sequence'
         )
         
         in_progress_apps_list = list(in_progress_apps)
-        # Assign application back-reference on child states
         for app in in_progress_apps_list:
             for s in app.stage_states.all():
                 s.application = app
-
-        for app in in_progress_apps_list:
-            job = app.job
-            job_stages = list(job.stages.all())
-            stage = next((s for s in job_stages if s.stage_type == job.status and not s.is_deleted), None)
-            if not stage:
-                stage = app.current_stage or next((s for s in sorted(job_stages, key=lambda s: s.sequence) if not s.is_deleted), None)
             
             if not stage:
                 continue
@@ -661,11 +701,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             })
         data['education_stats'] = education_stats
 
-        # ۴. تحلیل نرخ موفقیت و وضعیت کل درخواست‌ها
+        # ۴. تحلیل نرخ موفقیت و وضعیت کل درخواست‌ها — یک کوئری با annotate
         app_status_dist = []
         total_apps = JobApplication.objects.filter(is_deleted=False).count()
-        for stat_key, stat_label in JobApplication.STATUS_CHOICES:
-            count = JobApplication.objects.filter(status=stat_key, is_deleted=False).count()
+        app_status_counts = dict(
+            JobApplication.objects.filter(is_deleted=False)
+            .values('status')
+            .annotate(count=Count('id'))
+            .values_list('status', 'count')
+        )
+        app_label_map = dict(JobApplication.STATUS_CHOICES)
+        for stat_key, stat_label in app_label_map.items():
+            count = app_status_counts.get(stat_key, 0)
             percentage = round((count / total_apps) * 100, 1) if total_apps > 0 else 0
             app_status_dist.append({
                 'label': stat_label,
@@ -674,6 +721,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'key': stat_key
             })
         data['app_status_dist'] = app_status_dist
+
+        # Cache the heavy analytical data (exclude non-pickleable objects like view, request, etc.)
+        cacheable_data = {}
+        for k, v in data.items():
+            if k not in ('view', 'request', 'top_applicants', 'top_talents', 'recent_activities'):
+                try:
+                    import pickle
+                    pickle.dumps(v)
+                    cacheable_data[k] = v
+                except (pickle.PicklingError, TypeError):
+                    pass
+        cache.set(cache_key, cacheable_data, 300)  # 5 minutes
 
         return data
 

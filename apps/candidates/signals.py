@@ -347,6 +347,13 @@ def render_notification_template(template_text, candidate, job, stage_name=None,
 
 # --- رسیورهای سیگنال مدل درخواست همکاری (JobApplication) ---
 
+@receiver(post_save, sender=JobApplication)
+def invalidate_dashboard_cache_on_jobapp_change(sender, instance, **kwargs):
+    """هنگام ایجاد یا تغییر وضعیت JobApplication، کش داشبورد پاک می‌شود"""
+    from django.core.cache import cache
+    cache.delete('dashboard_stats_v1_active')
+    cache.delete('dashboard_stats_v1_closed')
+
 @receiver(pre_save, sender=JobApplication)
 def track_job_app_old_status(sender, instance, **kwargs):
     if instance.pk:
@@ -425,6 +432,14 @@ def track_stage_state_old_values(sender, instance, **kwargs):
         instance._old_status = None
         instance._old_date = None
         instance._old_time = None
+
+@receiver(post_save, sender=ApplicationStageState)
+def invalidate_dashboard_cache_on_stage_change(sender, instance, **kwargs):
+    """هنگام تغییر وضعیت مرحله ارزیابی، کش داشبورد پاک می‌شود"""
+    from django.core.cache import cache
+    cache.delete('dashboard_stats_v1_active')
+    cache.delete('dashboard_stats_v1_closed')
+
 
 @receiver(post_save, sender=ApplicationStageState)
 def handle_stage_state_notification(sender, instance, created, **kwargs):
