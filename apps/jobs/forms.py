@@ -6,6 +6,70 @@ from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, Workf
 class JobOpportunityForm(forms.ModelForm):
     start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}))
     end_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۱۲/۲۹'}))
+
+    # -- فاز ۱.۱: فیلدهای تاریخی اولیه --
+    initial_meeting_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰১'}
+        )
+    )
+    registration_start_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    registration_end_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    screening_end_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+
+    # -- فاز ۱.۲: آزمون کتبی --
+    written_exam_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    written_exam_result_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+
+    # -- فاز ۱.۳: آزمون مهارتی و مصاحبه --
+    skill_exam_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    interview_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+
+    # -- فاز ۱.۴: کانون ارزیابی و نتیجه نهایی --
+    assessment_referral_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    assessment_result_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+    final_result_date = forms.CharField(
+        required=False, widget=forms.TextInput(
+            attrs={'class': 'form-control date-picker', 'placeholder': '۱۴۰۲/۰۱/۰۱'}
+        )
+    )
+
     code = forms.CharField(
         required=True,
         label="کد و عنوان پست سازمانی",
@@ -17,7 +81,19 @@ class JobOpportunityForm(forms.ModelForm):
         fields = [
             'request_number', 'title', 'code', 'factory', 'department', 'unit', 'job_category',
             'headcount', 'recruitment_type', 'assigned_recruiter',
-            'workflow', 'status', 'start_date', 'end_date', 'description', 'requirements', 'notes'
+            'workflow', 'status',
+            'start_date', 'end_date',
+            # -- فاز ۱.۱: تاریخی اولیه --
+            'initial_meeting_date', 'registration_start_date', 'registration_end_date',
+            'screening_end_date',
+            # -- فاز ۱.۲: آزمون کتبی --
+            'exam_code', 'has_written_exam', 'written_exam_date', 'written_exam_result_date',
+            # -- فاز ۱.۳: آزمون مهارتی و مصاحبه --
+            'has_skill_exam', 'skill_exam_date', 'interview_date',
+            # -- فاز ۱.۴: کانون و نتیجه نهایی --
+            'assessment_referral_date', 'assessment_result_date',
+            'final_result_date', 'final_result_letter_number',
+            'description', 'requirements', 'notes'
         ]
         widgets = {
             'request_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: REQ-1402-001'}),
@@ -31,6 +107,11 @@ class JobOpportunityForm(forms.ModelForm):
             'assigned_recruiter': forms.Select(attrs={'class': 'form-select'}),
             'workflow': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
+            # -- فاز ۱.۱ -- 
+            'exam_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: EX-1402-001'}),
+            'has_written_exam': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_skill_exam': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'final_result_letter_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'شماره نامه اعلام نتیجه نهایی'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'شرح وظایف و مسئولیت‌های شغلی'}),
             'requirements': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'سوابق کار، مهارت‌های تخصصی و مدارک تحصیلی مورد نیاز'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'یادداشت‌های اداری و داخلی جذب'}),
@@ -59,12 +140,19 @@ class JobOpportunityForm(forms.ModelForm):
 
         if self.instance and self.instance.pk:
             import jdatetime
-            if self.instance.start_date:
-                jd = jdatetime.date.fromgregorian(date=self.instance.start_date)
-                self.initial['start_date'] = jd.strftime('%Y/%m/%d')
-            if self.instance.end_date:
-                jd = jdatetime.date.fromgregorian(date=self.instance.end_date)
-                self.initial['end_date'] = jd.strftime('%Y/%m/%d')
+            date_fields = [
+                'start_date', 'end_date',
+                'initial_meeting_date', 'registration_start_date', 'registration_end_date',
+                'screening_end_date',
+                'written_exam_date', 'written_exam_result_date',
+                'skill_exam_date', 'interview_date',
+                'assessment_referral_date', 'assessment_result_date', 'final_result_date',
+            ]
+            for fld in date_fields:
+                val = getattr(self.instance, fld, None)
+                if val:
+                    jd = jdatetime.date.fromgregorian(date=val)
+                    self.initial[fld] = jd.strftime('%Y/%m/%d')
 
     def clean_code(self):
         code = self.cleaned_data.get('code')
@@ -108,6 +196,52 @@ class JobOpportunityForm(forms.ModelForm):
             return jd.togregorian()
         except Exception:
             raise ValidationError("تاریخ وارد شده معتبر نیست. فرمت صحیح: سال/ماه/روز (مثال: ۱۴۰۲/۰۱/۰۱)")
+
+    # -- فاز ۱.۱: پاک‌کننده‌های تاریخ --
+    def _clean_jdate(self, field_name):
+        val = self.cleaned_data.get(field_name)
+        if not val:
+            return None
+        try:
+            import jdatetime
+            parts = [int(p) for p in val.split('/')]
+            jd = jdatetime.date(parts[0], parts[1], parts[2])
+            return jd.togregorian()
+        except Exception:
+            raise ValidationError(f"تاریخ {self.fields[field_name].label} معتبر نیست. فرمت صحیح: سال/ماه/روز")
+
+    def clean_initial_meeting_date(self):
+        return self._clean_jdate('initial_meeting_date')
+
+    def clean_registration_start_date(self):
+        return self._clean_jdate('registration_start_date')
+
+    def clean_registration_end_date(self):
+        return self._clean_jdate('registration_end_date')
+
+    def clean_screening_end_date(self):
+        return self._clean_jdate('screening_end_date')
+
+    def clean_written_exam_date(self):
+        return self._clean_jdate('written_exam_date')
+
+    def clean_written_exam_result_date(self):
+        return self._clean_jdate('written_exam_result_date')
+
+    def clean_skill_exam_date(self):
+        return self._clean_jdate('skill_exam_date')
+
+    def clean_interview_date(self):
+        return self._clean_jdate('interview_date')
+
+    def clean_assessment_referral_date(self):
+        return self._clean_jdate('assessment_referral_date')
+
+    def clean_assessment_result_date(self):
+        return self._clean_jdate('assessment_result_date')
+
+    def clean_final_result_date(self):
+        return self._clean_jdate('final_result_date')
 
 
 class BaseJobOpportunityStageFormSet(BaseInlineFormSet):
