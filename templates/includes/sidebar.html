@@ -28,6 +28,7 @@
         <div class="collapse {% if 'jobs' in request.path or 'workflows' in request.path %}show{% endif %}" id="menu-jobs">
             <div class="pj-submenu">
                 <a href="{% url 'job_list' %}" class="pj-sub-item {% if 'jobs' in request.path and 'workflows' not in request.path %}active{% endif %}">فرصت‌های شغلی</a>
+                <a href="{% url 'job_add' %}" class="pj-sub-item">جزئیات فرصت شغلی</a>
                 {% if user.profile.is_recruitment_staff %}
                 <a href="{% url 'workflow_list' %}" class="pj-sub-item {% if 'workflows' in request.path %}active{% endif %}">الگوهای فرآیند استخدام</a>
                 {% endif %}
