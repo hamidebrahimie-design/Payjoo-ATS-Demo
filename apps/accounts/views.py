@@ -368,6 +368,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         for app in in_progress_apps_list:
             for s in app.stage_states.all():
                 s.application = app
+            job = app.job
+            stage = app.current_stage
             
             if not stage:
                 continue
