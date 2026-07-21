@@ -130,6 +130,20 @@ class JobOpportunity(SoftDeleteModel):
     end_date = models.DateField(null=True, blank=True, verbose_name="تاریخ پایان")
     notes = models.TextField(blank=True, verbose_name="یادداشت‌های داخلی")
 
+    # -- فاز ۱.۱: فیلدهای تاریخی اولیه --
+    initial_meeting_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ جلسه اولیه"
+    )
+    registration_start_date = models.DateField(
+        null=True, blank=True, verbose_name="شروع ثبت‌نام"
+    )
+    registration_end_date = models.DateField(
+        null=True, blank=True, verbose_name="پایان ثبت‌نام"
+    )
+    screening_end_date = models.DateField(
+        null=True, blank=True, verbose_name="پایان غربالگری"
+    )
+
     class Meta:
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"
