@@ -158,6 +158,17 @@ class JobOpportunity(SoftDeleteModel):
         null=True, blank=True, verbose_name="تاریخ اعلام نتایج کتبی"
     )
 
+    # -- فاز ۱.۳: آزمون مهارتی و مصاحبه --
+    has_skill_exam = models.BooleanField(
+        default=False, verbose_name="آزمون مهارتی دارد"
+    )
+    skill_exam_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ آزمون مهارتی"
+    )
+    interview_date = models.DateField(
+        null=True, blank=True, verbose_name="تاریخ مصاحبه"
+    )
+
     class Meta:
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"
