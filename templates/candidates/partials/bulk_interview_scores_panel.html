@@ -86,9 +86,9 @@
     <input type="hidden" name="job_id" value="{{ job.id }}">
     <input type="hidden" name="stage_id" value="{{ stage.id }}">
 
-    <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-        <table class="table table-sm table-bordered align-middle mb-0" id="bulkScoreTable">
-            <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+    <div class="pj-table-wrapper" style="max-height: 420px; overflow-y: auto;">
+        <table class="table table-sm pj-table pj-table-responsive-card align-middle mb-0" id="bulkScoreTable">
+            <thead class="sticky-top" style="top: 0; z-index: 1;">
                 <tr>
                     <th class="text-xs font-semibold py-2 px-2" style="min-width: 200px;">متقاضی</th>
                     {% for iv in default_interviewers %}

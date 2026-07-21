@@ -118,9 +118,9 @@
                 <div class="tab-content" id="integrityTabContent">
                     <!-- Tab 1: Import issues -->
                     <div class="tab-pane fade show active" id="import-pane" role="tabpanel" aria-labelledby="import-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                        <div class="pj-table-wrapper">
+                            <table class="pj-table pj-table-responsive-card">
+                                <thead>
                                     <tr>
                                         <th class="ps-3" style="width: 200px;">متقاضی / فرصت شغلی</th>
                                         <th>شرح تضاد و مغایرت</th>
@@ -206,9 +206,9 @@
                     
                     <!-- Tab 2: User entry issues -->
                     <div class="tab-pane fade" id="user-pane" role="tabpanel" aria-labelledby="user-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                        <div class="pj-table-wrapper">
+                            <table class="pj-table pj-table-responsive-card">
+                                <thead>
                                     <tr>
                                         <th class="ps-3" style="width: 200px;">متقاضی / فرصت شغلی</th>
                                         <th>شرح تضاد و مغایرت</th>
@@ -303,9 +303,9 @@
                 <h6 class="font-semibold text-secondary m-0">⚙️ لاگ فعالیت‌ها و لغو تغییرات (Undo)</h6>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                <div class="pj-table-wrapper">
+                    <table class="pj-table pj-table-responsive-card">
+                        <thead>
                             <tr>
                                 <th class="ps-3 text-xs" style="width: 105px;">زمان</th>
                                 <th class="text-xs">کاربر</th>
@@ -316,19 +316,19 @@
                         <tbody id="integrity-actions-body">
                             {% for log in recent_actions %}
                             <tr id="action-log-row-{{ log.id }}">
-                                <td class="ps-3 text-xxs text-muted">{{ log.timestamp|to_jalali }}</td>
-                                <td class="text-xxs font-medium">
+                                <td class="ps-3 text-xxs text-muted" data-label="زمان">{{ log.timestamp|to_jalali }}</td>
+                                <td class="text-xxs font-medium" data-label="کاربر">
                                     {% if log.user %}
                                         {{ log.user.get_full_name|default:log.user.username }}
                                     {% else %}
                                         سیستم
                                     {% endif %}
                                 </td>
-                                <td class="text-xxs">
+                                <td class="text-xxs" data-label="عملیات">
                                     <span class="font-semibold text-secondary">{{ log.get_action_type_display }}</span>
                                     <div class="text-muted mt-0.5" style="font-size: 8px;">{{ log.model_name }} (ID: {{ log.object_id }})</div>
                                 </td>
-                                <td class="pe-3 text-end">
+                                <td class="pe-3 text-end" data-label="لغو">
                                     <button class="btn btn-outline-danger btn-xxs py-0.5 px-1.5" style="font-size: 8px;"
                                             hx-post="{% url 'undo_integrity_action' log.id %}" 
                                             hx-target="#action-log-row-{{ log.id }}" 
@@ -338,9 +338,7 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center py-4 text-muted text-xxs">هنوز هیچ تغییری در لاگ ثبت نشده است.</td>
-                            </tr>
+                            {% include "includes/table_empty.html" with colspan=4 message="هنوز هیچ تغییری در لاگ ثبت نشده است." icon="fas fa-history" %}
                             {% endfor %}
                         </tbody>
                     </table>

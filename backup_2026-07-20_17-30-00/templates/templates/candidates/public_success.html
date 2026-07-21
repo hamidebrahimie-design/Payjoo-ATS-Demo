@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}ثبت‌نام موفقیت‌آمیز{% endblock %}
+
+{% block extra_head %}
+<style>
+    .success-card {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        max-width: 550px;
+        margin: 4rem auto;
+        padding: 3rem 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card success-card text-center shadow-sm">
+        <div class="avatar-circle mx-auto mb-4 d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success font-semibold fs-1" style="width: 80px; height: 80px; border-radius: 50%;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+        </div>
+        
+        <h3 class="font-bold text-secondary mb-3">ثبت‌نام شما با موفقیت انجام شد!</h3>
+        <p class="text-muted text-sm lh-lg mb-4">
+            درخواست همکاری شما با موفقیت در سیستم ثبت گردید و پرونده ارزیابی استخدامی شما تشکیل شد. 
+            شما می‌توانید وضعیت پرونده خود را در هر زمان از طریق بخش پیگیری درخواست‌ها رصد نمایید.
+        </p>
+        
+        <div class="d-flex flex-column gap-2 max-width-xs mx-auto" style="max-width: 280px;">
+            <a href="{% url 'careers_track' %}" class="btn btn-primary-custom py-2">پیگیری وضعیت درخواست‌ها</a>
+            <a href="{% url 'careers_list' %}" class="btn btn-outline-secondary py-2">بازگشت به فرصت‌های شغلی</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

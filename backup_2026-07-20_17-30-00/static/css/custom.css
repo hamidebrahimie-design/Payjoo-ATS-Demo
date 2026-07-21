@@ -1,0 +1,258 @@
+/* Custom Premium RTL CSS for Payjo (formerly ATS) */
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #0f172a;
+    --primary-opacity-10: rgba(79, 70, 229, 0.1);
+    --bg-light: #f8fafc;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --border-radius: 8px;
+}
+
+body {
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-light);
+    color: #1e293b;
+    direction: rtl;
+    text-align: right;
+    margin: 0;
+    min-height: 100vh;
+    font-size: 0.875rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sidebar Styling - Compact & Sleek */
+.sidebar {
+    background-color: var(--secondary-color);
+    color: #f8fafc;
+    min-width: 230px;
+    max-width: 230px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    right: 0;
+    overflow-y: auto;
+    z-index: 1030;
+    transition: all 0.2s ease;
+}
+
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar .nav-link {
+    color: #94a3b8;
+    padding: 8px 16px;
+    border-radius: 6px;
+    margin: 2px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    transition: all 0.15s ease;
+}
+
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--primary-color);
+}
+
+/* Navbar Styling - Compact */
+.navbar-custom {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 24px;
+    font-size: 0.85rem;
+}
+
+/* Card Styling - Compact & Elegant */
+.premium-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+}
+
+.premium-card:hover {
+    box-shadow: var(--card-shadow-hover);
+}
+
+/* Glassmorphism for Login */
+.login-bg {
+    background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.05), 0 8px 16px -8px rgb(0 0 0 / 0.05);
+}
+
+/* Compact Form Controls */
+.form-control, .form-select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Compact Buttons */
+.btn-primary-custom {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+}
+
+.btn-primary-custom:hover {
+    background-color: var(--primary-hover);
+    color: #ffffff;
+}
+
+/* Compact Bootstrap Buttons Globally */
+.btn:not(.btn-xs):not(.btn-lg) {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+}
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+}
+
+/* Table Compacting */
+.table th, .table td {
+    padding: 8px 12px !important;
+    font-size: 0.825rem;
+}
+.table thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Badge role colors */
+.badge-role-admin { background-color: #ef4444; color: #ffffff; }
+.badge-role-hr { background-color: #f59e0b; color: #ffffff; }
+.badge-role-recruiter { background-color: #10b981; color: #ffffff; }
+.badge-role-interviewer { background-color: #3b82f6; color: #ffffff; }
+
+/* Utilities */
+.text-xs { font-size: 0.725rem; }
+.text-sm { font-size: 0.825rem; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+
+/* Custom CSS Variables Overrides for Themes */
+body.theme-indigo {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #0f172a;
+    --primary-opacity-10: rgba(79, 70, 229, 0.1);
+}
+body.theme-emerald {
+    --primary-color: #059669;
+    --primary-hover: #047857;
+    --secondary-color: #064e3b;
+    --primary-opacity-10: rgba(5, 150, 105, 0.1);
+}
+body.theme-slate {
+    --primary-color: #334155;
+    --primary-hover: #1e293b;
+    --secondary-color: #0f172a;
+    --primary-opacity-10: rgba(51, 65, 85, 0.1);
+}
+body.theme-sunset {
+    --primary-color: #ea580c;
+    --primary-hover: #c2410c;
+    --secondary-color: #431407;
+    --primary-opacity-10: rgba(234, 88, 12, 0.1);
+}
+body.theme-crimson {
+    --primary-color: #db2777;
+    --primary-hover: #be185d;
+    --secondary-color: #500724;
+    --primary-opacity-10: rgba(219, 39, 119, 0.1);
+}
+
+/* Bootstrap theme overrides dynamically linked to variables */
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+}
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+.bg-primary.bg-opacity-10 {
+    background-color: var(--primary-opacity-10) !important;
+}
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+/* Font Families */
+body.font-vazir {
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+body.font-yekan {
+    font-family: 'Yekan Bakh', 'YekanBakh', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+body.font-shabnam {
+    font-family: 'Shabnam', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+body.font-samim {
+    font-family: 'Samim', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Dynamic Font Sizing using root html scaling */
+html.size-small {
+    font-size: 12.5px !important;
+}
+html.size-medium {
+    font-size: 14.5px !important;
+}
+html.size-large {
+    font-size: 16.5px !important;
+}
+html.size-xlarge {
+    font-size: 18px !important;
+}

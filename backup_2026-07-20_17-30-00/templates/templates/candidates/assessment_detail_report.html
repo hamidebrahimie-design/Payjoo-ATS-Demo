@@ -1,0 +1,224 @@
+{% extends "base_page.html" %}
+{% load jalali_tags %}
+{% block title %}کارنامه کانون ارزیابی: {{ state.application.candidate.first_name }} {{ state.application.candidate.last_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    @media print {
+        aside.sidebar, nav.navbar, .no-print {
+            display: none !important;
+        }
+        main {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .container-print {
+            border: none !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            padding: 0 !important;
+        }
+        body {
+            background-color: #fff !important;
+        }
+        .card {
+            border: 1px solid #ccc !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<!-- Control bar (hidden during print) -->
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <a href="{% url 'assessment_center_report' %}" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+        <span>← بازگشت به لیست کارنامه‌ها</span>
+    </a>
+    <button onclick="window.print();" class="btn btn-sm btn-primary d-flex align-items-center gap-2 px-4 shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 1.603a1.5 1.5 0 0 1-1.485 1.714H7.595a1.5 1.5 0 0 1-1.485-1.714L6.34 18m11.32 0A12.01 12.01 0 0 0 18 15.75v-3.75a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v3.75m12 0a12.01 12.01 0 0 1-11.32 0M19.5 9.75h.008v.008h-.008V9.75Zm-3-3h.008v.008h-.008V6.75Z" />
+        </svg>
+        <span>🖨 چاپ کارنامه / ذخیره به عنوان PDF</span>
+    </button>
+</div>
+
+<!-- Print Container Sheet -->
+<div class="card premium-card container-print p-4 bg-white border border-slate shadow-sm" style="border-radius: 12px;">
+    <!-- Report Header -->
+    <div class="row align-items-center border-bottom border-slate pb-4 mb-4">
+        <div class="col-md-8 text-start">
+            <h4 class="font-bold text-secondary mb-1">کارنامه نهایی کانون ارزیابی شایستگی‌محور</h4>
+            <p class="text-muted text-sm m-0">سامانه هوشمند جذب و استخدام پیجو</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="text-muted text-xs">تاریخ گزارش: {{ today_jalali }}</div>
+            <div class="text-muted text-xs mt-1">شناسه ارزیابی کانون: #AC-{{ state.id }}</div>
+        </div>
+    </div>
+
+    <!-- Candidate and Opportunity Metadata Grid -->
+    <div class="bg-light bg-opacity-50 border border-slate p-3 rounded-3 mb-4">
+        <h6 class="font-bold text-secondary mb-3 border-bottom border-slate pb-2" style="font-size: 0.9rem;">اطلاعات متقاضی و فرصت شغلی</h6>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <span class="text-muted text-xs d-block mb-1">نام و نام خانوادگی متقاضی</span>
+                <span class="font-semibold text-secondary">{{ state.application.candidate.first_name }} {{ state.application.candidate.last_name }}</span>
+            </div>
+            <div class="col-md-3">
+                <span class="text-muted text-xs d-block mb-1">کد ملی</span>
+                <span class="font-semibold text-secondary">{{ state.application.candidate.national_id }}</span>
+            </div>
+            <div class="col-md-3">
+                <span class="text-muted text-xs d-block mb-1">فرصت شغلی درخواست شده</span>
+                <span class="font-semibold text-secondary">{{ state.application.job.title }}</span>
+            </div>
+            <div class="col-md-3">
+                <span class="text-muted text-xs d-block mb-1">مرحله ارزیابی کانون</span>
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded text-xs">{{ state.stage.name }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessors list -->
+    <div class="mb-4">
+        <h6 class="font-bold text-secondary mb-2" style="font-size: 0.9rem;">ارزیابان کانون و مصاحبه‌گران مشارکت‌کننده</h6>
+        <div class="d-flex flex-wrap gap-2">
+            {% for iscore in iscores %}
+                <span class="badge bg-slate text-secondary border border-slate px-3 py-2 rounded text-xs font-semibold">
+                    👤 {{ iscore.interviewer.get_full_name|default:iscore.interviewer.username }}
+                </span>
+            {% empty %}
+                <span class="text-muted text-xs">ارزیابی ثبت نشده است.</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Competency Breakdown Table -->
+    <div class="mb-4">
+        <h6 class="font-bold text-secondary mb-3" style="font-size: 0.9rem;">ریز نمرات و ارزیابی شایستگی‌ها</h6>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th rowspan="2" class="align-middle text-start ps-3" style="width: 250px;">عنوان شایستگی کانون</th>
+                        <th rowspan="2" class="align-middle" style="width: 100px;">وزن شایستگی</th>
+                        <th colspan="{{ iscores|length }}" class="align-middle">نمرات ارزیابان مستقل</th>
+                        <th rowspan="2" class="align-middle" style="width: 120px;">میانگین شایستگی</th>
+                    </tr>
+                    <tr>
+                        {% for iscore in iscores %}
+                            <th class="text-center text-xs py-1" style="font-weight: 500;">
+                                {{ iscore.interviewer.get_full_name|default:iscore.interviewer.username }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in comp_rows %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="font-semibold text-secondary">{{ row.competency.name }}</div>
+                            </td>
+                            <td class="text-center text-muted font-medium">
+                                {{ row.competency.weight }}٪
+                            </td>
+                            {% for score_detail in row.scores %}
+                                <td class="text-center font-semibold text-secondary">
+                                    {{ score_detail.score|default:"-" }}
+                                    {% if score_detail.notes %}
+                                        <small class="text-muted d-block font-normal mt-0.5" style="font-size: 9px;">({{ score_detail.notes }})</small>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-center font-bold text-secondary bg-light bg-opacity-30" id="comp-avg-{{ row.competency.id }}">
+                                <!-- JS Calculated or visually loaded -->
+                                <span class="comp-avg-value"></span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Final Summary Box -->
+    <div class="row align-items-stretch mt-4 mb-4 g-3">
+        <div class="col-md-8">
+            <div class="border border-slate rounded-3 p-3 h-100">
+                <h6 class="font-bold text-secondary mb-2" style="font-size: 0.85rem;">یادداشت عمومی و توضیحات نهایی کانون</h6>
+                <p class="text-muted text-xs m-0 lh-base" style="white-space: pre-wrap;">{{ state.notes|default:"توضیحات و جمع‌بندی نهایی توسط ارزیاب ارشد ثبت نگردیده است." }}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="rounded-3 p-3 h-100 text-white d-flex flex-column justify-content-between text-center" style="background: linear-gradient(135deg, #1e293b, #0f172a);">
+                <div>
+                    <span class="opacity-75 text-xs d-block mb-1">امتیاز نهایی کانون ارزیابی (میانگین وزنی)</span>
+                    <span class="fs-1 font-bold">{{ state.score|floatformat:1 }}</span>
+                </div>
+                <div class="mt-2 border-top border-secondary border-opacity-40 pt-2 text-xs">
+                    حد نصاب قبولی: <span class="font-bold">{{ state.stage.passing_score }}</span> | 
+                    وضعیت: 
+                    <span class="font-bold">
+                        {% if state.status == 'COMPLETED' %}
+                            <span class="text-success">قبول</span>
+                        {% else %}
+                            <span class="text-danger">مردود</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessor Signatures -->
+    <div class="row mt-5 pt-4 border-top border-slate no-print" style="opacity: 0.8;">
+        <div class="col text-center">
+            <div class="text-xs text-muted mb-5">محل امضاء ارزیاب(ها)</div>
+            <div class="border-bottom border-slate w-50 mx-auto"></div>
+        </div>
+        <div class="col text-center">
+            <div class="text-xs text-muted mb-5">تایید مدیریت منابع انسانی / کانون ارزیابی</div>
+            <div class="border-bottom border-slate w-50 mx-auto"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Calculate and render each competency average score across assessors
+        document.querySelectorAll('tr').forEach(row => {
+            let cells = row.querySelectorAll('td');
+            if (cells.length > 2) {
+                let sum = 0.0;
+                let count = 0;
+                let avgCell = cells[cells.length - 1];
+                
+                // Read assessor score cells (between weight cell and average cell)
+                for (let i = 2; i < cells.length - 1; i++) {
+                    // Extract text score, convert to float
+                    let valStr = cells[i].textContent.trim().split('(')[0].trim();
+                    let val = parseFloat(valStr);
+                    if (!isNaN(val)) {
+                        sum += val;
+                        count++;
+                    }
+                }
+                
+                if (count > 0) {
+                    let avg = sum / count;
+                    let avgSpan = avgCell.querySelector('.comp-avg-value');
+                    if (avgSpan) {
+                        avgSpan.textContent = avg.toFixed(2);
+                    }
+                } else {
+                    let avgSpan = avgCell.querySelector('.comp-avg-value');
+                    if (avgSpan) {
+                        avgSpan.textContent = '-';
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

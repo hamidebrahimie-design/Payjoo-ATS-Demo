@@ -1,0 +1,404 @@
+{% extends "base_page.html" %}
+{% block title %}پشتیبان‌گیری و بازگردانی سیستم | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    }
+    .accent-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .warning-box {
+        background-color: #fffbeb;
+        border-right: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="font-bold text-secondary mb-1">پشتیبان‌گیری و بازگردانی کل سیستم</h3>
+        <p class="text-muted text-sm m-0">تهیه نسخه پشتیبان کامل از دیتابیس و فایل‌های رزومه متقاضیان، یا بازگردانی سیستم به وضعیت قبل</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- بخش تهیه نسخه پشتیبان -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card glass-card border-0 h-100 p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-primary bg-opacity-10 text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v6.75m0 0l-3-3m3 3l3-3m-8.25 6h10.5a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 3.75H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">تهیه نسخه پشتیبان (Backup)</h5>
+                    <p class="text-muted text-xs m-0">دانلود یک فایل ZIP فشرده شامل کل اطلاعات دیتابیس و رزومه‌ها</p>
+                </div>
+            </div>
+            
+            <div class="flex-grow-1 text-sm text-secondary mb-4">
+                <p>با کلیک بر روی دکمه زیر، سامانه یک فایل زیپ فشرده شامل موارد زیر را تولید کرده و برای شما دانلود می‌کند:</p>
+                <ul class="ps-3 mb-3">
+                    <li class="mb-1">تمام اطلاعات جداول پایگاه داده (کاربران، متقاضیان، آزمون‌ها، نمرات و لاگ‌ها).</li>
+                    <li class="mb-1">تمام فایل‌های ضمیمه‌شده و رزومه‌های آپلود شده توسط متقاضیان.</li>
+                </ul>
+                <p class="text-muted text-xs">توصیه می‌شود قبل از انجام کارهای حیاتی یا به‌روزرسانی سیستم، یک نسخه پشتیبان دانلود و در جای امن نگهداری کنید.</p>
+            </div>
+            
+            <form action="{% url 'download_backup' %}" method="post" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary-custom w-100 py-2.5 font-bold d-flex align-items-center justify-content-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    دانلود فایل پشتیبان کامل سیستم (.zip)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- بخش بازگردانی نسخه پشتیبان -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card glass-card border-0 h-100 p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-danger bg-opacity-10 text-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3-3m-3 3l-3-3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">بازگردانی نسخه پشتیبان (Restore)</h5>
+                    <p class="text-muted text-xs m-0">بارگذاری فایل پشتیبان و بازگردانی اطلاعات سیستم به زمان دلخواه</p>
+                </div>
+            </div>
+
+            <div class="warning-box mb-4">
+                <div class="d-flex gap-2">
+                    <span class="text-warning font-bold">⚠️ هشدار بسیار مهم:</span>
+                </div>
+                <p class="text-xs text-secondary m-0 mt-1.5" style="line-height: 1.6;">
+                    عملیات بازگردانی، **تمام اطلاعات جاری سیستم را به طور کامل پاک کرده** و اطلاعات دیتابیس و فایل‌های رزومه فایل زیپ آپلود شده را جایگزین می‌کند. 
+                    حتماً قبل از انجام بازگردانی، **یک نسخه پشتیبان از دیتابیس فعلی خود دانلود کنید** تا در صورت نیاز به بازگشت، داده‌های جاری خود را داشته باشید.
+                </p>
+            </div>
+
+            <form action="{% url 'restore_backup' %}" method="post" enctype="multipart/form-data" class="m-0" id="restore-form">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label font-semibold text-xs text-secondary mb-2">انتخاب فایل پشتیبان معتبر (.zip یا .sqlite3):</label>
+                    <input type="file" name="backup_file" accept=".zip,.sqlite3" class="form-control text-sm" required style="border-radius: 8px;">
+                    <div class="form-text text-xxs text-muted mt-1.5">فایل زیپ کامل پشتیبان (.zip) یا فایل پایگاه داده مستقیم (.sqlite3) قابل قبول هستند. (اگر مک‌بوک شما فایل زیپ دانلود شده را خودکار استخراج کرده، می‌توانید مستقیماً فایل دیتابیس استخراج شده را آپلود کنید.)</div>
+                </div>
+                
+                <button type="submit" class="btn btn-outline-danger w-100 py-2.5 font-bold d-flex align-items-center justify-content-center gap-2" 
+                        onclick="return confirm('آیا از بازگردانی اطلاعات مطمئن هستید؟ این عمل غیرقابل بازگشت است و تمام داده‌های فعلی را حذف می‌کند.');">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    شروع عملیات بازگردانی اطلاعات
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- بخش به‌روزرسانی سیستم -->
+    <div class="col-lg-4 col-md-12">
+        <div class="card glass-card border-0 h-100 p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="accent-icon bg-warning bg-opacity-10 text-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0">به‌روزرسانی سامانه (Update)</h5>
+                    <p class="text-muted text-xs m-0">دریافت آخرین نسخه نرم‌افزار مستقیم از مخزن گیت‌هاب</p>
+                </div>
+            </div>
+
+            <div class="flex-grow-1 text-sm text-secondary mb-3">
+                <div id="update-status-container" 
+                     hx-get="{% url 'system_update_check' %}" 
+                     hx-trigger="load" 
+                     class="h-100">
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="spinner-border text-primary spinner-border-sm mb-2" role="status" id="update-spinner"></div>
+                        <span class="text-xs text-muted">در حال بررسی نسخه‌های جدید...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- دکمه راه‌اندازی مجدد دستی سرور -->
+            <div class="mt-auto pt-3 border-top">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="font-bold text-xs text-secondary d-block">راه‌اندازی مجدد دستی سرور</span>
+                        <span class="text-muted text-xxs">راه‌اندازی مجدد موتور وب‌سرور برای اعمال تنظیمات جدید</span>
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm py-1.5 px-3 font-semibold text-xs" onclick="startSystemRestart();" style="border-radius: 8px;">
+                        ریست سرور
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function startSystemUpdate(event) {
+        event.preventDefault();
+        
+        if (!confirm("آیا از به‌روزرسانی خودکار سیستم اطمینان دارید؟ این فرآیند فایل‌های کد را دانلود کرده و پایگاه داده را به‌روزرسانی می‌کند.")) {
+            return;
+        }
+        
+        const container = document.getElementById('update-status-container');
+        
+        // Render progress UI
+        container.innerHTML = `
+            <div class="d-flex flex-column justify-content-center h-100 py-4">
+                <h6 class="font-bold text-secondary text-xs mb-3 text-right">در حال به‌روزرسانی سیستم...</h6>
+                <div class="progress mb-2.5" style="height: 12px; border-radius: 6px; background-color: #f1f5f9; overflow: hidden;">
+                    <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 5%;" aria-valuenow="5" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="update-progress-percent" class="text-xxs font-bold text-warning">۵٪</span>
+                    <span id="update-progress-status" class="text-xxs text-muted">در حال دریافت کدهای جدید از گیت‌هاب...</span>
+                </div>
+            </div>
+        `;
+        
+        const progressBar = document.getElementById('update-progress-bar');
+        const progressPercent = document.getElementById('update-progress-percent');
+        const progressStatus = document.getElementById('update-progress-status');
+        
+        let currentPercent = 5;
+        const progressInterval = setInterval(() => {
+            if (currentPercent < 75) {
+                currentPercent += Math.floor(Math.random() * 3) + 1;
+                if (currentPercent > 75) currentPercent = 75;
+                progressBar.style.width = currentPercent + '%';
+                progressPercent.textContent = currentPercent + '٪';
+            }
+        }, 300);
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch("{% url "system_update_run" %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            clearInterval(progressInterval);
+            if (response.ok) {
+                progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-info";
+                progressBar.style.width = '80%';
+                progressPercent.textContent = '۸۰٪';
+                progressPercent.className = "text-xxs font-bold text-info";
+                progressStatus.textContent = 'کدها با موفقیت به‌روز شدند. در حال ریستارت سرور...';
+                
+                pollHealthCheck(80);
+            } else {
+                response.text().then(errorHtml => {
+                    container.innerHTML = `
+                        <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="text-danger mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                            </svg>
+                            <span class="text-xs font-semibold text-danger mb-2">خطا در فرآیند به‌روزرسانی</span>
+                            <div class="w-100 mb-3" style="max-height: 150px; overflow-y: auto;">${errorHtml}</div>
+                            <button class="btn btn-sm btn-outline-secondary px-3" onclick="window.location.reload();" style="border-radius: 8px; font-size: 11px;">
+                                بارگذاری مجدد صفحه
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            container.innerHTML = `
+                <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="text-danger mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span class="text-xs font-semibold text-danger mb-3">خطا در ارتباط با سرور: ${error.message}</span>
+                    <button class="btn btn-sm btn-outline-secondary px-3" onclick="window.location.reload();" style="border-radius: 8px; font-size: 11px;">
+                        بارگذاری مجدد صفحه
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    function startSystemRestart() {
+        if (!confirm("آیا از راه‌اندازی مجدد دستی وب‌سرور مطمئن هستید؟")) {
+            return;
+        }
+        
+        const container = document.getElementById('update-status-container');
+        
+        container.innerHTML = `
+            <div class="d-flex flex-column justify-content-center h-100 py-4">
+                <h6 class="font-bold text-secondary text-xs mb-3 text-right">در حال راه‌اندازی مجدد وب‌سرور...</h6>
+                <div class="progress mb-2.5" style="height: 12px; border-radius: 6px; background-color: #f1f5f9; overflow: hidden;">
+                    <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 10%;" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="update-progress-percent" class="text-xxs font-bold text-warning">۱۰٪</span>
+                    <span id="update-progress-status" class="text-xxs text-muted">ارسال دستور راه‌اندازی مجدد به سرور...</span>
+                </div>
+            </div>
+        `;
+        
+        const progressBar = document.getElementById('update-progress-bar');
+        const progressPercent = document.getElementById('update-progress-percent');
+        const progressStatus = document.getElementById('update-progress-status');
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch("{% url "system_restart" %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-info";
+                progressBar.style.width = '40%';
+                progressPercent.textContent = '۴۰٪';
+                progressPercent.className = "text-xxs font-bold text-info";
+                progressStatus.textContent = 'دستور ارسال شد. منتظر بازخوانی سرور...';
+                
+                pollHealthCheck(40);
+            } else {
+                response.text().then(errorHtml => {
+                    container.innerHTML = `
+                        <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="text-danger mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                            </svg>
+                            <span class="text-xs font-semibold text-danger mb-2">خطا در راه‌اندازی مجدد</span>
+                            <div class="w-100 mb-3">${errorHtml}</div>
+                            <button class="btn btn-sm btn-outline-secondary px-3" onclick="window.location.reload();" style="border-radius: 8px; font-size: 11px;">
+                                بارگذاری مجدد صفحه
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+        })
+        .catch(error => {
+            container.innerHTML = `
+                <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="text-danger mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span class="text-xs font-semibold text-danger mb-3">خطا در ارتباط با سرور: ${error.message}</span>
+                    <button class="btn btn-sm btn-outline-secondary px-3" onclick="window.location.reload();" style="border-radius: 8px; font-size: 11px;">
+                        بارگذاری مجدد صفحه
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    function pollHealthCheck(startPercent) {
+        let currentPercent = startPercent;
+        const progressBar = document.getElementById('update-progress-bar');
+        const progressPercent = document.getElementById('update-progress-percent');
+        const progressStatus = document.getElementById('update-progress-status');
+        const container = document.getElementById('update-status-container');
+        
+        const restartInterval = setInterval(() => {
+            if (currentPercent < 98) {
+                currentPercent += 1;
+                progressBar.style.width = currentPercent + '%';
+                progressPercent.textContent = currentPercent + '٪';
+            }
+        }, 1000);
+        
+        let attempts = 0;
+        const maxAttempts = 60; // 2 minutes max
+        
+        const checkServer = () => {
+            attempts++;
+            
+            fetch("{% url "system_health_check" %}", { cache: "no-store" })
+            .then(response => {
+                if (response.ok) {
+                    clearInterval(restartInterval);
+                    progressBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-success";
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '۱۰۰٪';
+                    progressPercent.className = "text-xxs font-bold text-success";
+                    progressStatus.textContent = 'سرور با موفقیت بالا آمد. در حال بازنشانی صفحه...';
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkServer, 1500);
+                    } else {
+                        showRestartTimeoutError(container);
+                    }
+                }
+            })
+            .catch(error => {
+                // Expected to fail during restart
+                if (attempts < maxAttempts) {
+                    setTimeout(checkServer, 1500);
+                } else {
+                    showRestartTimeoutError(container);
+                }
+            });
+        };
+        
+        // Wait 2 seconds before first health check to allow server to shut down
+        setTimeout(checkServer, 2000);
+    }
+
+    function showRestartTimeoutError(container) {
+        container.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="text-warning mb-2" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <span class="text-xs font-semibold text-warning mb-2">راه‌اندازی مجدد بیش از حد طول کشید</span>
+                <span class="text-xxs text-muted mb-3">ممکن است سرور با خطایی مواجه شده باشد یا فرآیند طولانی شده باشد. لطفاً کنسول یا سرویس را بررسی کنید.</span>
+                <button class="btn btn-sm btn-outline-secondary px-3" onclick="window.location.reload();" style="border-radius: 8px; font-size: 11px;">
+                    بارگذاری مجدد صفحه
+                </button>
+            </div>
+        `;
+    }
+</script>
+{% endblock %}

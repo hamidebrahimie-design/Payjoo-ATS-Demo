@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="pj-page-header">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb m-0">
+            {% block breadcrumbs %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">خانه</a></li>
+            {% endblock %}
+        </ol>
+    </nav>
+
+    <!-- Page Title + Actions -->
+    <div class="pj-page-title-row">
+        <h2 class="pj-page-title">{% block page_title %}{% endblock %}</h2>
+        <div class="pj-page-actions">
+            {% block actions %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<!-- Card Body -->
+<div class="pj-card">
+    {% block page_content %}{% endblock %}
+</div>
+
+<!-- Pagination -->
+{% block pagination %}{% endblock %}
+{% endblock %}

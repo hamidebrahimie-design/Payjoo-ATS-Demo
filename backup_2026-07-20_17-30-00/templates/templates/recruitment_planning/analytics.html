@@ -1,0 +1,660 @@
+{% extends "base_page.html" %}
+{% load jalali_tags %}
+{% block title %}داشبورد گزارشات و تحلیل‌های استراتژیک{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .analytics-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+        background: #ffffff;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .analytics-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    }
+    .chart-box {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        direction: ltr !important;
+    }
+    .small-chart-box {
+        position: relative;
+        height: 160px;
+        width: 100%;
+        direction: ltr !important;
+    }
+    .nav-tabs .nav-link {
+        color: #4b5563;
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid #e5e7eb;
+        border-bottom: none;
+        transition: all 0.25s ease;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 0.65rem 1.25rem;
+    }
+    .nav-tabs .nav-link:hover:not(.active) {
+        background: #f3f4f6;
+        color: #1f2937;
+    }
+    .nav-tabs .nav-link.active {
+        color: #2563eb;
+        background: #ffffff;
+        border-color: #d1d5db;
+        border-bottom-color: #ffffff;
+        box-shadow: 0 -4px 12px rgba(37, 99, 235, 0.05);
+        font-weight: 700;
+    }
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;  
+        overflow: hidden;
+    }
+    .metric-badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    .funnel-list-item {
+        border-bottom: 1px dashed #e2e8f0;
+        padding: 8px 0;
+    }
+    .funnel-list-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<!-- هدر صفحه -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h3 class="font-semibold text-secondary mb-1">تحلیل‌های استراتژیک و گزارشات عملکردی</h3>
+        <p class="text-muted text-sm m-0">ارزیابی نرخ تبدیل متقاضیان، روند جذب ماهیانه، بهره‌وری کارشناسان و آنالیز توزیع نمرات</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">🖨️ چاپ گزارش</button>
+        <a href="{% url 'planning_dashboard' %}" class="btn btn-sm btn-primary-custom">📅 برنامه‌ریزی جذب</a>
+    </div>
+</div>
+
+<ul class="nav nav-tabs gap-1.5 mb-4 border-bottom" id="analyticsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab != 'logs' %}active{% endif %} font-semibold text-xs d-flex align-items-center gap-1.5" id="charts-tab" data-bs-toggle="tab" data-bs-target="#charts-pane" type="button" role="tab" aria-controls="charts-pane" aria-selected="{% if active_tab != 'logs' %}true{% else %}false{% endif %}">
+            <span>📊 آمار و نمودارهای تحلیلی</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'logs' %}active{% endif %} font-semibold text-xs d-flex align-items-center gap-1.5" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" role="tab" aria-controls="logs-pane" aria-selected="{% if active_tab == 'logs' %}true{% else %}false{% endif %}">
+            <span>✉️ گزارش ارسال اعلانات (پیامک و ایمیل)</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="analyticsTabContent">
+    <!-- تب اول: نمودارها و آمار -->
+    <div class="tab-pane fade {% if active_tab != 'logs' %}show active{% endif %}" id="charts-pane" role="tabpanel" aria-labelledby="charts-tab">
+        <!-- بخش فیلتر هوشمند قیف تبدیل -->
+        <div class="card analytics-card mb-4 border-0">
+    <div class="card-body p-3">
+        <form method="get" action="" class="row align-items-center g-2" id="jobFilterForm">
+            <div class="col-12 col-md-8 col-lg-6">
+                <label for="job_id" class="form-label text-xs font-bold text-muted mb-1">🎯 فیلتر قیف تبدیل بر اساس فرصت شغلی خاص:</label>
+                <select name="job_id" id="job_id" class="form-select form-select-sm text-sm" onchange="this.form.submit()">
+                    <option value="">-- کل فرصت‌های شغلی (داشبورد کلان) --</option>
+                    {% for job in jobs_list %}
+                        <option value="{{ job.id }}" {% if selected_job.id == job.id %}selected{% endif %}>
+                            {{ job.title }} {% if job.code %}(کد: {{ job.code }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4 col-lg-6 d-flex align-items-end justify-content-md-end pt-3">
+                {% if selected_job %}
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-xs btn-outline-danger">پاک کردن فیلتر شغل ❌</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ردیف اول: قیف تبدیل و نمودار روند زمانی -->
+<div class="row g-4 mb-4">
+    <!-- قیف تبدیل متقاضیان -->
+    <div class="col-12 col-lg-6">
+        <div class="card analytics-card h-100">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title font-semibold text-secondary m-0 text-sm">
+                    📊 قیف تبدیل و ارزیابی متقاضیان 
+                    {% if selected_job %}({{ selected_job.title }}){% endif %}
+                </h5>
+                <span class="badge bg-primary bg-opacity-10 text-primary text-xxs font-bold">نرخ تبدیل</span>
+            </div>
+            <div class="card-body pt-0">
+                <div class="row">
+                    <div class="col-12 col-md-7">
+                        <div class="chart-box">
+                            <canvas id="funnelChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-5 d-flex flex-column justify-content-center">
+                        <div class="bg-light p-3 rounded-3 border">
+                            <h6 class="text-xs font-bold text-secondary mb-2">جزییات گذار بین مراحل:</h6>
+                            <div class="d-flex flex-column text-xs">
+                                {% for s in funnel_data %}
+                                    <div class="d-flex justify-content-between funnel-list-item">
+                                        <span class="text-muted">{{ s.stage_name }}</span>
+                                        <div>
+                                            <span class="font-bold text-secondary">{{ s.passed }} نفر</span>
+                                            {% if not forloop.first %}
+                                                <span class="text-muted ms-1 font-semibold">({{ s.pass_rate }}٪ گذر)</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- روند زمانی درخواست‌ها و استخدام‌ها -->
+    <div class="col-12 col-lg-6">
+        <div class="card analytics-card h-100">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title font-semibold text-secondary m-0 text-sm">📈 روند ۶ ماهه درخواست‌های وارده و اتمام‌یافته</h5>
+                <span class="badge bg-info bg-opacity-10 text-info text-xxs font-bold">روند زمانی</span>
+            </div>
+            <div class="card-body pt-0 px-2">
+                <div class="chart-box">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ردیف دوم: جدول عملکرد کارشناسان جذب مسئول -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card analytics-card">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title font-semibold text-secondary m-0 text-sm">👥 مقایسه عملکرد کارنامه کارشناسان جذب مسئول</h5>
+                <span class="badge bg-success bg-opacity-10 text-success text-xxs font-bold">بهره‌وری تیمی</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">کارشناس مسئول</th>
+                                <th class="text-center">فرصت‌های واگذار شده (کل)</th>
+                                <th class="text-center">فرصت‌های فعال</th>
+                                <th class="text-center">متقاضیان ارزیابی شده</th>
+                                <th class="text-center">تعداد جذب نهایی</th>
+                                <th class="text-center">متوسط سرعت استخدام (Time-to-Fill)</th>
+                                <th class="text-center">میزان رعایت مهلت استاندارد در مراحل</th>
+                                <th class="pe-4 text-center">وضعیت رتبه‌بندی</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in recruiter_stats %}
+                            <tr>
+                                <td class="ps-4 font-bold text-secondary">{{ stat.name }}</td>
+                                <td class="text-center">{{ stat.total_jobs }} فرصت</td>
+                                <td class="text-center font-medium">{{ stat.active_jobs }} فرصت فعال</td>
+                                <td class="text-center">{{ stat.total_apps }} نفر</td>
+                                <td class="text-center font-bold text-success">{{ stat.hires_count }} نفر</td>
+                                <td class="text-center font-semibold text-primary">
+                                    {% if stat.avg_time_to_fill != '-' %}
+                                        {{ stat.avg_time_to_fill }} روز
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                        <div class="progress w-50" style="height: 6px;">
+                                            <div class="progress-bar {% if stat.sla_compliance >= 90 %}bg-success{% elif stat.sla_compliance >= 75 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                 style="width: {{ stat.sla_compliance }}%"></div>
+                                        </div>
+                                        <span class="font-bold {% if stat.sla_compliance >= 90 %}text-success{% elif stat.sla_compliance >= 75 %}text-warning{% else %}text-danger{% endif %} text-xs">
+                                            {{ stat.sla_compliance }}٪
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="pe-4 text-center">
+                                    {% if stat.sla_compliance >= 90 %}
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1">عالی 🌟</span>
+                                    {% elif stat.sla_compliance >= 75 %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2.5 py-1">مطلوب ⚠️</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2.5 py-1">بحرانی 🚨</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">کارشناسی در سیستم تعریف نشده است.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ردیف سوم: هیستوگرام توزیع نمرات مراحل ارزیابی -->
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="font-semibold text-secondary mb-0 text-sm">📊 تحلیل توزیع نمرات آزمون‌ها و ارزیابی‌ها (Histogram)</h5>
+        <span class="text-muted text-xxs font-semibold">تعداد متقاضیان در هر بازه نمره‌ای (خط قرمز نشانگر حد قبولی ۶۰٪ است)</span>
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
+        {% for code, dist in score_distributions.items %}
+        <div class="col">
+            <div class="card analytics-card h-100">
+                <div class="card-header bg-white py-2 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="card-title font-semibold text-secondary m-0 text-xs">{{ dist.label }}</h6>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary text-xxs">کل: {{ dist.total_scores }} مورد</span>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="small-chart-box">
+                        <canvas id="scoreChart_{{ code }}"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>    </div> <!-- پایان تب‌ پنل اول (charts-pane) -->
+
+    <!-- تب دوم: لاگ اعلانات (ایمیل و پیامک) -->
+    <div class="tab-pane fade {% if active_tab == 'logs' %}show active{% endif %}" id="logs-pane" role="tabpanel" aria-labelledby="logs-tab">
+        <!-- فیلترها و جستجو در اعلانات -->
+        <div class="card analytics-card border-0 mb-4">
+            <div class="card-body p-4">
+                <form method="get" action="" class="row align-items-end g-3" id="logFilterForm">
+                    <input type="hidden" name="tab" value="logs">
+                    
+                    <!-- کادر جستجو -->
+                    <div class="col-12 col-md-4">
+                        <label for="log_q" class="form-label text-xs font-bold text-muted mb-1.5">🔍 جستجو در گیرنده، موضوع یا متن:</label>
+                        <input type="text" name="log_q" id="log_q" class="form-control form-control-sm text-sm" placeholder="نام، ایمیل، شماره تماس، موضوع و..." value="{{ log_q|default:'' }}" style="border-radius: 8px;">
+                    </div>
+                    
+                    <!-- فیلتر نوع -->
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label for="log_type" class="form-label text-xs font-bold text-muted mb-1.5">نوع اعلان:</label>
+                        <select name="log_type" id="log_type" class="form-select form-select-sm text-sm" style="border-radius: 8px;">
+                            <option value="">همه اعلانات</option>
+                            <option value="EMAIL" {% if log_type == 'EMAIL' %}selected{% endif %}>📧 ایمیل‌ها</option>
+                            <option value="SMS" {% if log_type == 'SMS' %}selected{% endif %}>💬 پیامک‌ها</option>
+                        </select>
+                    </div>
+                    
+                    <!-- فیلتر وضعیت -->
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label for="log_status" class="form-label text-xs font-bold text-muted mb-1.5">وضعیت ارسال:</label>
+                        <select name="log_status" id="log_status" class="form-select form-select-sm text-sm" style="border-radius: 8px;">
+                            <option value="">همه وضعیت‌ها</option>
+                            <option value="SENT" {% if log_status == 'SENT' %}selected{% endif %}>🟢 ارسال موفق</option>
+                            <option value="FAILED" {% if log_status == 'FAILED' %}selected{% endif %}>🔴 خطا در ارسال</option>
+                        </select>
+                    </div>
+                    
+                    <!-- دکمه‌ها -->
+                    <div class="col-12 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 font-bold" style="border-radius: 8px; height: 38px;">اعمال فیلتر</button>
+                        <a href="?tab=logs" class="btn btn-light btn-sm font-bold" style="border-radius: 8px; height: 38px; width: 50px; display: flex; align-items: center; justify-content: center;" title="پاک کردن فیلترها">❌</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- جدول لاگ‌ها -->
+        <div class="card analytics-card border-0">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title font-semibold text-secondary m-0 text-sm">📋 تاریخچه و لاگ اعلانات ارسالی کاندیداها</h5>
+                <span class="badge bg-primary bg-opacity-10 text-primary text-xxs font-bold">لاگ سیستم</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">نوع</th>
+                                <th>گیرنده</th>
+                                <th>عنوان / سناریو</th>
+                                <th style="width: 40%;">متن پیام</th>
+                                <th class="text-center">زمان ارسال</th>
+                                <th class="text-center">وضعیت</th>
+                                <th class="pe-4 text-center">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in log_page_obj %}
+                            <tr>
+                                <td class="ps-4">
+                                    {% if log.notification_type == 'EMAIL' %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary text-xxs px-2 py-1"><i class="bi bi-envelope"></i> ایمیل</span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning text-xxs px-2 py-1"><i class="bi bi-chat-left-text"></i> پیامک</span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-semibold text-secondary font-monospace" style="direction: ltr; text-align: right;">{{ log.recipient }}</td>
+                                <td class="font-medium">{{ log.subject }}</td>
+                                <td class="text-muted text-xs text-truncate-2" style="max-width: 300px; line-height: 1.4;">{{ log.body|striptags }}</td>
+                                <td class="text-center text-xs font-semibold text-muted">{{ log.created_at|to_jalali }}</td>
+                                <td class="text-center">
+                                    {% if log.status == 'SENT' %}
+                                        <span class="badge bg-success bg-opacity-10 text-success text-xxs px-2 py-1">ارسال موفق 🟢</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger text-xxs px-2 py-1" style="cursor: help;" title="{{ log.error_message|default:'خطای ناشناخته سرور' }}">خطا در ارسال 🔴</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pe-4 text-center">
+                                    <button type="button" class="btn btn-xs btn-outline-primary font-bold py-0.5 px-2" style="font-size: 11px; border-radius: 6px;" 
+                                        onclick="showFullMessage('{{ log.notification_type|escapejs }}', '{{ log.recipient|escapejs }}', '{{ log.subject|escapejs }}', '{{ log.created_at|to_jalali|escapejs }}', `{{ log.body|escapejs }}`)">
+                                        مشاهده پیام
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    هیچ لاگ اعلانی در سیستم ثبت نشده است.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ناوبری صفحه‌بندی -->
+                {% if log_page_obj.has_other_pages %}
+                <nav aria-label="Page navigation" class="py-3 d-flex justify-content-center border-top bg-light">
+                    <ul class="pagination pagination-sm gap-1 m-0">
+                        {% if log_page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link border rounded" href="?tab=logs&page={{ log_page_obj.previous_page_number }}&log_type={{ log_type }}&log_status={{ log_status }}&log_q={{ log_q }}" style="border-radius: 6px;">قبلی</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in log_page_obj.paginator.page_range %}
+                            {% if log_page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link border rounded bg-primary text-white" style="border-radius: 6px;">{{ num }}</span>
+                                </li>
+                            {% elif num > log_page_obj.number|add:'-3' and num < log_page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link border rounded" href="?tab=logs&page={{ num }}&log_type={{ log_type }}&log_status={{ log_status }}&log_q={{ log_q }}" style="border-radius: 6px;">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if log_page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link border rounded" href="?tab=logs&page={{ log_page_obj.next_page_number }}&log_type={{ log_type }}&log_status={{ log_status }}&log_q={{ log_q }}" style="border-radius: 6px;">بعدی</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div> <!-- پایان تب‌ پنل‌ها (analyticsTabContent) -->
+
+<!-- Modal برای نمایش متن کامل پیام -->
+<div class="modal fade" id="logMessageModal" tabindex="-1" aria-labelledby="logMessageModalLabel" aria-hidden="true" dir="rtl">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-light border-bottom py-3">
+                <h5 class="modal-title font-bold text-secondary text-sm" id="logMessageModalLabel">✉️ متن کامل پیام ارسالی</h5>
+                <button type="button" class="btn-close m-0 ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3 p-3 bg-light rounded-3 text-xs">
+                    <div class="row g-2 text-right">
+                        <div class="col-md-6"><strong>نوع فرستنده:</strong> <span id="modal-log-type">-</span></div>
+                        <div class="col-md-6" style="direction: ltr;"><strong>گیرنده:</strong> <span id="modal-log-recipient" class="font-monospace">-</span></div>
+                        <div class="col-md-12"><strong>عنوان/سناریو:</strong> <span id="modal-log-subject">-</span></div>
+                        <div class="col-md-12"><strong>زمان ارسال:</strong> <span id="modal-log-date">-</span></div>
+                    </div>
+                </div>
+                <label class="form-label font-bold text-secondary text-xxs">محتوای پیام:</label>
+                <div class="border rounded p-3 bg-white text-sm" id="modal-log-body" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-family: inherit;">
+                    -
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top py-2">
+                <button type="button" class="btn btn-secondary btn-xs font-bold" data-bs-dismiss="modal" style="border-radius: 6px;">بستن</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تنظیمات سراسری فونت برای چارت‌ها
+    Chart.defaults.font.family = 'Vazirmatn';
+    Chart.defaults.color = '#475569';
+
+    // مبدل فارسی اعداد برای تولتیپ‌ها
+    const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    function toPersian(str) {
+        if (str === null || str === undefined) return '';
+        return str.toString().replace(/[0-9]/g, w => PERSIAN_DIGITS[+w]);
+    }
+
+    // نمایش کامل متن پیام در مودال
+    function showFullMessage(type, recipient, subject, date, body) {
+        document.getElementById('modal-log-type').innerText = type === 'EMAIL' ? '📧 ایمیل' : '💬 پیامک';
+        document.getElementById('modal-log-recipient').innerText = recipient;
+        document.getElementById('modal-log-subject').innerText = subject;
+        document.getElementById('modal-log-date').innerText = date;
+        document.getElementById('modal-log-body').innerText = body;
+        
+        var myModal = new bootstrap.Modal(document.getElementById('logMessageModal'));
+        myModal.show();
+    }
+
+    // ۱. داده‌ها و ساخت نمودار قیف تبدیل (Funnel)
+    const funnelLabels = [{% for s in funnel_data %}"{{ s.stage_name|escapejs }}",{% endfor %}];
+    const funnelRates = [{% for s in funnel_data %}{{ s.conversion_rate }},{% endfor %}];
+    const funnelPassed = [{% for s in funnel_data %}{{ s.passed }},{% endfor %}];
+
+    const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
+    new Chart(ctxFunnel, {
+        type: 'bar',
+        data: {
+            labels: funnelLabels,
+            datasets: [{
+                label: 'درصد بقا از کل متقاضیان اولیه',
+                data: funnelRates,
+                backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                hoverBackgroundColor: 'rgba(67, 56, 202, 1)',
+                borderRadius: 6,
+                maxBarThickness: 32,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            indexAxis: 'y', // افقی کردن نمودار
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    rtl: true,
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            return `بقای کل: ${toPersian(context.raw)}٪ (${toPersian(funnelPassed[index])} نفر)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        callback: function(value) { return toPersian(value) + '٪'; },
+                        font: { size: 9 }
+                    },
+                    max: 100
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10, weight: 'bold' } }
+                }
+            }
+        }
+    });
+
+    // ۲. نمودار روند زمانی (Trend Chart)
+    const trendLabels = {{ trend_labels|safe }};
+    const trendApplied = {{ applied_trend }};
+    const trendCompleted = {{ completed_trend }};
+
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [
+                {
+                    label: 'درخواست‌های وارده',
+                    data: trendApplied,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    pointRadius: 4
+                },
+                {
+                    label: 'اتمام یافته',
+                    data: trendCompleted,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 5,
+                    right: 15,
+                    top: 10,
+                    bottom: 0
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+                tooltip: {
+                    rtl: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${toPersian(context.raw)} نفر`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { 
+                        font: { size: 9 },
+                        maxRotation: 0,
+                        minRotation: 0
+                    } 
+                },
+                y: {
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: function(value) { return toPersian(value); },
+                        font: { size: 9 }
+                    }
+                }
+            }
+        }
+    });
+
+    // ۳. نمودارهای توزیع نمرات مراحل ارزیابی
+    
+    // کدهای جنریک ترسیم چارت هیستوگرام برای مراحل مختلف
+    {% for code, dist in score_distributions.items %}
+    (function() {
+        const bucketLabels = {{ dist.labels|safe }};
+        const bucketData = {{ dist.data }};
+        const bucketColors = {{ dist.colors|safe }};
+        const bucketBorders = {{ dist.borders|safe }};
+
+        const ctxScore = document.getElementById('scoreChart_{{ code }}').getContext('2d');
+        new Chart(ctxScore, {
+            type: 'bar',
+            data: {
+                labels: bucketLabels,
+                datasets: [{
+                    data: bucketData,
+                    backgroundColor: bucketColors,
+                    borderColor: bucketBorders,
+                    borderWidth: 1,
+                    barPercentage: 1.0, // هیستوگرام ستون‌های چسبیده دارد
+                    categoryPercentage: 0.95
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        rtl: true,
+                        callbacks: {
+                            label: function(context) {
+                                return `تعداد متقاضیان: ${toPersian(context.raw)} نفر`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 8 } }
+                    },
+                    y: {
+                        grid: { color: '#f8fafc' },
+                        ticks: {
+                            callback: function(value) { return toPersian(value); },
+                            font: { size: 8 }
+                        }
+                    }
+                }
+            }
+        });
+    })();
+    {% endfor %}
+</script>
+{% endblock %}

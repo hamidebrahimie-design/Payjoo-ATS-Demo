@@ -102,8 +102,8 @@
 
 <!-- جدول شایستگی‌های دستی -->
 <div class="card comp-card border-0 p-4 shadow-xs">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle text-sm">
+    <div class="pj-table-wrapper">
+        <table class="pj-table pj-table-responsive-card">
             <thead>
                 <tr class="text-secondary">
                     <th style="width: 5%;">ردیف</th>
@@ -120,17 +120,17 @@
             <tbody>
                 {% for comp in custom_competencies %}
                 <tr>
-                    <td class="text-muted text-xs font-semibold">{{ forloop.counter }}</td>
-                    <td class="font-bold text-dark">
+                    <td class="text-muted text-xs font-semibold" data-label="ردیف">{{ forloop.counter }}</td>
+                    <td class="font-bold text-dark" data-label="عنوان شایستگی">
                         {{ comp.title }}
                         <span class="badge bg-warning bg-opacity-10 text-warning font-bold text-xxs ms-1" style="font-size: 9px;">دستی</span>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center" data-label="نوع">
                         <span class="badge bg-secondary bg-opacity-10 text-secondary text-xxs px-2 py-1 font-bold">
                             {{ comp.get_competency_type_display }}
                         </span>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center" data-label="اهمیت">
                         {% if comp.importance == 1 %}
                             <span class="badge bg-danger bg-opacity-10 text-danger text-xxs px-2 py-1 font-bold">محوری</span>
                         {% elif comp.importance == 2 %}
@@ -139,7 +139,7 @@
                             <span class="badge bg-info bg-opacity-10 text-info text-xxs px-2 py-1 font-bold">حداقلی</span>
                         {% endif %}
                     </td>
-                    <td class="text-center">
+                    <td class="text-center" data-label="سطح">
                         {% if comp.level == 3 %}
                             <span class="badge bg-success bg-opacity-10 text-success text-xxs px-2 py-1 font-bold">تسلط</span>
                         {% elif comp.level == 2 %}
@@ -148,19 +148,17 @@
                             <span class="badge bg-light text-dark text-xxs px-2 py-1 font-bold">آشنایی</span>
                         {% endif %}
                     </td>
-                    <td class="font-semibold text-secondary text-xs">{{ comp.job.code }}</td>
-                    <td>
+                    <td class="font-semibold text-secondary text-xs" data-label="کد پست">{{ comp.job.code }}</td>
+                    <td data-label="فرصت شغلی">
                         <a href="{% url 'job_competency_config' comp.job.id %}" class="text-decoration-none font-semibold text-primary text-xs hover:underline">
                             {{ comp.job.title }}
                         </a>
                     </td>
-                    <td class="text-muted text-xs font-semibold">{{ comp.job.assigned_recruiter.get_full_name|default:"-" }}</td>
-                    <td class="text-muted text-xxs font-bold">{{ comp.created_at.date|to_jalali }}</td>
+                    <td class="text-muted text-xs font-semibold" data-label="کارشناس جذب">{{ comp.job.assigned_recruiter.get_full_name|default:"-" }}</td>
+                    <td class="text-muted text-xxs font-bold" data-label="تاریخ ایجاد">{{ comp.created_at.date|to_jalali }}</td>
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="9" class="text-center text-muted py-5">هیچ شایستگی دستی با شرایط فیلتر یافت نشد.</td>
-                </tr>
+                {% include "includes/table_empty.html" with colspan=9 message="هیچ شایستگی دستی با شرایط فیلتر یافت نشد." icon="fas fa-star" %}
                 {% endfor %}
             </tbody>
         </table>

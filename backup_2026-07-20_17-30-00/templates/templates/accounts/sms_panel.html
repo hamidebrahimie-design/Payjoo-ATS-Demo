@@ -1,0 +1,385 @@
+{% extends 'base_page.html' %}
+
+{% block title %}مدیریت پیامک‌ها - سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Glassmorphism Design System */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card:hover {
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .glass-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        color: white;
+        border-radius: 14px 14px 0 0;
+        padding: 1.25rem;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        padding: 0.6rem 0.8rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    .btn-indigo {
+        background-color: #4f46e5;
+        color: white;
+        border-radius: 10px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-indigo:hover {
+        background-color: #4338ca;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .badge-placeholder {
+        cursor: pointer;
+        transition: all 0.2s;
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px dashed #d1d5db;
+        font-size: 0.85rem;
+    }
+
+    .badge-placeholder:hover {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+        border-color: #818cf8;
+        transform: scale(1.05);
+    }
+
+    .placeholder-desc {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    /* HTMX Indicator */
+    .htmx-indicator {
+        display: none;
+        opacity: 0;
+        transition: opacity 200ms ease-in;
+    }
+
+    .htmx-request .htmx-indicator {
+        display: inline-block;
+        opacity: 1;
+    }
+
+    .htmx-request.htmx-indicator {
+        display: inline-block;
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid py-2" dir="rtl">
+    <!-- Header Page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 font-bold text-gray-800 m-0">مدیریت و ارسال پیامک گروهی</h1>
+            <p class="text-muted m-0 mt-1" style="font-size: 0.9rem;">قالب‌های پیامک خود را طراحی کنید، مخاطبین را فیلتر
+                کرده و خروجی مناسب سامانه پیامکی دریافت کنید.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Right Column: Template Management -->
+        <div class="col-lg-4 col-md-5">
+            <!-- Template CRUD Form -->
+            <div class="glass-card mb-4 overflow-hidden">
+                <div class="glass-header">
+                    <h5 class="m-0 font-semibold">
+                        {% if edit_template %}
+                        ویرایش قالب پیامک
+                        {% else %}
+                        ثبت قالب پیامک جدید
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="p-4">
+                    <form method="post" action="{% url 'sms_panel' %}">
+                        {% csrf_token %}
+                        {% if edit_template %}
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="template_id" value="{{ edit_template.id }}">
+                        {% else %}
+                        <input type="hidden" name="action" value="create">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="template_name" class="form-label font-medium text-secondary">نام قالب</label>
+                            <input type="text" class="form-control" id="template_name" name="template_name"
+                                placeholder="مثلاً: دعوت به مصاحبه " required
+                                value="{{ edit_template.name|default:'' }}" autocomplete="off">
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <label for="template_body" class="form-label font-medium text-secondary m-0">متن
+                                    پیامک</label>
+                                <span class="text-xs text-muted" id="char_counter_form">۰ کاراکتر</span>
+                            </div>
+                            <textarea class="form-control text-right" id="template_body" name="body" rows="6"
+                                placeholder="متن پیامک خود را بنویسید..."
+                                required>{{ edit_template.body|default:'' }}</textarea>
+                        </div>
+
+                        <!-- Placeholders Selector Guide -->
+                        <div class="mb-4">
+                            <span class="d-block text-xs font-semibold text-secondary mb-2">برای درج متغیرهای پویا، روی
+                                کلمات کلیدی زیر کلیک کنید:</span>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{نام}')">{نام}</span>
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{نام_خانوادگی}')">{نام_خانوادگی}</span>
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{عنوان_شغل}')">{عنوان_شغل}</span>
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{نام_مرحله}')">{نام_مرحله}</span>
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{نمره}')">{نمره}</span>
+                                <span class="badge badge-placeholder px-2 py-1.5 rounded"
+                                    onclick="insertPlaceholder('{کد_ملی}')">{کد_ملی}</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-indigo flex-grow-1">ذخیره قالب</button>
+                            {% if edit_template %}
+                            <a href="{% url 'sms_panel' %}" class="btn btn-outline-secondary"
+                                style="border-radius: 10px;">انصراف</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Templates List Card -->
+            <div class="glass-card overflow-hidden">
+                <div class="p-3 bg-light border-bottom font-semibold text-secondary">
+                    لیست قالب‌های ذخیره شده
+                </div>
+                <div class="p-3" style="max-height: 380px; overflow-y: auto;">
+                    {% if templates %}
+                    <div class="list-group list-group-flush">
+                        {% for tmpl in templates %}
+                        <div class="list-group-item px-0 py-2.5 border-bottom d-flex flex-column gap-1">
+                            <div class="d-flex justify-content-between align-items-start w-100">
+                                <h6 class="mb-0 font-semibold text-dark text-truncate" style="max-width: 170px;">{{ tmpl.name }}</h6>
+                                <div class="d-flex gap-1">
+                                    <a href="?edit_template={{ tmpl.id }}"
+                                        class="btn btn-xs btn-outline-primary py-0.5 px-2"
+                                        style="font-size: 11px; border-radius: 6px;">ویرایش</a>
+
+                                    <!-- Delete template trigger button -->
+                                    <form method="post" action="{% url 'sms_panel' %}" class="m-0"
+                                        onsubmit="return confirm('آیا از حذف این قالب پیامک اطمینان دارید؟');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="template_id" value="{{ tmpl.id }}">
+                                        <button type="submit" class="btn btn-xs btn-outline-danger py-0.5 px-2"
+                                            style="font-size: 11px; border-radius: 6px;">حذف</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <p class="text-xs text-muted mb-0 text-truncate-2"
+                                style="font-size: 0.8rem; line-height: 1.4;">{{ tmpl.body }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor" class="mb-2 text-muted">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18V6.125c0-.621.504-1.125 1.125-1.125H9.75M8.25 21h8.25" />
+                        </svg>
+                        <p class="mb-0 text-xs">قالبی ثبت نشده است.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Column: Filtering and Candidates Preview -->
+        <div class="col-lg-8 col-md-7">
+            <!-- Filter Bar Card -->
+            <div class="glass-card mb-4">
+                <div class="p-4">
+                    <form id="sms-filter-form" hx-get="{% url 'sms_panel_preview' %}"
+                        hx-target="#sms-candidates-container" hx-trigger="change delay:100ms, keyup delay:400ms, load"
+                        hx-indicator="#loading-indicator">
+
+                        <div class="row g-3">
+                            <!-- Template Selection -->
+                            <div class="col-md-6">
+                                <label for="id_template_id" class="form-label font-medium text-secondary">قالب انتخابی
+                                    برای پیش‌نویس</label>
+                                <select class="form-select" id="id_template_id" name="template_id">
+                                    <option value="" {% if not edit_template %}selected{% endif %}>--- انتخاب قالب پیامک
+                                        ---</option>
+                                    {% for tmpl in templates %}
+                                    <option value="{{ tmpl.id }}" {% if edit_template.id == tmpl.id %}selected{% endif %}>
+                                        {{ tmpl.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Job Selection -->
+                            <div class="col-md-6">
+                                <label for="id_job_id" class="form-label font-medium text-secondary">فرصت شغلی</label>
+                                <select class="form-select" id="id_job_id" name="job_id"
+                                    hx-get="{% url 'sms_panel_stages' %}" hx-target="#id_stage_id" hx-trigger="change"
+                                    hx-include="[name='job_id']">
+                                    <option value="">همه فرصت‌های شغلی</option>
+                                    {% for job in jobs %}
+                                    <option value="{{ job.id }}">{{ job.title }} ({{ job.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Stage Selection -->
+                            <div class="col-md-4">
+                                <label for="id_stage_id" class="form-label font-medium text-secondary">مرحله
+                                    ارزیابی</label>
+                                <select class="form-select" id="id_stage_id" name="stage_id">
+                                    <option value="">همه مراحل</option>
+                                </select>
+                            </div>
+
+                            <!-- Application Status -->
+                            <div class="col-md-4">
+                                <label for="id_app_status" class="form-label font-medium text-secondary">وضعیت نهایی
+                                    درخواست</label>
+                                <select class="form-select" id="id_app_status" name="app_status">
+                                    <option value="">همه وضعیت‌ها</option>
+                                    {% for code, label in app_statuses %}
+                                    <option value="{{ code }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Stage Evaluation Status -->
+                            <div class="col-md-4">
+                                <label for="id_stage_status" class="form-label font-medium text-secondary">وضعیت قبولی
+                                    در مرحله</label>
+                                <select class="form-select" id="id_stage_status" name="stage_status">
+                                    <option value="">همه وضعیت‌های مرحله</option>
+                                    {% for code, label in stage_statuses %}
+                                    <option value="{{ code }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Text Search -->
+                            <div class="col-12 mt-2">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"
+                                        style="border-radius: 10px 0 0 10px;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            fill="currentColor" class="bi bi-search text-muted" viewBox="0 0 16 16">
+                                            <path
+                                                d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                                        </svg>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" id="id_search" name="q"
+                                        placeholder="جستجو متقاضی بر اساس نام، نام خانوادگی، شماره تماس یا کد ملی..."
+                                        style="border-radius: 0 10px 10px 0;">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loader Indicator -->
+            <div class="text-center py-2">
+                <div id="loading-indicator" class="htmx-indicator spinner-border text-primary spinner-border-sm"
+                    role="status">
+                    <span class="visually-hidden">در حال بارگذاری...</span>
+                </div>
+            </div>
+
+            <!-- Candidates Grid / Table container -->
+            <div id="sms-candidates-container">
+                <!-- HTMX replaces this dynamically -->
+                <div class="glass-card py-5 text-center text-muted">
+                    در حال بارگذاری متقاضیان...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Character Counter on Form Textarea
+    const templateBody = document.getElementById('template_body');
+    const charCounterForm = document.getElementById('char_counter_form');
+
+    function updateCharCounter() {
+        const charCount = templateBody.value.length;
+        let parts = 1;
+        if (charCount > 70) {
+            parts = Math.ceil(charCount / 67);
+        } else if (charCount === 0) {
+            parts = 0;
+        }
+        charCounterForm.innerText = `${charCount} کاراکتر (${parts} پیامک)`;
+    }
+
+    if (templateBody) {
+        templateBody.addEventListener('input', updateCharCounter);
+        updateCharCounter();
+    }
+
+    // Insert Placeholders into Textarea
+    function insertPlaceholder(placeholderText) {
+        if (!templateBody) return;
+
+        const startPos = templateBody.selectionStart;
+        const endPos = templateBody.selectionEnd;
+        const text = templateBody.value;
+
+        templateBody.value = text.substring(0, startPos) + placeholderText + text.substring(endPos, text.length);
+        templateBody.focus();
+
+        // Restore cursor selection to after the placeholder
+        const newCursorPos = startPos + placeholderText.length;
+        templateBody.setSelectionRange(newCursorPos, newCursorPos);
+
+        updateCharCounter();
+
+        // Trigger live change preview if HTMX needs to update
+        templateBody.dispatchEvent(new Event('input'));
+    }
+</script>
+{% endblock %}

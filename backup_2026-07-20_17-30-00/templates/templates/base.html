@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="{% if user.is_authenticated and user.profile %}size-{{ user.profile.font_size|default:'medium' }}{% else %}size-medium{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Prevent dark mode flash: set theme before page renders -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('payjoo-theme');
+            if (theme) {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            }
+        })();
+    </script>
+    <title>{% block title %}پی‌جو | سامانه هوشمند جذب و استخدام{% endblock %}</title>
+
+    <!-- Vazirmatn Font (Google Fonts CDN) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap RTL 5.3.3 -->
+    <link rel="stylesheet" href="/static/css/bootstrap.rtl.min.css">
+
+    <!-- FontAwesome 6 Free -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Webfont local styles -->
+    <link href="/static/css/vazirmatn.css" rel="stylesheet" type="text/css" />
+    <link href="/static/css/shabnam.css" rel="stylesheet" type="text/css" />
+    <link href="/static/css/samim.css" rel="stylesheet" type="text/css" />
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/custom.css?v=1.4.5">
+    <link rel="stylesheet" href="/static/css/layout.css?v=2.0">
+    <!-- HTMX -->
+    <script src="/static/js/htmx.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="{% if user.is_authenticated and user.profile %}theme-{{ user.profile.theme|default:'indigo' }} font-{{ user.profile.font_family|default:'vazir' }}{% else %}theme-indigo font-vazir{% endif %}">
+    <!-- Sidebar -->
+    {% if user.is_authenticated %}
+    {% include 'includes/sidebar.html' %}
+    {% endif %}
+
+    <!-- Content -->
+    {% if user.is_authenticated %}
+    {% include 'includes/header.html' %}
+    {% endif %}
+
+    <main class="pj-main">
+        {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 8px;">
+                {{ message|safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- FAB + Quick Actions Menu -->
+    <div class="pj-fab-container">
+        <button class="pj-fab" id="fabButton" aria-label="اقدام سریع" title="اقدام سریع">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="pj-fab-menu" id="fabMenu">
+            <a href="{% url 'job_add' %}" class="pj-fab-menu-item">
+                <i class="fas fa-briefcase"></i>
+                <span>افزودن فرصت شغلی</span>
+            </a>
+            <a href="{% url 'candidate_add' %}" class="pj-fab-menu-item">
+                <i class="fas fa-user-plus"></i>
+                <span>افزودن متقاضی</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    {% if user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar Toggle (mobile)
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggleBtn = document.getElementById('sidebarToggle');
+
+            function toggleSidebar() {
+                if (sidebar) sidebar.classList.toggle('show');
+                if (overlay) overlay.classList.toggle('show');
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+            if (overlay) overlay.addEventListener('click', toggleSidebar);
+
+            // Theme Toggle
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const htmlEl = document.documentElement;
+
+            if (themeToggle && themeIcon) {
+                // Sync icon with current theme (already set by head script)
+                const current = htmlEl.getAttribute('data-bs-theme') || 'light';
+                themeIcon.className = current === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+
+                themeToggle.addEventListener('click', function() {
+                    const now = htmlEl.getAttribute('data-bs-theme');
+                    const next = now === 'dark' ? 'light' : 'dark';
+                    htmlEl.setAttribute('data-bs-theme', next);
+                    localStorage.setItem('payjoo-theme', next);
+                    themeIcon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                });
+            }
+
+            // Close sidebar on nav link click (mobile) - but not on toggle items
+            const navLinks = document.querySelectorAll('.pj-sidebar-item:not(.pj-sidebar-toggle)');
+            navLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 992) toggleSidebar();
+                });
+            });
+
+            // FAB Menu Toggle
+            const fab = document.getElementById('fabButton');
+            const fabMenu = document.getElementById('fabMenu');
+            if (fab && fabMenu) {
+                fab.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    fab.classList.toggle('open');
+                    fabMenu.classList.toggle('show');
+                });
+                document.addEventListener('click', function() {
+                    fab.classList.remove('open');
+                    fabMenu.classList.remove('show');
+                });
+            }
+        });
+    </script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

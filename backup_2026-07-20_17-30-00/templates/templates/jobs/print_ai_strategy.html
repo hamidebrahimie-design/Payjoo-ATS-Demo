@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>گزارش راهبرد استخدامی هوش مصنوعی | {{ post_title }}</title>
+    <!-- Bootstrap RTL 5.3.3 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts / Vazirmatn -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #ffffff;
+            color: #1e293b;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .print-container {
+            max-width: 900px;
+            margin: 0 auto;
+            border: 1px solid #cbd5e1;
+            padding: 2.5rem;
+            background: #ffffff;
+            border-radius: 8px;
+        }
+        .doc-header {
+            border-bottom: 2px double #475569;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .section-title {
+            border-right: 4px solid #6366f1;
+            padding-right: 10px;
+            margin-bottom: 1.25rem;
+            color: #1e1b4b;
+        }
+        .advice-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .signature-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 1.2rem;
+            height: 150px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .signature-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #334155;
+        }
+        .signature-note {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        @media print {
+            body {
+                padding: 0;
+                background-color: white;
+            }
+            .print-container {
+                border: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container my-3 no-print text-center">
+    <button onclick="window.print()" class="btn btn-primary px-4 py-2 font-semibold rounded-pill shadow-sm">
+        🖨️ چاپ راهبرد استخدامی هوشمند
+    </button>
+    <button onclick="window.close()" class="btn btn-outline-secondary px-4 py-2 font-semibold rounded-pill shadow-sm ms-2">
+        بستن صفحه
+    </button>
+</div>
+
+<div class="print-container">
+    <!-- Header -->
+    <div class="doc-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold text-secondary m-0">سامانه جذب و استخدام پی‌جو</h4>
+            <span class="text-xs text-muted d-block mt-1">کد پست سازمانی مرجع: {{ post_code }}</span>
+        </div>
+        <div class="text-end">
+            <h5 class="fw-bold text-dark m-0">راهبرد استخدامی و ارزیابی پیشنهادی هوش مصنوعی (AI)</h5>
+            <span class="text-xs text-muted d-block mt-1">بر اساس بنچمارک‌های جهانی SHL UCF و Lominger</span>
+        </div>
+    </div>
+
+    <!-- Metadata Grid -->
+    <table class="table table-bordered align-middle text-sm mb-4">
+        <tbody>
+            <tr>
+                <th style="width: 25%; background-color: #f8fafc; font-weight: 700;">عنوان پست سازمانی</th>
+                <td style="width: 25%;">{{ post_title }}</td>
+                <th style="width: 25%; background-color: #f8fafc; font-weight: 700;">کد پست</th>
+                <td style="width: 25%;">{{ post_code }}</td>
+            </tr>
+            <tr>
+                <th style="background-color: #f8fafc; font-weight: 700;">روش تحلیل</th>
+                <td>مدل شایستگی مرجع</td>
+                <th style="background-color: #f8fafc; font-weight: 700;">نوع اتصال هوش مصنوعی</th>
+                <td>
+                    {% if is_live %}
+                        اتصال زنده (Live API) {% if cached %}[بارگذاری شده از حافظه موقت (کش)]{% endif %}
+                    {% else %}
+                        حالت پیش‌فرض آفلاین (Offline Fallback)
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 1. Competency Optimization Advice -->
+    <h5 class="fw-bold section-title">۱. توصیه‌های بهینه‌سازی شایستگی‌ها و اوزان ارزیابی</h5>
+    <div class="mb-4">
+        {% for tip in opt_advice %}
+        <div class="advice-box">
+            <div class="fw-bold text-dark text-xs mb-1">پیشنهاد {{ forloop.counter }}:</div>
+            <div class="text-sm text-secondary">
+                {% if tip.text %}{{ tip.text }}{% else %}{{ tip }}{% endif %}
+            </div>
+            {% if tip.weights %}
+            <div class="mt-2 text-xxs text-primary font-bold">
+                🎯 اوزان ارزیابی پیشنهادی:
+                {% for stage, val in tip.weights.items %}
+                    {% if stage == 'EXAM' %}آزمون کتبی: {{ val }}٪ |
+                    {% elif stage == 'SKILL_TEST' %}آزمون مهارتی: {{ val }}٪ |
+                    {% elif stage == 'INTERVIEW' %}مصاحبه تخصصی: {{ val }}٪ |
+                    {% elif stage == 'ASSESSMENT' %}کانون ارزیابی: {{ val }}٪ |
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted text-sm">هیچ پیشنهادی برای بهینه‌سازی ثبت نشده است.</p>
+        {% endfor %}
+    </div>
+
+    <!-- 2. Global Benchmarks Table -->
+    <h5 class="fw-bold section-title">۲. نگاشت شایستگی‌ها به بنچمارک‌های معتبر جهانی (SHL, Lominger, Korn Ferry, DDI)</h5>
+    <div class="mb-4">
+        {% if benchmark_mappings %}
+        <table class="table table-bordered align-middle text-xs mb-4">
+            <thead class="table-light text-secondary font-bold">
+                <tr>
+                    <th style="width: 20%;" class="text-right">شایستگی و ابزار سنجش</th>
+                    <th style="width: 20%;" class="text-right">چارچوب و بعد مرجع</th>
+                    <th style="width: 25%;" class="text-right">نشانگرهای رفتاری کلیدی</th>
+                    <th style="width: 15%; text-align: center;">بنچمارک قبولی</th>
+                    <th style="width: 20%;" class="text-right">تحلیل فنی انتخاب ابزار</th>
+                </tr>
+            </thead>
+            <tbody class="text-secondary font-medium">
+                {% for mapping in benchmark_mappings %}
+                <tr>
+                    <td class="fw-bold text-dark">
+                        <div>{{ mapping.competency }}</div>
+                        <span class="badge bg-light text-secondary border mt-1" style="font-size: 9px;">🛠️ {{ mapping.tool }}</span>
+                    </td>
+                    <td>
+                        <div class="mb-1">
+                            <span class="badge bg-light text-dark border px-2 py-0.5" style="font-size: 9.5px;">{{ mapping.framework }}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 9.5px; line-height: 1.3;">{{ mapping.dimension }}</span>
+                    </td>
+                    <td>
+                        {% if mapping.behavioral_indicators %}
+                            <ul class="ps-3 mb-0" style="font-size: 10px; line-height: 1.4; padding-right: 15px;">
+                                {% for indicator in mapping.behavioral_indicators %}
+                                    <li class="mb-1">{{ indicator }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if mapping.pass_benchmark %}
+                            <span class="badge bg-light text-success border px-2 py-1" style="font-size: 10px; font-weight: bold;">🎯 {{ mapping.pass_benchmark }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size: 10.5px; line-height: 1.4; text-align: justify;">{{ mapping.rationale }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-sm">نگاشت بنچمارک در دسترس نیست.</p>
+        {% endif %}
+    </div>
+
+    <!-- 3. Evaluation Scenario -->
+    <h5 class="fw-bold section-title">۳. سناریوی پیشنهادی کانون ارزیابی و ابزارهای سنجش</h5>
+    <div class="p-3 border rounded-3 bg-light bg-opacity-25 mb-4 text-xs text-secondary" style="line-height: 1.8; text-align: justify;">
+        {{ scenario|linebreaks }}
+    </div>
+
+    <!-- 4. CBI Questions -->
+    <h5 class="fw-bold section-title">۴. بانک سوالات مصاحبه ساختاریافته (CBI) پیشنهادی</h5>
+    <table class="table table-bordered align-middle text-sm mb-5">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 8%;" class="text-center">ردیف</th>
+                <th>سوال مصاحبه پیشنهادی هوشمند و راهنمای ارزیابی</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in questions %}
+            <tr>
+                <td class="text-center font-bold text-secondary">{{ forloop.counter }}</td>
+                <td class="text-secondary">
+                    {% if q.question %}
+                        <div class="mb-1.5">
+                            <span class="badge bg-light text-primary border px-2 py-0.5" style="font-size: 9.5px; font-weight: bold;">🎯 شایستگی: {{ q.competency }}</span>
+                        </div>
+                        <div class="fw-semibold text-dark mb-2" style="font-size: 12px; line-height: 1.6;">{{ q.question }}</div>
+                        {% if q.criteria %}
+                            <div class="text-muted" style="font-size: 10.5px; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 6px; line-height: 1.5;">
+                                <strong>💡 راهنمای ارزیابی (STAR):</strong> {{ q.criteria }}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-dark" style="font-size: 12px; line-height: 1.6;">{{ q }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center text-muted">سوالی تولید نشده است.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <h6 class="fw-bold text-secondary mb-3">۵. تاییدات راهبرد استخدامی</h6>
+    <div class="row g-3">
+        <div class="col-4">
+            <div class="signature-box">
+                <span class="signature-title">کارشناس جذب و ارزیابی</span>
+                <span class="signature-note">امضا و تاریخ</span>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="signature-box">
+                <span class="signature-title">رئیس تامین سرمایه انسانی</span>
+                <span class="signature-note">امضا و تاریخ</span>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="signature-box">
+                <span class="signature-title">مدیر کل توسعه منابع انسانی</span>
+                <span class="signature-note">امضا و تاریخ</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

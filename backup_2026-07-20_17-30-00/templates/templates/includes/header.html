@@ -1,0 +1,40 @@
+{# templates/includes/header.html #}
+{% load static %}
+<header class="pj-header">
+    <!-- Hamburger (mobile) -->
+    <button class="pj-hamburger" id="sidebarToggle" aria-label="باز و بسته کردن منو">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Brand -->
+    <a href="{% url 'dashboard' %}" class="pj-brand-link">
+        <img src="{% static 'logo.png' %}" alt="پی‌جو" class="pj-logo">
+        <span class="pj-brand-text">پی‌جو</span>
+    </a>
+
+    <!-- Global Search -->
+    <div class="pj-search-box">
+        <i class="fas fa-search pj-search-icon"></i>
+        <input type="text" class="pj-search-input" placeholder="جستجوی متقاضی، شغل یا...">
+    </div>
+
+    <!-- Header Actions -->
+    <div class="pj-header-actions">
+        <!-- Notifications -->
+        <button class="pj-icon-btn" title="اعلان‌ها">
+            <i class="fas fa-bell"></i>
+            <span class="pj-badge-dot"></span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button class="pj-icon-btn" id="themeToggle" title="تغییر تم">
+            <i class="fas fa-moon" id="themeIcon"></i>
+        </button>
+
+        <!-- User -->
+        <div class="pj-user">
+            <span class="pj-user-name">{{ user.get_full_name|default:user.username }}</span>
+            <div class="pj-avatar">{{ user.get_full_name|default:user.username|first|default:'U' }}</div>
+        </div>
+    </div>
+</header>

@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}ورود به سامانه پیجو{% endblock %}
+
+{% block content %}
+<div class="login-wrapper w-100 min-vh-100 position-relative overflow-hidden d-flex align-items-center justify-content-center">
+    <!-- Dynamic Ambient Bubbles in Background -->
+    <div class="bubble bubble-1"></div>
+    <div class="bubble bubble-2"></div>
+    <div class="bubble bubble-3"></div>
+
+    <!-- Main Premium Login Card Container -->
+    <div class="card login-main-card border-0 shadow-2xl overflow-hidden position-relative z-3 w-100" style="max-width: 900px; min-height: 520px; border-radius: 24px;">
+        <div class="row g-0 h-100 align-items-stretch">
+            
+            <!-- Left Side: Splash Graphic & Presentation Panel (Hidden on mobile) -->
+            <div class="col-md-6 d-none d-md-flex flex-column justify-content-between p-5 text-white position-relative overflow-hidden splash-panel" 
+                 style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);">
+                
+                <!-- Ambient Glow inside the panel -->
+                <div class="panel-glow"></div>
+
+                <!-- Top Logo -->
+                <div class="position-relative z-2">
+                    <img src="/static/logo.png" alt="لوگو پیجو" style="height: 40px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+                </div>
+                
+                <!-- Framed Floating Splash Image -->
+                <div class="d-flex align-items-center justify-content-center my-4 position-relative z-2">
+                    <div class="splash-box p-4 d-flex align-items-center justify-content-center">
+                        <img src="/static/splash.png" alt="پیش‌نمایش پیجو" class="splash-img">
+                    </div>
+                </div>
+                
+                <!-- Title & Tagline -->
+                <div class="position-relative z-2" style="text-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                    <h3 class="font-bold mb-1.5" style="font-size: 1.4rem;">سامانه هوشمند جذب و استخدام پیجو</h3>
+                    <p class="text-xs text-slate-300 m-0 leading-relaxed">ارزیابی تخصصی کاندیداها و انطباق شایستگی‌ها بر پایه هوش مصنوعی</p>
+                </div>
+            </div>
+
+            <!-- Right Side: Login Form Panel -->
+            <div class="col-12 col-md-6 d-flex align-items-center justify-content-center p-4 p-md-5 bg-white position-relative z-2">
+                <div class="w-100" style="max-width: 360px;">
+                    <!-- Mobile Top Logo (Shown only on small screens) -->
+                    <div class="text-center mb-4 d-md-none">
+                        <img src="/static/logo.png" alt="سامانه پیجو" style="height: 52px; width: auto; object-fit: contain; margin-bottom: 12px;" class="mx-auto">
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="font-bold text-secondary mb-1">خوش آمدید!</h4>
+                        <p class="text-muted text-xs">لطفاً برای ورود به پنل کاربری، اطلاعات خود را وارد کنید.</p>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2 text-xs text-center border-0 rounded-3 mb-3" role="alert" style="background-color: #fef2f2; color: #dc2626;">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'login' %}">
+                        {% csrf_token %}
+                        {% if request.GET.next %}
+                            <input type="hidden" name="next" value="{{ request.GET.next }}">
+                        {% endif %}
+
+                        <div class="mb-3 form-group">
+                            <label for="username_field" class="form-label font-medium text-xs text-muted mb-1.5">نام کاربری</label>
+                            <div class="input-wrapper">
+                                {{ form.username }}
+                            </div>
+                            {% if form.username.errors %}
+                            <div class="text-danger text-xxs mt-1 font-medium">{{ form.username.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4 form-group">
+                            <label for="password_field" class="form-label font-medium text-xs text-muted mb-1.5">رمز عبور</label>
+                            <div class="input-wrapper">
+                                {{ form.password }}
+                            </div>
+                            {% if form.password.errors %}
+                            <div class="text-danger text-xxs mt-1 font-medium">{{ form.password.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary-custom w-100 py-2.5 font-bold shadow-lg transition-all rounded-3 d-flex align-items-center justify-content-center gap-2">
+                            <span>ورود به سامانه</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="submit-arrow-icon">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* تنظیمات ساختار کلی بدنه در صفحه ورود */
+    .sidebar, .navbar-custom {
+        display: none !important;
+    }
+    main {
+        padding: 0 !important;
+        width: 100vw;
+        max-width: 100vw;
+        overflow: hidden;
+    }
+
+    /* انیمیشن پس‌زمینه رنگارنگ و داینامیک */
+    @keyframes animated-bg {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .login-wrapper {
+        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #1e293b);
+        background-size: 400% 400%;
+        animation: animated-bg 18s ease infinite;
+        z-index: 1;
+    }
+
+    /* حباب‌های شناور و محو پس‌زمینه */
+    @keyframes float-bubble {
+        0% { transform: translateY(0px) scale(1); }
+        100% { transform: translateY(-40px) scale(1.1); }
+    }
+    .bubble {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.18;
+        z-index: 2;
+        animation: float-bubble 8s infinite alternate ease-in-out;
+    }
+    .bubble-1 {
+        width: 320px;
+        height: 320px;
+        background: #4f46e5;
+        top: -50px;
+        left: -50px;
+    }
+    .bubble-2 {
+        width: 450px;
+        height: 450px;
+        background: #0ea5e9;
+        bottom: -100px;
+        right: -50px;
+        animation-delay: -3s;
+    }
+    .bubble-3 {
+        width: 250px;
+        height: 250px;
+        background: #ec4899;
+        top: 40%;
+        left: 35%;
+        opacity: 0.08;
+        animation-delay: -5s;
+    }
+
+    /* استایل‌های کارت لاگین شیشه‌ای و پریمیوم */
+    .login-main-card {
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-height: 520px;
+    }
+
+    /* پنل سمت چپ (اسپلش گرافیکی) */
+    .splash-panel {
+        position: relative;
+    }
+    .panel-glow {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: #6366f1;
+        filter: blur(70px);
+        opacity: 0.25;
+        top: 25%;
+        left: 20%;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    /* کادر شیشه‌ای شناور اسپلش */
+    @keyframes float-box {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
+    }
+    .splash-box {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+        animation: float-box 5s ease-in-out infinite;
+    }
+    .splash-img {
+        max-width: 220px;
+        height: auto;
+        object-fit: contain;
+        border-radius: 10px;
+        filter: drop-shadow(0 8px 12px rgba(0,0,0,0.15));
+    }
+
+    /* استایل‌های مدرن فرم و فیلدهای ورودی */
+    .login-main-card .form-control {
+        border: 1px solid #cbd5e1;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background-color: #f8fafc;
+        transition: all 0.25s ease;
+    }
+    .login-main-card .form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.14) !important;
+        background-color: #ffffff;
+    }
+
+    /* دکمه ورود سفارشی و متحرک */
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        border: none;
+        color: white;
+    }
+    .btn-primary-custom:hover:not(:disabled) {
+        background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+        transform: translateY(-1.5px);
+        box-shadow: 0 12px 24px rgba(79, 70, 229, 0.35);
+    }
+    .btn-primary-custom:hover:not(:disabled) .submit-arrow-icon {
+        transform: translateX(-4px);
+    }
+    .submit-arrow-icon {
+        transition: transform 0.2s ease;
+    }
+    
+    /* افکت‌های واکنش‌گرایی برای موبایل */
+    @media (max-width: 767.98px) {
+        .login-main-card {
+            max-width: 400px;
+            margin: 16px;
+            min-height: auto;
+            border-radius: 20px;
+        }
+    }
+</style>
+
+<!-- اسکریپت تعاملی حالت لودینگ دکمه -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector('form');
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (form && submitBtn) {
+            form.addEventListener('submit', function() {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>در حال ورود به سیستم...</span>
+                `;
+            });
+        }
+    });
+</script>
+{% endblock %}

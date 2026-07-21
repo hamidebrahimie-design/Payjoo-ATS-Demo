@@ -1,0 +1,102 @@
+{% load jalali_tags %}
+<tr id="interviewer-row-{{ state.id }}" class="align-middle bg-success bg-opacity-5">
+    <td class="ps-4">
+        <div class="font-semibold text-secondary">
+            {{ state.application.candidate.first_name }} {{ state.application.candidate.last_name }}
+        </div>
+        <div class="text-muted text-xs mt-0.5">کد ملی: {{ state.application.candidate.national_id }}</div>
+    </td>
+    <td>
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2 py-1 rounded font-medium text-xs">
+            {{ state.stage.name }}
+        </span>
+        <small class="text-muted d-block text-xxs mt-1 mb-1.5">{{ state.application.job.title }}</small>
+        <button type="button" 
+                hx-get="{% url 'job_opportunity_description' state.application.job.id %}" 
+                hx-target="#job-description-modal-content"
+                data-bs-toggle="modal" 
+                data-bs-target="#jobDescriptionModal"
+                class="btn btn-xs btn-outline-info rounded-pill px-2.5 py-0.5" 
+                style="font-size: 10px;">
+            👁 مشاهده آگهی شغل
+        </button>
+    </td>
+    <td colspan="3" class="p-0">
+        {% if state.stage.competencies.exists %}
+            <div class="p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded text-xs font-semibold">
+                            کانون ارزیابی شایستگی‌محور
+                        </span>
+                        <small class="text-muted">این مرحله دارای {{ state.stage.competencies.count }} شایستگی تعریف‌شده است.</small>
+                    </div>
+                    <button type="button" 
+                            hx-get="{% url 'candidate_assessment_sheet' state.id %}" 
+                            hx-target="#assessment-modal-content"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#assessmentModal"
+                            class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5 px-3 py-2" 
+                            style="border-radius: 6px; font-size: 12px;">
+                        📊 ثبت/ویرایش کاربرگ کانون
+                    </button>
+                </div>
+                <div class="mt-2 bg-success bg-opacity-10 border border-success border-opacity-20 rounded p-2 text-xxs d-flex align-items-center justify-content-between text-success">
+                    <div class="d-flex align-items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        <span>ارزیابی کانون با میانگین وزنی <strong>{{ iscore.score }}</strong> با موفقیت ثبت شد.</span>
+                    </div>
+                    <div class="text-xxs opacity-75 font-medium">
+                        ثبت شده توسط: {{ iscore.interviewer.get_full_name|default:iscore.interviewer.username }} در {{ iscore.updated_at|to_jalali }}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <form hx-post="{% url 'candidate_submit_interviewer_score' state.id %}" 
+                  hx-target="#interviewer-row-{{ state.id }}" 
+                  hx-swap="outerHTML" 
+                  class="m-0">
+                {% csrf_token %}
+                <div class="d-flex align-items-center py-2 pe-4 gap-2">
+                    <div style="width: 150px;">
+                        <input type="number" 
+                               name="score" 
+                               value="{{ iscore.score }}" 
+                               step="0.1" 
+                               min="0" 
+                               max="100" 
+                               class="form-control form-control-sm text-center font-bold" 
+                               style="border-radius: 6px; font-size: 13px;"
+                               required>
+                    </div>
+                    <div class="flex-grow-1">
+                        <input type="text" 
+                               name="notes" 
+                               value="{{ iscore.notes|default:'' }}" 
+                               placeholder="توضیحات و یادداشت..." 
+                               class="form-control form-control-sm text-muted" 
+                               style="border-radius: 6px; font-size: 11px;">
+                    </div>
+                    <div style="width: 150px;" class="text-end">
+                        <button type="submit" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1 px-3 py-1.5" style="border-radius: 6px; font-size: 12px;">
+                            ثبت ارزیابی
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-success bg-opacity-10 border-top border-success border-opacity-20 text-success px-4 py-1 text-xxs d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        <span>ارزیابی شما با نمره <strong>{{ iscore.score }}</strong> با موفقیت ثبت شد.</span>
+                    </div>
+                    <div class="text-xxs opacity-75 font-medium">
+                        ثبت شده توسط: {{ iscore.interviewer.get_full_name|default:iscore.interviewer.username }} در {{ iscore.updated_at|to_jalali }}
+                    </div>
+                </div>
+            </form>
+        {% endif %}
+    </td>
+</tr>

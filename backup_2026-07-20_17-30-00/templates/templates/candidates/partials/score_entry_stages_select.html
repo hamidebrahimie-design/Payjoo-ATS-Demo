@@ -1,0 +1,16 @@
+<label class="form-label font-medium text-secondary mb-2" style="font-size: 0.9rem;">انتخاب مرحله ارزیابی</label>
+<select name="stage_id" 
+        hx-get="{% url 'candidate_score_entry' %}" 
+        hx-include="[name='job_id']"
+        hx-target="#score-entry-list-container" 
+        hx-indicator="#loading-indicator"
+        class="form-select form-select-lg shadow-sm border-slate" 
+        style="font-size: 0.95rem; border-radius: 10px; max-width: 500px;"
+        required>
+    <option value="">-- لطفاً یک مرحله ارزیابی را انتخاب کنید --</option>
+    {% for stage in stages %}
+        <option value="{{ stage.id }}" {% if selected_stage and selected_stage.id == stage.id %}selected{% endif %}>
+            {{ stage.name }} (ترتیب: {{ stage.sequence }} - ضریب: {{ stage.weight }}٪)
+        </option>
+    {% endfor %}
+</select>

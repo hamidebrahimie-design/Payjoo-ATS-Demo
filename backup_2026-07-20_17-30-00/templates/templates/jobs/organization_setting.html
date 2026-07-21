@@ -1,0 +1,1051 @@
+{% extends "base_page.html" %}
+{% block title %}تنظیمات سازمان و اعلانات | سامانه جذب پیجو{% endblock %}
+
+{% block extra_head %}
+<!-- Animate.css for micro-animations -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.15);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(59, 130, 246, 0.05);
+    }
+    
+    .logo-preview-box {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        background-color: #f8fafc;
+        max-width: 250px;
+        margin: 0 auto;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    
+    .logo-preview-box:hover {
+        border-color: #3b82f6;
+    }
+
+    .preview-img {
+        max-height: 120px;
+        max-width: 100%;
+        object-fit: contain;
+        border-radius: 6px;
+    }
+
+    .nav-pills .nav-link {
+        color: #475569;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        text-align: right;
+    }
+    
+    .nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+        color: #ffffff;
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+    
+    .nav-pills .nav-link:hover:not(.active) {
+        background-color: #f1f5f9;
+        border-color: #e2e8f0;
+    }
+
+    .placeholder-badge {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px;
+        background-color: #f1f5f9;
+        color: #0f172a;
+        padding: 3px 6px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        display: inline-block;
+        transition: all 0.15s ease;
+        user-select: all;
+    }
+    
+    .placeholder-badge:hover {
+        background-color: #e2e8f0;
+        border-color: #cbd5e1;
+        transform: scale(1.05);
+    }
+
+    /* RTL Switch styling overrides */
+    .form-check.form-switch {
+        padding-right: 2.5em;
+        padding-left: 0;
+    }
+    .form-check.form-switch .form-check-input {
+        margin-right: -2.5em;
+        margin-left: 0;
+        float: right;
+    }
+
+    /* CSS overrides for tab panes wrapped in form */
+    .tab-content .tab-pane {
+        display: none !important;
+    }
+    .tab-content .tab-pane.active {
+        display: block !important;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h3 class="font-bold text-secondary mb-1">⚙️ تنظیمات سیستم</h3>
+    <p class="text-muted text-sm m-0">پیکربندی هویت سازمان و قالب‌های اعلانات ایمیلی و پیامکی خودکار کاندیداها.</p>
+</div>
+
+<div class="row g-4">
+    <!-- منوی سایدبار تب‌ها -->
+    <div class="col-lg-3">
+        <div class="card glass-card border-0 p-3 shadow-sm sticky-top" style="top: 20px; z-index: 10;">
+            <h6 class="font-bold text-muted text-xxs mb-3 px-2 text-uppercase">بخش‌های تنظیمات</h6>
+            <div class="nav flex-column nav-pills gap-2" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-org-tab" data-bs-toggle="pill" data-bs-target="#v-pills-org" type="button" role="tab" aria-controls="v-pills-org" aria-selected="true">
+                    <span>🏢 هویت سازمان</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-reg-tab" data-bs-toggle="pill" data-bs-target="#v-pills-reg" type="button" role="tab" aria-controls="v-pills-reg" aria-selected="false">
+                    <span>✉️ اعلانات ثبت‌نام</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-exam-tab" data-bs-toggle="pill" data-bs-target="#v-pills-exam" type="button" role="tab" aria-controls="v-pills-exam" aria-selected="false">
+                    <span>📝 دعوت به آزمون کتبی</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-interview-tab" data-bs-toggle="pill" data-bs-target="#v-pills-interview" type="button" role="tab" aria-controls="v-pills-interview" aria-selected="false">
+                    <span>👥 دعوت به مصاحبه</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-offer-tab" data-bs-toggle="pill" data-bs-target="#v-pills-offer" type="button" role="tab" aria-controls="v-pills-offer" aria-selected="false">
+                    <span>🎉 پذیرش و پیشنهاد همکاری</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-reject-tab" data-bs-toggle="pill" data-bs-target="#v-pills-reject" type="button" role="tab" aria-controls="v-pills-reject" aria-selected="false">
+                    <span>❌ مردودی و رد رزومه</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-connect-tab" data-bs-toggle="pill" data-bs-target="#v-pills-connect" type="button" role="tab" aria-controls="v-pills-connect" aria-selected="false">
+                    <span>🔑 درگاه‌های ارتباطی (SMTP/SMS)</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-sms-manual-tab" data-bs-toggle="pill" data-bs-target="#v-pills-sms-manual" type="button" role="tab" aria-controls="v-pills-sms-manual" aria-selected="false">
+                    <span>💬 مدیریت پیامک‌های دستی</span>
+                </button>
+                <button class="nav-link font-semibold text-xs py-2.5 px-3 text-end d-flex align-items-center justify-content-between" id="v-pills-license-tab" data-bs-toggle="pill" data-bs-target="#v-pills-license" type="button" role="tab" aria-controls="v-pills-license" aria-selected="false">
+                    <span>🔑 لایسنس و محدودیت‌ها</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- محتوای تنظیمات -->
+    <div class="col-lg-9">
+        <div class="card glass-card border-0 p-4 shadow-sm">
+            <div class="tab-content" id="v-pills-tabContent">
+                <form action="{% url 'organization_setting' %}" method="post" enctype="multipart/form-data" id="org-settings-form" class="m-0">
+                    {% csrf_token %}
+                    
+                    <!-- ۱. هویت سازمان -->
+                    <div class="tab-pane fade show active" id="v-pills-org" role="tabpanel" aria-labelledby="v-pills-org-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom">🏢 شناسنامه و هویت سازمان</h5>
+                        
+                        <div class="row g-3">
+                            <!-- نام سازمان -->
+                            <div class="col-md-12">
+                                <label for="id_name" class="form-label font-semibold text-xs text-secondary mb-1.5">نام رسمی سازمان:</label>
+                                {{ form.name }}
+                                <div class="form-text text-xxs text-muted mt-1">نام سازمان در تمامی قالب‌های پیامک و ایمیل با متغیر <span class="placeholder-badge">{{ company_name }}</span> نمایش داده خواهد شد.</div>
+                            </div>
+
+                            <!-- فایل لوگو و پیش‌نمایش -->
+                            <div class="col-md-12 mt-4">
+                                <label for="id_logo" class="form-label font-semibold text-xs text-secondary mb-2">لوگوی رسمی سازمان:</label>
+                                
+                                <div class="row align-items-center g-3">
+                                    <div class="col-md-7">
+                                        {{ form.logo }}
+                                        <div class="form-text text-xxs text-muted mt-2">
+                                            فرمت‌های مجاز: PNG, JPG, JPEG, SVG. <br>
+                                            پیشنهاد می‌شود از لوگوی با پس‌زمینه شفاف (Transparent) استفاده نمایید.
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-5 text-center">
+                                        <div class="logo-preview-box">
+                                            {% if setting.logo %}
+                                                <img src="{{ setting.logo.url }}" alt="لوگوی فعلی" id="image-preview" class="preview-img">
+                                                <span class="d-block text-xxs text-muted mt-2 font-semibold">لوگوی بارگذاری شده</span>
+                                            {% else %}
+                                                <img src="/static/logo.png" alt="لوگوی پیش‌فرض" id="image-preview" class="preview-img" style="opacity: 0.5;">
+                                                <span class="d-block text-xxs text-muted mt-2 font-semibold">لوگوی پیش‌فرض سیستم</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۲. اعلانات ثبت‌نام -->
+                    <div class="tab-pane fade" id="v-pills-reg" role="tabpanel" aria-labelledby="v-pills-reg-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>✉️ اعلانات ثبت درخواست و ورود اولیه</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary text-xxs">مرحله غربالگری اولیه</span>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-envelope"></i> 📧 پیکربندی ایمیل
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.reg_email_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_reg_email_enabled">ارسال خودکار ایمیل فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reg_email_subject" class="form-label font-semibold text-xxs text-secondary">موضوع ایمیل:</label>
+                                    {{ form.reg_email_subject }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reg_email_body" class="form-label font-semibold text-xxs text-secondary">متن ایمیل (HTML):</label>
+                                    {{ form.reg_email_body }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-text"></i> 💬 پیکربندی پیامک (SMS)
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.reg_sms_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_reg_sms_enabled">ارسال خودکار پیامک فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reg_sms_body" class="form-label font-semibold text-xxs text-secondary">متن پیامک:</label>
+                                    {{ form.reg_sms_body }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۳. دعوت به آزمون کتبی -->
+                    <div class="tab-pane fade" id="v-pills-exam" role="tabpanel" aria-labelledby="v-pills-exam-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>📝 اعلانات دعوت به آزمون کتبی / تخصصی</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary text-xxs">مرحله آزمون</span>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-envelope"></i> 📧 پیکربندی ایمیل
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.exam_email_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_exam_email_enabled">ارسال خودکار ایمیل فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_exam_email_subject" class="form-label font-semibold text-xxs text-secondary">موضوع ایمیل:</label>
+                                    {{ form.exam_email_subject }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_exam_email_body" class="form-label font-semibold text-xxs text-secondary">متن ایمیل (HTML):</label>
+                                    {{ form.exam_email_body }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-text"></i> 💬 پیکربندی پیامک (SMS)
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.exam_sms_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_exam_sms_enabled">ارسال خودکار پیامک فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_exam_sms_body" class="form-label font-semibold text-xxs text-secondary">متن پیامک:</label>
+                                    {{ form.exam_sms_body }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۴. دعوت به مصاحبه -->
+                    <div class="tab-pane fade" id="v-pills-interview" role="tabpanel" aria-labelledby="v-pills-interview-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>👥 اعلانات دعوت به مصاحبه تخصصی</span>
+                            <span class="badge bg-success bg-opacity-10 text-success text-xxs">مرحله مصاحبه</span>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-envelope"></i> 📧 پیکربندی ایمیل
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.interview_email_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_interview_email_enabled">ارسال خودکار ایمیل فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_interview_email_subject" class="form-label font-semibold text-xxs text-secondary">موضوع ایمیل:</label>
+                                    {{ form.interview_email_subject }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_interview_email_body" class="form-label font-semibold text-xxs text-secondary">متن ایمیل (HTML):</label>
+                                    {{ form.interview_email_body }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-text"></i> 💬 پیکربندی پیامک (SMS)
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.interview_sms_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_interview_sms_enabled">ارسال خودکار پیامک فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_interview_sms_body" class="form-label font-semibold text-xxs text-secondary">متن پیامک:</label>
+                                    {{ form.interview_sms_body }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۵. پذیرش و پیشنهاد همکاری -->
+                    <div class="tab-pane fade" id="v-pills-offer" role="tabpanel" aria-labelledby="v-pills-offer-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>🎉 اعلانات پذیرش نهایی و پیشنهاد همکاری (Offer)</span>
+                            <span class="badge bg-info bg-opacity-10 text-info text-xxs">مرحله قبولی نهایی</span>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-envelope"></i> 📧 پیکربندی ایمیل
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.offer_email_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_offer_email_enabled">ارسال خودکار ایمیل فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_offer_email_subject" class="form-label font-semibold text-xxs text-secondary">موضوع ایمیل:</label>
+                                    {{ form.offer_email_subject }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_offer_email_body" class="form-label font-semibold text-xxs text-secondary">متن ایمیل (HTML):</label>
+                                    {{ form.offer_email_body }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-text"></i> 💬 پیکربندی پیامک (SMS)
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.offer_sms_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_offer_sms_enabled">ارسال خودکار پیامک فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_offer_sms_body" class="form-label font-semibold text-xxs text-secondary">متن پیامک:</label>
+                                    {{ form.offer_sms_body }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۶. مردودی و رد رزومه -->
+                    <div class="tab-pane fade" id="v-pills-reject" role="tabpanel" aria-labelledby="v-pills-reject-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>❌ اعلانات عدم پذیرش و رد رزومه</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger text-xxs">مرحله رد رزومه</span>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-envelope"></i> 📧 پیکربندی ایمیل
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.reject_email_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_reject_email_enabled">ارسال خودکار ایمیل فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reject_email_subject" class="form-label font-semibold text-xxs text-secondary">موضوع ایمیل:</label>
+                                    {{ form.reject_email_subject }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reject_email_body" class="form-label font-semibold text-xxs text-secondary">متن ایمیل (HTML):</label>
+                                    {{ form.reject_email_body }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-chat-left-text"></i> 💬 پیکربندی پیامک (SMS)
+                                </h6>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.reject_sms_enabled }}
+                                    <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_reject_sms_enabled">ارسال خودکار پیامک فعال باشد</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_reject_sms_body" class="form-label font-semibold text-xxs text-secondary">متن پیامک:</label>
+                                    {{ form.reject_sms_body }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۷. تنظیمات درگاه‌های ارتباطی -->
+                    <div class="tab-pane fade" id="v-pills-connect" role="tabpanel" aria-labelledby="v-pills-connect-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                            <span>🔑 پیکربندی درگاه‌های ایمیل و پیامک</span>
+                            <span class="badge bg-dark bg-opacity-10 text-dark text-xxs">SMTP & SMS Gateway</span>
+                        </h5>
+                        
+                        <div class="row g-4">
+                            <!-- سرور ارسال ایمیل -->
+                            <div class="col-md-6 border-start">
+                                <h6 class="font-bold text-primary mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-server"></i> 📧 سرور ارسال ایمیل (SMTP)
+                                </h6>
+                                <div class="mb-3">
+                                    <label for="id_email_provider" class="form-label font-semibold text-xxs text-secondary">سرویس‌دهنده ایمیل:</label>
+                                    {{ form.email_provider }}
+                                </div>
+                                <div class="mb-3" id="smtp-host-group">
+                                    <label for="id_smtp_host" class="form-label font-semibold text-xxs text-secondary">آدرس سرور SMTP:</label>
+                                    {{ form.smtp_host }}
+                                    <div class="form-text text-xxs text-muted">آدرس سرور پست الکترونیک (مثال: smtp.gmail.com)</div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-8" id="smtp-user-group">
+                                        <label for="id_smtp_user" class="form-label font-semibold text-xxs text-secondary">نام کاربری SMTP (ایمیل):</label>
+                                        {{ form.smtp_user }}
+                                    </div>
+                                    <div class="col-md-4" id="smtp-port-group">
+                                        <label for="id_smtp_port" class="form-label font-semibold text-xxs text-secondary">پورت SMTP:</label>
+                                        {{ form.smtp_port }}
+                                    </div>
+                                </div>
+                                <div class="mb-3" id="smtp-password-group">
+                                    <label for="id_smtp_password" class="form-label font-semibold text-xxs text-secondary">کلمه عبور SMTP:</label>
+                                    {{ form.smtp_password }}
+                                    <div class="form-text text-xxs text-muted mt-1" id="smtp-password-help">در صورت استفاده از Gmail یا Outlook، باید <strong>رمز عبور برنامه (App Password)</strong> را از تنظیمات امنیتی گوگل/مایکروسافت دریافت کرده و در این کادر وارد نمایید (نه رمز اصلی اکانت خود).</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_smtp_sender_email" class="form-label font-semibold text-xxs text-secondary">ایمیل فرستنده پیش‌فرض:</label>
+                                    {{ form.smtp_sender_email }}
+                                    <div class="form-text text-xxs text-muted">آدرسی که به عنوان فرستنده ایمیل‌ها درج می‌شود (مثال: no-reply@company.com)</div>
+                                </div>
+                                <div class="d-flex gap-3 mb-3" id="smtp-encryption-group">
+                                    <div class="form-switch">
+                                        {{ form.smtp_use_tls }}
+                                        <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_smtp_use_tls">استفاده از TLS</label>
+                                    </div>
+                                    <div class="form-switch">
+                                        {{ form.smtp_use_ssl }}
+                                        <label class="form-check-label font-semibold text-xs text-secondary ms-2" for="id_smtp_use_ssl">استفاده از SSL</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- وب‌سرویس پیامکی -->
+                            <div class="col-md-6">
+                                <h6 class="font-bold text-warning mb-3 text-xs d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-phone"></i> 💬 درگاه وب‌سرویس پیامک (SMS Gateway)
+                                </h6>
+                                <div class="mb-3">
+                                    <label for="id_sms_provider" class="form-label font-semibold text-xxs text-secondary">ارائه‌دهنده پنل پیامکی:</label>
+                                    {{ form.sms_provider }}
+                                </div>
+                                <div class="mb-3" id="sms-api-key-group">
+                                    <label for="id_sms_api_key" class="form-label font-semibold text-xxs text-secondary" id="sms-api-key-label">کلید API / کلمه عبور پنل:</label>
+                                    {{ form.sms_api_key }}
+                                    <div class="form-text text-xxs text-muted" id="sms-api-key-help">کد امنیتی یا API Key پنل پیامکی جهت احراز هویت.</div>
+                                </div>
+                                <div class="mb-3" id="sms-sender-group">
+                                    <label for="id_sms_sender_number" class="form-label font-semibold text-xxs text-secondary">شماره فرستنده (خط اختصاصی):</label>
+                                    {{ form.sms_sender_number }}
+                                    <div class="form-text text-xxs text-muted">شماره فرستنده اختصاصی خریداری شده در پنل پیامکی.</div>
+                                </div>
+                                <div class="mb-3" id="sms-custom-url-group">
+                                    <label for="id_sms_custom_url" class="form-label font-semibold text-xxs text-secondary">آدرس API اختصاصی / دستی:</label>
+                                    {{ form.sms_custom_url }}
+                                    <div class="form-text text-xxs text-muted">آدرس کامل وب‌سرویس دلخواه (مثال: https://api.mysms.ir/v1/send)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ۸. مدیریت لایسنس و محدودیت‌ها -->
+                    <div class="tab-pane fade" id="v-pills-license" role="tabpanel" aria-labelledby="v-pills-license-tab">
+                        <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom">🔑 مدیریت لایسنس و محدودیت‌ها</h5>
+                        
+                        <!-- نمایش آمار مصرف منابع -->
+                        <div class="row g-3 mb-4">
+                            <!-- ظرفیت فرصت‌های شغلی -->
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0 p-3" style="border-radius: 12px;">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-xs font-semibold text-secondary">💼 فرصت‌های شغلی</span>
+                                        <span class="badge {% if license_stats.jobs_over_limit %}bg-danger{% else %}bg-primary{% endif %} text-white text-xxs font-bold">
+                                            {{ license_stats.jobs_used }} / {{ license_stats.jobs_limit }}
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 6px; border-radius: 3px;">
+                                        <div class="progress-bar {% if license_stats.jobs_over_limit %}bg-danger{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ license_stats.jobs_percent }}%;" aria-valuenow="{{ license_stats.jobs_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="text-xxs text-muted mt-2 d-block">میزان مصرف ظرفیت فرصت‌های شغلی</span>
+                                </div>
+                            </div>
+                            
+                            <!-- ظرفیت متقاضیان -->
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0 p-3" style="border-radius: 12px;">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-xs font-semibold text-secondary">👥 متقاضیان کار</span>
+                                        <span class="badge {% if license_stats.candidates_over_limit %}bg-danger{% else %}bg-primary{% endif %} text-white text-xxs font-bold">
+                                            {{ license_stats.candidates_used }} / {{ license_stats.candidates_limit }}
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 6px; border-radius: 3px;">
+                                        <div class="progress-bar {% if license_stats.candidates_over_limit %}bg-danger{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ license_stats.candidates_percent }}%;" aria-valuenow="{{ license_stats.candidates_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="text-xxs text-muted mt-2 d-block">میزان مصرف ظرفیت متقاضیان</span>
+                                </div>
+                            </div>
+
+                            <!-- ظرفیت پست‌های شایستگی -->
+                            <div class="col-md-4">
+                                <div class="card bg-light border-0 p-3" style="border-radius: 12px;">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-xs font-semibold text-secondary">📋 پست‌های بانک شایستگی</span>
+                                        <span class="badge {% if license_stats.posts_over_limit %}bg-danger{% else %}bg-primary{% endif %} text-white text-xxs font-bold">
+                                            {{ license_stats.posts_used }} / {{ license_stats.posts_limit }}
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 6px; border-radius: 3px;">
+                                        <div class="progress-bar {% if license_stats.posts_over_limit %}bg-danger{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ license_stats.posts_percent }}%;" aria-valuenow="{{ license_stats.posts_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="text-xxs text-muted mt-2 d-block">میزان مصرف پست‌های بانک شایستگی</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- مشخصات لایسنس جاری -->
+                        <div class="card border border-light shadow-sm p-3 mb-4" style="border-radius: 16px;">
+                            <h6 class="font-bold text-secondary mb-3 text-xs">📋 مشخصات لایسنس جاری سیستم</h6>
+                            <div class="row g-3 text-xs">
+                                <div class="col-md-6">
+                                    <span class="text-muted d-block mb-1">صادرشده برای (مالک لایسنس):</span>
+                                    <strong class="text-secondary">{{ license_stats.licensee }}</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <span class="text-muted d-block mb-1">تاریخ انقضا:</span>
+                                    <strong class="{% if not license_stats.is_valid and license_stats.expires_at_jalali %}text-danger{% else %}text-secondary{% endif %}">
+                                        {{ license_stats.expires_at_jalali|default:"ندارد (نسخه رایگان)" }}
+                                    </strong>
+                                </div>
+                                <div class="col-md-12 mt-3">
+                                    <span class="text-muted d-block mb-1">وضعیت لایسنس:</span>
+                                    {% if license_stats.is_valid %}
+                                        <span class="badge bg-success text-white px-2.5 py-1 text-xxs font-bold">فعال و معتبر</span>
+                                    {% else %}
+                                        <span class="badge bg-danger text-white px-2.5 py-1 text-xxs font-bold">نامعتبر / رایگان</span>
+                                        <div class="text-danger mt-2 font-semibold text-xxs">⚠️ دلیل خطای لایسنس: {{ license_stats.error }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-12 mt-3 pt-3 border-top">
+                                    <span class="text-muted d-block mb-1">شناسه سخت‌افزاری این سرور (Machine ID):</span>
+                                    <code class="text-secondary font-monospace bg-light px-2 py-1 rounded text-xxs">{{ license_stats.machine_id }}</code>
+                                    <div class="text-muted mt-1" style="font-size: 9px;">در صورت نیاز به قفل سخت‌افزاری آفلاین، این شناسه را به تولیدکننده لایسنس اعلام فرمایید.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- فیلد ورود لایسنس جدید -->
+                        <div class="mb-3">
+                            <label for="id_license_key" class="form-label font-semibold text-xs text-secondary mb-1.5">کلید لایسنس فعال‌سازی (Base64 Encoded):</label>
+                            
+                            {% if setting.license_key %}
+                                <div id="license-masked-container" class="card bg-light border-0 p-3 mb-2" style="border-radius: 12px;">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <code class="text-xxs text-muted font-monospace" style="word-break: break-all;">
+                                            {{ setting.license_key|slice:":15" }}...****************************************************************************************************************...{{ setting.license_key|slice:"-15:" }}
+                                        </code>
+                                        <button type="button" class="btn btn-xs btn-outline-danger font-bold text-xxs px-2.5 py-1.5 ms-3 flex-shrink-0" onclick="enableLicenseEditing()" style="border-radius: 8px;">
+                                            🔒 تغییر لایسنس
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="license-input-container" style="display: none;">
+                                    {{ form.license_key }}
+                                </div>
+                            {% else %}
+                                {{ form.license_key }}
+                            {% endif %}
+                            
+                            <div class="form-text text-xxs text-muted mt-1.5">
+                                برای ارتقای ظرفیت سامانه، لطفاً کد لایسنس صادرشده توسط شرکت را در کادر بالا قرار داده و بر روی دکمه <strong>«ذخیره تنظیمات سیستم»</strong> کلیک کنید.
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- ۸. مدیریت پیامک‌های دستی -->
+                <div class="tab-pane fade" id="v-pills-sms-manual" role="tabpanel" aria-labelledby="v-pills-sms-manual-tab">
+                    <h5 class="font-bold text-secondary mb-4 pb-2 border-bottom d-flex align-items-center justify-content-between">
+                        <span>💬 مدیریت و ارسال پیامک گروهی (دستی)</span>
+                        <span class="badge bg-dark bg-opacity-10 text-dark text-xxs">Manual SMS Panel</span>
+                    </h5>
+                    
+                    <div class="row g-4">
+                        <!-- راست: مدیریت قالب‌های پیامک دستی -->
+                        <div class="col-lg-4 col-md-5 border-start">
+                            <div class="card bg-light border-0 p-3 mb-4" style="border-radius: 12px;">
+                                <h6 class="font-bold text-secondary mb-3 text-xs">
+                                    {% if edit_template %}
+                                    ✏️ ویرایش قالب پیامک دستی
+                                    {% else %}
+                                    ➕ ثبت قالب پیامک جدید
+                                    {% endif %}
+                                </h6>
+                                <form method="post" action="{% url 'sms_panel' %}">
+                                    {% csrf_token %}
+                                    {% if edit_template %}
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="hidden" name="template_id" value="{{ edit_template.id }}">
+                                    {% else %}
+                                    <input type="hidden" name="action" value="create">
+                                    {% endif %}
+
+                                    <div class="mb-3">
+                                        <label for="template_name" class="form-label font-semibold text-xxs text-secondary mb-1">نام قالب:</label>
+                                        <input type="text" class="form-control form-control-sm" id="template_name" name="template_name"
+                                            placeholder="مثال: دعوت به مصاحبه" required
+                                            value="{{ edit_template.name|default:'' }}" autocomplete="off" style="font-size: 12px; border-radius: 6px;">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="template_body" class="form-label font-semibold text-xxs text-secondary m-0">متن پیامک:</label>
+                                            <span class="text-xxs text-muted" id="char_counter_form" style="font-size: 9px;">۰ کاراکتر</span>
+                                        </div>
+                                        <textarea class="form-control form-control-sm text-right" id="template_body" name="body" rows="4"
+                                            placeholder="متن پیامک خود را بنویسید..."
+                                            required style="font-size: 11px; border-radius: 6px;">{{ edit_template.body|default:'' }}</textarea>
+                                    </div>
+
+                                    <div class="mb-3 bg-white p-2 rounded border border-light">
+                                        <span class="d-block text-xxs font-semibold text-secondary mb-1">متغیرها (کلیک برای کپی/درج):</span>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{نام}')">{نام}</span>
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{نام_خانوادگی}')">{نام_خانوادگی}</span>
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{عنوان_شغل}')">{عنوان_شغل}</span>
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{نام_مرحله}')">{نام_مرحله}</span>
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{نمره}')">{نمره}</span>
+                                            <span class="placeholder-badge" style="font-size: 9px; padding: 2px 5px; cursor: pointer;" onclick="insertPlaceholder('{کد_ملی}')">{کد_ملی}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1 font-bold text-xxs" style="border-radius: 6px;">ذخیره قالب</button>
+                                        {% if edit_template %}
+                                        <a href="?tab=sms-manual" class="btn btn-light btn-sm font-bold text-xxs" style="border-radius: 6px;">انصراف</a>
+                                        {% endif %}
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="card bg-light border-0 p-3" style="border-radius: 12px;">
+                                <h6 class="font-bold text-secondary mb-3 text-xs">📋 لیست قالب‌های ذخیره شده</h6>
+                                <div style="max-height: 250px; overflow-y: auto;">
+                                    {% if templates %}
+                                    <div class="list-group list-group-flush bg-transparent">
+                                        {% for tmpl in templates %}
+                                        <div class="list-group-item px-0 py-2 border-bottom bg-transparent d-flex flex-column gap-1">
+                                            <div class="d-flex justify-content-between align-items-start w-100">
+                                                <h6 class="mb-0 font-bold text-dark text-truncate text-xs" style="max-width: 140px;">{{ tmpl.name }}</h6>
+                                                <div class="d-flex gap-1">
+                                                    <a href="?tab=sms-manual&edit_template={{ tmpl.id }}"
+                                                        class="btn btn-xxs btn-outline-primary py-0.5 px-1.5"
+                                                        style="font-size: 9px; border-radius: 4px;">ویرایش</a>
+
+                                                    <form method="post" action="{% url 'sms_panel' %}" class="m-0"
+                                                        onsubmit="return confirm('آیا از حذف این قالب پیامک اطمینان دارید؟');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <input type="hidden" name="template_id" value="{{ tmpl.id }}">
+                                                        <button type="submit" class="btn btn-xxs btn-outline-danger py-0.5 px-1.5"
+                                                            style="font-size: 9px; border-radius: 4px;">حذف</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            <p class="text-xxs text-muted mb-0 text-truncate-2" style="font-size: 10px; line-height: 1.4;">{{ tmpl.body }}</p>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-3 text-muted">
+                                        <p class="mb-0 text-xxs">قالبی ثبت نشده است.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- چپ: فیلترها و پیش‌نمایش متقاضیان -->
+                        <div class="col-lg-8 col-md-7">
+                            <div class="card border border-light shadow-none p-3 mb-3" style="border-radius: 12px; background: rgba(0,0,0,0.01);">
+                                <h6 class="font-bold text-secondary mb-3 text-xs">🔍 فیلتر و انتخاب متقاضیان دریافت پیامک</h6>
+                                <form id="sms-filter-form" hx-get="{% url 'sms_panel_preview' %}"
+                                    hx-target="#sms-candidates-container" hx-trigger="change delay:100ms, keyup delay:400ms, load"
+                                    hx-indicator="#loading-indicator">
+
+                                    <div class="row g-2.5">
+                                        <div class="col-md-6">
+                                            <label for="id_template_id" class="form-label font-semibold text-xxs text-secondary mb-1">قالب انتخابی برای پیش‌نویس</label>
+                                            <select class="form-select form-select-sm" id="id_template_id" name="template_id" style="font-size: 11px; border-radius: 6px;">
+                                                <option value="" {% if not edit_template %}selected{% endif %}>--- انتخاب قالب پیامک ---</option>
+                                                {% for tmpl in templates %}
+                                                <option value="{{ tmpl.id }}" {% if edit_template.id == tmpl.id %}selected{% endif %}>{{ tmpl.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="id_job_id" class="form-label font-semibold text-xxs text-secondary mb-1">فرصت شغلی</label>
+                                            <select class="form-select form-select-sm" id="id_job_id" name="job_id" style="font-size: 11px; border-radius: 6px;"
+                                                hx-get="{% url 'sms_panel_stages' %}" hx-target="#id_stage_id" hx-trigger="change"
+                                                hx-include="[name='job_id']">
+                                                <option value="">همه فرصت‌های شغلی</option>
+                                                {% for job in jobs %}
+                                                <option value="{{ job.id }}">{{ job.title }} ({{ job.code }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label for="id_stage_id" class="form-label font-semibold text-xxs text-secondary mb-1">مرحلۀ ارزیابی</label>
+                                            <select class="form-select form-select-sm" id="id_stage_id" name="stage_id" style="font-size: 11px; border-radius: 6px;">
+                                                <option value="">همه مراحل</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label for="id_app_status" class="form-label font-semibold text-xxs text-secondary mb-1">وضعیت نهایی درخواست</label>
+                                            <select class="form-select form-select-sm" id="id_app_status" name="app_status" style="font-size: 11px; border-radius: 6px;">
+                                                <option value="">همه وضعیت‌ها</option>
+                                                {% for code, label in app_statuses %}
+                                                <option value="{{ code }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label for="id_stage_status" class="form-label font-semibold text-xxs text-secondary mb-1">وضعیت قبولی در مرحله</label>
+                                            <select class="form-select form-select-sm" id="id_stage_status" name="stage_status" style="font-size: 11px; border-radius: 6px;">
+                                                <option value="">همه وضعیت‌های مرحله</option>
+                                                {% for code, label in stage_statuses %}
+                                                <option value="{{ code }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12 mt-1">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white border-end-0" style="border-radius: 6px 0 0 6px;">
+                                                    <i class="bi bi-search text-muted" style="font-size: 11px;"></i>
+                                                </span>
+                                                <input type="text" class="form-control border-start-0" id="id_search" name="q"
+                                                    placeholder="جستجو متقاضی بر اساس نام، شماره تماس یا کد ملی..."
+                                                    style="border-radius: 0 6px 6px 0; font-size: 11px;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="text-center py-1">
+                                <div id="loading-indicator" class="htmx-indicator spinner-border text-primary spinner-border-sm" role="status" style="width: 1rem; height: 1rem;">
+                                    <span class="visually-hidden">در حال بارگذاری...</span>
+                                </div>
+                            </div>
+
+                            <div id="sms-candidates-container">
+                                <div class="card border border-light p-4 text-center text-muted" style="border-radius: 12px; font-size: 11px;">
+                                    در حال بارگذاری متقاضیان...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+                <!-- راهنمای متغیرهای پویا (Placeholders Reference) -->
+                <div class="mt-4 pt-3 border-top" id="placeholders-guide" style="display: none;">
+                    <div class="card bg-light border-0 p-3" style="border-radius: 12px;">
+                        <h6 class="font-bold text-secondary mb-2 text-xs">📋 راهنمای متغیرهای پویا (مورد استفاده در قالب‌ها)</h6>
+                        <p class="text-xxs text-muted mb-3">شما می‌توانید از متغیرهای زیر در متن پیامک‌ها و عنوان یا متن ایمیل‌ها استفاده کنید. متغیرها هنگام ارسال به صورت خودکار جایگزین می‌شوند:</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ candidate_name }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">نام متقاضی</span>
+                            
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ job_title }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">عنوان شغل</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ company_name }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">نام سازمان</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ stage_name }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">نام مرحله</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ date }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">تاریخ شمسی رویداد</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ time }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">ساعت رویداد</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ link }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">لینک پنل کاندیدا</span>
+
+                            <span class="placeholder-badge" title="کلیک برای کپی" onclick="navigator.clipboard.writeText(this.innerText)">{{ recruiter_name }}</span>
+                            <span class="text-xxs text-muted align-middle mt-1 font-semibold">نام کارشناس جذب</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- دکمه‌های ثبت و بازگشت -->
+                <div class="mt-4 pt-4 border-top d-flex gap-2" id="settings-save-actions">
+                    <button type="submit" form="org-settings-form" class="btn btn-primary px-4 py-2.5 font-bold text-xs d-flex align-items-center gap-2" style="border-radius: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        ذخیره تنظیمات سیستم
+                    </button>
+                    <a href="{% url 'job_list' %}" class="btn btn-light px-4 py-2.5 font-bold text-xs" style="border-radius: 8px;">بازگشت به فرصت‌ها</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('id_logo');
+        const previewImg = document.getElementById('image-preview');
+
+        // استایل‌دهی یکدست به المان‌های فرم جنگو
+        const formControls = document.querySelectorAll('#org-settings-form input[type="text"], #org-settings-form textarea, #org-settings-form select');
+        formControls.forEach(el => {
+            el.classList.add('form-control');
+            el.style.borderRadius = '8px';
+            if (el.tagName === 'SELECT') {
+                el.classList.remove('form-control');
+                el.classList.add('form-select');
+            }
+            if (el.tagName === 'TEXTAREA') {
+                el.style.fontSize = '0.75rem';
+                el.style.padding = '8px 10px';
+            } else {
+                el.style.fontSize = '0.85rem';
+                el.style.padding = '8px 12px';
+            }
+        });
+
+        // نمایش لایو لوگوی بارگذاری شده
+        if (fileInput) {
+            fileInput.classList.add('form-control');
+            fileInput.style.borderRadius = '8px';
+            fileInput.style.fontSize = '0.85rem';
+            
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        previewImg.style.opacity = '1';
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // نمایش یا عدم نمایش راهنمای متغیرهای پویا و دکمه ذخیره تنظیمات بر اساس تب فعال
+        const placeholdersGuide = document.getElementById('placeholders-guide');
+        const tabs = document.querySelectorAll('#v-pills-tab button');
+        
+        function togglePlaceholdersGuide(targetId) {
+            const saveActions = document.getElementById('settings-save-actions');
+            if (targetId === 'v-pills-sms-manual-tab') {
+                if (saveActions) saveActions.style.setProperty('display', 'none', 'important');
+                if (placeholdersGuide) placeholdersGuide.style.display = 'none';
+            } else {
+                if (saveActions) saveActions.style.setProperty('display', 'flex', 'important');
+                if (placeholdersGuide) {
+                    if (targetId === 'v-pills-org-tab' || targetId === 'v-pills-connect-tab' || targetId === 'v-pills-license-tab') {
+                        placeholdersGuide.style.display = 'none';
+                    } else {
+                        placeholdersGuide.style.display = 'block';
+                        // افکت انیمیشن در هنگام نمایش مجدد
+                        placeholdersGuide.classList.remove('animate__animated', 'animate__fadeIn');
+                        void placeholdersGuide.offsetWidth; // Trigger reflow
+                        placeholdersGuide.classList.add('animate__animated', 'animate__fadeIn');
+                    }
+                }
+            }
+        }
+
+        // فعال‌سازی تب بر اساس URL query params (تب مدیریت دستی پیامک)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam === 'sms-manual') {
+            const smsTabBtn = document.getElementById('v-pills-sms-manual-tab');
+            if (smsTabBtn) {
+                setTimeout(() => {
+                    const tabTrigger = new bootstrap.Tab(smsTabBtn);
+                    tabTrigger.show();
+                    togglePlaceholdersGuide('v-pills-sms-manual-tab');
+                }, 150);
+            }
+        } else {
+            // مقداردهی اولیه برای تب لود شده پیش‌فرض
+            const activeTab = document.querySelector('#v-pills-tab button.active');
+            if (activeTab) {
+                togglePlaceholdersGuide(activeTab.id);
+            }
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(event) {
+                togglePlaceholdersGuide(event.target.id);
+            });
+        });
+
+        // پویایی فیلدهای درگاه‌های ارتباطی (SMTP / SMS)
+        const emailProvider = document.getElementById('id_email_provider');
+        const smtpHost = document.getElementById('id_smtp_host');
+        const smtpPort = document.getElementById('id_smtp_port');
+        const smtpTls = document.getElementById('id_smtp_use_tls');
+        const smtpSsl = document.getElementById('id_smtp_use_ssl');
+
+        const smsProvider = document.getElementById('id_sms_provider');
+        const smsApiKeyGroup = document.getElementById('sms-api-key-group');
+        const smsApiKeyLabel = document.getElementById('sms-api-key-label');
+        const smsApiKeyHelp = document.getElementById('sms-api-key-help');
+        const smsSenderGroup = document.getElementById('sms-sender-group');
+        const smsCustomUrlGroup = document.getElementById('sms-custom-url-group');
+
+        function updateEmailFields() {
+            if (!emailProvider || !smtpHost || !smtpPort) return;
+            const val = emailProvider.value;
+            if (val === 'GMAIL') {
+                smtpHost.value = 'smtp.gmail.com';
+                smtpHost.readOnly = true;
+                smtpPort.value = '587';
+                smtpPort.readOnly = true;
+                if (smtpTls) smtpTls.checked = true;
+                if (smtpSsl) smtpSsl.checked = false;
+            } else if (val === 'OUTLOOK') {
+                smtpHost.value = 'smtp-mail.outlook.com';
+                smtpHost.readOnly = true;
+                smtpPort.value = '587';
+                smtpPort.readOnly = true;
+                if (smtpTls) smtpTls.checked = true;
+                if (smtpSsl) smtpSsl.checked = false;
+            } else { // CUSTOM
+                smtpHost.readOnly = false;
+                smtpPort.readOnly = false;
+            }
+        }
+
+        function updateSMSFields() {
+            if (!smsProvider) return;
+            const val = smsProvider.value;
+            if (val === 'MOCK' || val === 'OTHER') {
+                if (smsApiKeyGroup) smsApiKeyGroup.style.display = 'none';
+                if (smsSenderGroup) smsSenderGroup.style.display = 'none';
+                if (smsCustomUrlGroup) smsCustomUrlGroup.style.display = 'none';
+            } else if (val === 'KAVENEGAR') {
+                if (smsApiKeyGroup) smsApiKeyGroup.style.display = 'block';
+                if (smsSenderGroup) smsSenderGroup.style.display = 'block';
+                if (smsCustomUrlGroup) smsCustomUrlGroup.style.display = 'none';
+                if (smsApiKeyLabel) smsApiKeyLabel.innerText = "کلید API پنل کاوه نگار (Kavenegar API Key):";
+                if (smsApiKeyHelp) smsApiKeyHelp.innerText = "کد امنیتی یا API Key پنل کاوه نگار جهت احراز هویت وب‌سرویس.";
+            } else if (val === 'MELIPAYAMAK' || val === 'FARAPAYAMAK') {
+                if (smsApiKeyGroup) smsApiKeyGroup.style.display = 'block';
+                if (smsSenderGroup) smsSenderGroup.style.display = 'block';
+                if (smsCustomUrlGroup) smsCustomUrlGroup.style.display = 'none';
+                const providerName = val === 'MELIPAYAMAK' ? 'ملی پیامک' : 'فراپیامک';
+                if (smsApiKeyLabel) smsApiKeyLabel.innerText = "کد کاربری و کلمه عبور پنل (فرمت: username:password):";
+                if (smsApiKeyHelp) smsApiKeyHelp.innerText = `نام کاربری و کلمه عبور پنل ${providerName} را با کاراکتر دو نقطه از هم جدا کنید. مثال: myusername:mypassword`;
+            } else if (val === 'CUSTOM') {
+                if (smsApiKeyGroup) smsApiKeyGroup.style.display = 'block';
+                if (smsSenderGroup) smsSenderGroup.style.display = 'block';
+                if (smsCustomUrlGroup) smsCustomUrlGroup.style.display = 'block';
+                if (smsApiKeyLabel) smsApiKeyLabel.innerText = "کلید API / توکن احراز هویت (اختیاری):";
+                if (smsApiKeyHelp) smsApiKeyHelp.innerText = "رمز عبور، توکن احراز هویت یا فیلد رمز درگاه پیامکی شما.";
+            }
+        }
+
+        if (emailProvider) {
+            emailProvider.addEventListener('change', updateEmailFields);
+            updateEmailFields();
+        }
+        if (smsProvider) {
+            smsProvider.addEventListener('change', updateSMSFields);
+            updateSMSFields();
+        }
+    });
+
+    // شمارشگر کاراکتر پیامک دستی
+    const templateBody = document.getElementById('template_body');
+    const charCounterForm = document.getElementById('char_counter_form');
+
+    function updateCharCounter() {
+        if (!templateBody || !charCounterForm) return;
+        const charCount = templateBody.value.length;
+        let parts = 1;
+        if (charCount > 70) {
+            parts = Math.ceil(charCount / 67);
+        } else if (charCount === 0) {
+            parts = 0;
+        }
+        charCounterForm.innerText = `${charCount} کاراکتر (${parts} پیامک)`;
+    }
+
+    if (templateBody) {
+        templateBody.addEventListener('input', updateCharCounter);
+        updateCharCounter();
+    }
+
+    // درج متغیر در ادیتور پیامک دستی
+    window.insertPlaceholder = function(placeholderText) {
+        if (!templateBody) return;
+
+        const startPos = templateBody.selectionStart;
+        const endPos = templateBody.selectionEnd;
+        const text = templateBody.value;
+
+        templateBody.value = text.substring(0, startPos) + placeholderText + text.substring(endPos, text.length);
+        templateBody.focus();
+
+        const newCursorPos = startPos + placeholderText.length;
+        templateBody.setSelectionRange(newCursorPos, newCursorPos);
+
+        updateCharCounter();
+        templateBody.dispatchEvent(new Event('input'));
+    };
+
+    window.enableLicenseEditing = function() {
+        const masked = document.getElementById('license-masked-container');
+        if (masked) masked.style.display = 'none';
+        
+        const inputContainer = document.getElementById('license-input-container');
+        if (inputContainer) {
+            inputContainer.style.display = 'block';
+            const textarea = inputContainer.querySelector('textarea');
+            if (textarea) {
+                textarea.value = '';
+                textarea.focus();
+            }
+        }
+    };
+</script>
+{% endblock %}

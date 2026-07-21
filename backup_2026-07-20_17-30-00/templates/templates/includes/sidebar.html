@@ -1,0 +1,138 @@
+{# templates/includes/sidebar.html #}
+{% load static %}
+<aside class="pj-sidebar" id="mainSidebar">
+    <!-- Brand -->
+    <div class="pj-sidebar-header">
+        <a href="{% url 'dashboard' %}" class="pj-sidebar-brand">
+            <img src="{% static 'logo.png' %}" alt="پی‌جو" class="pj-sidebar-logo">
+            <span class="pj-sidebar-title">پی‌جو</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="pj-sidebar-nav">
+        <!-- 1. Dashboard -->
+        <a href="{% url 'dashboard' %}" class="pj-sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-pie"></i>
+            <span>داشبورد</span>
+        </a>
+
+        <!-- 2. جذب و استخدام -->
+        {% if user.profile.role != 'INTERVIEWER' and user.profile.role != 'EXTERNAL_ASSESSOR' %}
+        <a href="#menu-jobs" class="pj-sidebar-item pj-sidebar-toggle {% if 'jobs' in request.path or 'workflows' in request.path %}active{% endif %}"
+           data-bs-toggle="collapse" role="button" aria-expanded="{% if 'jobs' in request.path or 'workflows' in request.path %}true{% else %}false{% endif %}">
+            <i class="fas fa-briefcase"></i>
+            <span>جذب و استخدام</span>
+            <i class="fas fa-chevron-left pj-arrow"></i>
+        </a>
+        <div class="collapse {% if 'jobs' in request.path or 'workflows' in request.path %}show{% endif %}" id="menu-jobs">
+            <div class="pj-submenu">
+                <a href="{% url 'job_list' %}" class="pj-sub-item {% if 'jobs' in request.path and 'workflows' not in request.path %}active{% endif %}">فرصت‌های شغلی</a>
+                {% if user.profile.is_recruitment_staff %}
+                <a href="{% url 'workflow_list' %}" class="pj-sub-item {% if 'workflows' in request.path %}active{% endif %}">الگوهای فرآیند استخدام</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 3. متقاضیان -->
+        {% if user.profile.is_recruitment_staff or user.profile.role == 'EXTERNAL_ASSESSOR' %}
+        <a href="#menu-candidates" class="pj-sidebar-item pj-sidebar-toggle {% if 'candidates' in request.path or 'score-entry' in request.path or 'assessment-center' in request.path %}active{% endif %}"
+           data-bs-toggle="collapse" role="button" aria-expanded="{% if 'candidates' in request.path or 'score-entry' in request.path or 'assessment-center' in request.path %}true{% else %}false{% endif %}">
+            <i class="fas fa-users"></i>
+            <span>متقاضیان</span>
+            <i class="fas fa-chevron-left pj-arrow"></i>
+        </a>
+        <div class="collapse {% if 'candidates' in request.path or 'score-entry' in request.path or 'assessment-center' in request.path %}show{% endif %}" id="menu-candidates">
+            <div class="pj-submenu">
+                {% if user.profile.is_recruitment_staff %}
+                <a href="{% url 'candidate_list' %}?view=candidates" class="pj-sub-item {% if 'candidates' in request.path and 'by-stage' not in request.path and 'score-entry' not in request.path and 'interviews' not in request.path and 'assessment-center' not in request.path %}{% if request.GET.view == 'candidates' or request.resolver_match.url_name != 'candidate_list' %}active{% endif %}{% endif %}">لیست متقاضیان</a>
+                <a href="{% url 'candidates_by_stage_list' %}" class="pj-sub-item {% if request.resolver_match.url_name == 'candidates_by_stage_list' %}active{% endif %}">پایش به تفکیک مراحل</a>
+                <a href="{% url 'candidate_list' %}" class="pj-sub-item {% if request.resolver_match.url_name == 'candidate_list' and request.GET.view != 'candidates' %}active{% endif %}">بانک استعدادها</a>
+                {% endif %}
+                {% if user.profile.can_enter_exam_scores %}
+                <a href="{% url 'candidate_score_entry' %}" class="pj-sub-item {% if 'score-entry' in request.path %}active{% endif %}">ثبت و ورود نمرات</a>
+                {% endif %}
+                <a href="{% url 'assessment_center_report' %}" class="pj-sub-item {% if 'assessment-center' in request.path %}active{% endif %}">کانون ارزیابی (PDF)</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 4. برنامه‌ریزی و اجرا -->
+        {% if user.profile.is_recruitment_staff or user.profile.can_view_interviews %}
+        <a href="#menu-planning" class="pj-sidebar-item pj-sidebar-toggle {% if 'planning' in request.path or 'analytics' in request.path or 'interviews' in request.path %}active{% endif %}"
+           data-bs-toggle="collapse" role="button" aria-expanded="{% if 'planning' in request.path or 'analytics' in request.path or 'interviews' in request.path %}true{% else %}false{% endif %}">
+            <i class="fas fa-calendar-alt"></i>
+            <span>برنامه‌ریزی و اجرا</span>
+            <i class="fas fa-chevron-left pj-arrow"></i>
+        </a>
+        <div class="collapse {% if 'planning' in request.path or 'analytics' in request.path or 'interviews' in request.path %}show{% endif %}" id="menu-planning">
+            <div class="pj-submenu">
+                {% if user.profile.is_recruitment_staff %}
+                <a href="{% url 'planning_dashboard' %}" class="pj-sub-item {% if 'planning' in request.path and 'analytics' not in request.path %}active{% endif %}">برنامه‌ریزی جذب</a>
+                <a href="{% url 'analytics_dashboard' %}" class="pj-sub-item {% if 'analytics' in request.path %}active{% endif %}">داشبورد تحلیلی و گزارشات</a>
+                {% endif %}
+                {% if user.profile.can_view_interviews %}
+                <a href="{% url 'candidate_interviews' %}" class="pj-sub-item {% if 'interviews' in request.path %}active{% endif %}">پنل مصاحبه‌ها</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 5. شایستگی‌ها -->
+        {% if user.profile.can_manage_jobs %}
+        <a href="#menu-competency" class="pj-sidebar-item pj-sidebar-toggle {% if 'competencies' in request.path or 'patterns' in request.path or 'upload' in request.path or 'custom-report' in request.path or 'models' in request.path %}active{% endif %}"
+           data-bs-toggle="collapse" role="button" aria-expanded="{% if 'competencies' in request.path or 'patterns' in request.path or 'upload' in request.path or 'custom-report' in request.path or 'models' in request.path %}true{% else %}false{% endif %}">
+            <i class="fas fa-star"></i>
+            <span>شایستگی‌ها</span>
+            <i class="fas fa-chevron-left pj-arrow"></i>
+        </a>
+        <div class="collapse {% if 'competencies' in request.path or 'patterns' in request.path or 'upload' in request.path or 'custom-report' in request.path or 'models' in request.path %}show{% endif %}" id="menu-competency">
+            <div class="pj-submenu">
+                <a href="{% url 'competency_list' %}" class="pj-sub-item {% if 'competencies' in request.path and 'patterns' not in request.path and 'upload' not in request.path and 'custom-report' not in request.path and 'models' not in request.path %}active{% endif %}">بانک شایستگی‌ها</a>
+                <a href="{% url 'competency_model_list' %}" class="pj-sub-item {% if 'competencies/models' in request.path %}active{% endif %}">مدل‌های شایستگی</a>
+                <a href="{% url 'custom_competencies_report' %}" class="pj-sub-item {% if 'custom-report' in request.path %}active{% endif %}">شایستگی‌های دستی</a>
+                <a href="{% url 'recruitment_patterns' %}" class="pj-sub-item {% if 'patterns' in request.path %}active{% endif %}">الگوهای استخدامی</a>
+                <a href="{% url 'competency_upload' %}" class="pj-sub-item {% if 'upload' in request.path %}active{% endif %}">بارگذاری اکسل شایستگی</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 6. تنظیمات سیستم -->
+        <a href="#menu-settings" class="pj-sidebar-item pj-sidebar-toggle {% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}active{% endif %}"
+           data-bs-toggle="collapse" role="button" aria-expanded="{% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}true{% else %}false{% endif %}">
+            <i class="fas fa-cog"></i>
+            <span>تنظیمات سیستم</span>
+            <i class="fas fa-chevron-left pj-arrow"></i>
+        </a>
+        <div class="collapse {% if 'preferences' in request.path or 'users' in request.path or 'system-backup' in request.path or 'data-integrity' in request.path or 'settings/ai' in request.path or 'audit-logs' in request.path or 'import' in request.path %}show{% endif %}" id="menu-settings">
+            <div class="pj-submenu">
+                <a href="{% url 'user_preferences' %}" class="pj-sub-item {% if 'preferences' in request.path %}active{% endif %}">شخصی‌سازی ظاهر</a>
+                {% if user.profile.is_recruitment_staff %}
+                <a href="{% url 'import_upload' %}" class="pj-sub-item {% if 'import' in request.path %}active{% endif %}">ایمپورت سوابق (اکسل)</a>
+                {% endif %}
+                {% if user.profile.role == 'ADMIN' %}
+                <a href="{% url 'user_list' %}" class="pj-sub-item {% if 'users' in request.path %}active{% endif %}">مدیریت کاربران (RBAC)</a>
+                <a href="{% url 'system_backup' %}" class="pj-sub-item {% if 'system-backup' in request.path %}active{% endif %}">پشتیبان‌گیری و بازگردانی</a>
+                <a href="{% url 'data_integrity_dashboard' %}" class="pj-sub-item {% if 'data-integrity' in request.path %}active{% endif %}">پایش سلامت داده‌ها</a>
+                <a href="{% url 'ai_setting' %}" class="pj-sub-item {% if 'settings/ai' in request.path %}active{% endif %}">تنظیمات هوش مصنوعی</a>
+                <a href="{% url 'organization_setting' %}" class="pj-sub-item {% if 'settings/organization' in request.path %}active{% endif %}">تنظیمات سازمان</a>
+                {% endif %}
+                {% if user.profile.can_view_audit_logs %}
+                <a href="{% url 'audit_log_list' %}" class="pj-sub-item {% if 'audit-logs' in request.path %}active{% endif %}">لاگ‌های ممیزی</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Logout -->
+    <div class="pj-sidebar-footer">
+        <form action="{% url 'logout' %}" method="post" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="pj-sidebar-logout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج از سامانه</span>
+            </button>
+        </form>
+    </div>
+</aside>

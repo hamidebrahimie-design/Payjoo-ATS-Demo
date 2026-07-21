@@ -1,0 +1,229 @@
+{% extends "base_page.html" %}
+{% load jalali_tags %}
+{% block title %}برنامه‌ریزی زمانبندی: {{ job.title }} | سامانه پیجو{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
+<style>
+    .planning-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+    #bd-root-start_date {
+        font-family: 'Vazirmatn', sans-serif !important;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <a href="{% if request.GET.next == 'print_doc' %}{% url 'job_print_doc' job.id %}{% else %}{% url 'planning_dashboard' %}{% endif %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 mb-2" style="border-radius: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        {% if request.GET.next == 'print_doc' %}
+            رد کردن و مشاهده سند آزمون
+        {% else %}
+            بازگشت به داشبورد برنامه‌ریزی
+        {% endif %}
+    </a>
+    <h3 class="font-bold text-secondary mb-1">تنظیم برنامه زمانبندی جذب</h3>
+    <p class="text-muted text-sm m-0">شغل: {{ job.title }} | کد: {{ job.code }} | دپارتمان: {{ job.department }} | رده شغلی: {{ job.job_category|default:"-" }}</p>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2.5 py-1.5 rounded font-medium text-xs">
+            📋 الگوی فرآیند: <strong class="text-dark">{{ job.workflow.name|default:"بدون الگو" }}</strong>
+        </span>
+        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded font-medium text-xs">
+            📍 مرحله فعلی: <strong class="text-dark">{{ current_stage.name|default:"-" }} (مرحله {{ current_stage.sequence|default:"۱" }})</strong>
+        </span>
+    </div>
+</div>
+
+<form hx-post="{% url 'job_planning' job.id %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" 
+      hx-target="#schedule-preview-container" 
+      hx-trigger="change delay:400ms, submit" 
+      class="m-0" 
+      id="planning-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="form-action" value="preview">
+
+    <div class="row g-4">
+        <!-- ستون تنظیمات و دریافت اطلاعات -->
+        <div class="col-lg-4">
+            <div class="card planning-card border-0 p-4 shadow-xs">
+                <h5 class="font-bold text-secondary mb-3">تنظیم تاریخ شروع</h5>
+                
+                <div class="mb-4">
+                    <label class="form-label font-semibold text-xs text-secondary mb-2">تاریخ شروع فرآیند استخدام:</label>
+                    <input type="text" 
+                           name="start_date" 
+                           id="start_date" 
+                           value="{% if plan %}{{ plan.start_date|to_jalali }}{% else %}{{ today_jalali }}{% endif %}" 
+                           placeholder="۱۴۰۵/۰۲/۰۱" 
+                           class="form-control text-center jalali-datepicker-input font-bold" 
+                           autocomplete="off" 
+                           required 
+                           style="border-radius: 8px;">
+                    <div class="form-text text-xxs text-muted mt-1.5">شروع فرآیند جذب از این تاریخ محاسبه خواهد شد. روزهای غیرکاری و جمعه‌ها نادیده گرفته می‌شوند.</div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 mb-4" style="border-radius: 8px;">
+                    <span class="text-xxs font-bold text-muted d-block mb-2">جزئیات فرصت شغلی:</span>
+                    <div class="d-flex justify-content-between text-xs text-secondary mb-2">
+                        <span>الگوی فرآیند:</span>
+                        <strong class="text-dark">{{ job.workflow.name|default:"بدون الگو" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between text-xs text-secondary mb-2">
+                        <span>مرحله فعلی فرآیند:</span>
+                        <strong class="text-dark">{{ current_stage.name|default:"-" }} (مرحله {{ current_stage.sequence|default:"۱" }})</strong>
+                    </div>
+                    <div class="d-flex justify-content-between text-xs text-secondary mb-2">
+                        <span>ظرفیت جذب (Headcount):</span>
+                        <strong class="text-primary">{{ job.headcount }} نفر</strong>
+                    </div>
+                    <div class="d-flex justify-content-between text-xs text-secondary">
+                        <span>نوع استخدام:</span>
+                        <strong>{{ job.get_recruitment_type_display }}</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="button" 
+                            class="btn btn-outline-primary w-100 py-2.5 font-bold text-xs d-flex align-items-center justify-content-center gap-2" 
+                            style="border-radius: 8px;"
+                            hx-get="{% url 'job_planning_suggestions' job.id %}"
+                            hx-target="#suggestions-container"
+                            hx-indicator="#suggestions-spinner">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096L3 15.187m6 5.813l6-5.813M3.14 8.868A9.047 9.047 0 0112 3c4.97 0 9 4.03 9 9 0 2.274-.843 4.35-2.23 5.942m-1.285 1.286A9.043 9.043 0 0112 21c-4.97 0-9-4.03-9-9 0-2.274.843-4.35 2.23-5.942" />
+                        </svg>
+                        دستیار هوشمند تاریخ و ظرفیت ماه‌ها
+                        <div id="suggestions-spinner" class="htmx-indicator spinner-border text-primary spinner-border-sm" role="status" style="width: 12px; height: 12px; border-width: 2px;"></div>
+                    </button>
+                </div>
+
+                <button type="button" 
+                        class="btn btn-success w-100 py-2.5 font-bold text-xs d-flex align-items-center justify-content-center gap-2" 
+                        style="border-radius: 8px;"
+                        onclick="submitSaveForm();">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    تایید و ثبت نهایی برنامه‌ریزی
+                </button>
+            </div>
+        </div>
+
+        <!-- ستون پیش‌نمایش تقویم زمانبندی -->
+        <div class="col-lg-8">
+            <div class="card planning-card border-0 p-4 shadow-xs h-100">
+                <h5 class="font-bold text-secondary mb-4">پیش‌نمایش زمانبندی و تحلیل ظرفیت مراحل</h5>
+                
+                <div id="schedule-preview-container">
+                    <!-- بارگذاری خودکار پیش‌نمایش در لود اولیه با HTMX -->
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5 h-100" 
+                         hx-post="{% url 'job_planning' job.id %}" 
+                         hx-vals='{"action": "preview", "start_date": "{% if plan %}{{ plan.start_date|to_jalali }}{% else %}{{ today_jalali }}{% endif %}"}' 
+                         hx-trigger="load" 
+                         hx-target="#schedule-preview-container">
+                        <div class="spinner-border text-primary spinner-border-sm mb-2" role="status"></div>
+                        <span class="text-xs text-muted">در حال شبیه‌سازی و تولید زمانبندی پیشنهادی...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row mt-4">
+    <div class="col-12" id="suggestions-container"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    function submitSaveForm() {
+        document.getElementById('form-action').value = 'save';
+        htmx.trigger('#planning-form', 'submit');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize process start date picker
+        kamaDatepicker('start_date', {
+            buttonsColor: '#0052cc',
+            markToday: true,
+            gotoToday: true,
+            twodigit: true,
+            closeAfterSelect: true,
+            nextButtonIcon: '>',
+            previousButtonIcon: '<'
+        });
+        // Allow manual typing
+        $('#start_date').removeAttr('readonly');
+
+        // If start date changes, clear previous stage date overrides so they recalculate
+        $(document).on('change', '#start_date', function() {
+            $('.stage-datepicker').val('');
+        });
+
+        // Dispatch change event ONLY when a day is actually selected in the calendar
+        $(document).on('click', '#bd-main-start_date', function(e) {
+            if ($(e.target).closest('.bd-table td').length > 0) {
+                setTimeout(function() {
+                    const input = document.getElementById('start_date');
+                    if (input) {
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }, 50);
+            }
+        });
+
+        // Initialize datepickers for steps in schedule preview
+        function initializeDatepickers() {
+            $('.stage-datepicker').each(function() {
+                const id = $(this).attr('id');
+                if (!$(this).data('kama-init')) {
+                    kamaDatepicker(id, {
+                        buttonsColor: '#0052cc',
+                        markToday: true,
+                        gotoToday: true,
+                        twodigit: true,
+                        closeAfterSelect: true,
+                        nextButtonIcon: '>',
+                        previousButtonIcon: '<'
+                    });
+                    $(this).data('kama-init', true);
+                    // Allow manual typing
+                    $(this).removeAttr('readonly');
+                }
+            });
+        }
+
+        // Initialize on HTMX load/swap for both standalone and modal previews
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'schedule-preview-container' || evt.detail.target.id === 'schedule-preview-container-modal') {
+                initializeDatepickers();
+            }
+        });
+
+        // Handle dynamically created datepicker day clicks to trigger HTMX submit (exclude month/year navigation clicks)
+        $(document).on('click', '[id^="bd-main-date_"]', function(e) {
+            if ($(e.target).closest('.bd-table td').length > 0) {
+                const mainId = $(this).attr('id');
+                const inputId = mainId.replace('bd-main-', '');
+                setTimeout(function() {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }, 50);
+            }
+        });
+    });
+</script>
+{% endblock %}

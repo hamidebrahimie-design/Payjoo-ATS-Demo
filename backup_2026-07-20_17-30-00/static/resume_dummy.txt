@@ -1,0 +1,4 @@
+This is a dummy resume file for testing the ATS application submission flow.
+Name: Kian Karimi
+Skills: Python, Django, PostgreSQL
+Experience: 3 years

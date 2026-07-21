@@ -1,0 +1,423 @@
+{% extends "base_page.html" %}
+{% block title %}ورود نمرات و ارزیابی متقاضیان{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.css">
+<style>
+    /* Styling for Persian datepicker to match page style */
+    #bd-root-bulk_eval_date, [id^="bd-root-date_"] {
+        font-family: 'Vazirmatn', sans-serif !important;
+        z-index: 9999 !important;
+    }
+    
+    /* Premium table sorting styles */
+    .sortable-header {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        position: relative;
+    }
+    .sortable-header:hover {
+        background-color: #f1f5f9 !important;
+    }
+    .sort-icon {
+        font-size: 0.75rem;
+        display: inline-block;
+        vertical-align: middle;
+        transition: color 0.2s ease;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h3 class="font-semibold text-secondary mb-1">ورود سریع نمرات آزمون و ارزیابی</h3>
+    <p class="text-muted text-sm m-0">فرصت شغلی مورد نظر را انتخاب کرده و نمرات و وضعیت مرحله جاری هر متقاضی را ثبت نمایید.</p>
+</div>
+
+<!-- Job Opportunity Selector Card -->
+<div class="card premium-card mb-4">
+    <div class="card-body p-4">
+        <!-- فیلتر جستجوی فرصت شغلی -->
+        <form method="get" action="" class="mb-3" id="job-search-form">
+            {% if selected_job %}<input type="hidden" name="job_id" value="{{ selected_job.id }}">{% endif %}
+            {% if selected_stage %}<input type="hidden" name="stage_id" value="{{ selected_stage.id }}">{% endif %}
+            <label class="form-label font-medium text-secondary mb-2" style="font-size: 0.85rem;">
+                🔍 جستجوی فرصت شغلی (عنوان یا کد)
+            </label>
+            <div class="input-group input-group-sm" style="max-width: 480px;">
+                <input type="text" 
+                       name="job_q" 
+                       id="job_q_input"
+                       value="{{ job_q }}"
+                       class="form-control border-slate shadow-sm"
+                       placeholder="مثلاً: کارشناس، بازرس، ۴۱۲۰..."
+                       style="border-radius: 8px 0 0 8px; font-size: 0.875rem;">
+                <button type="submit" class="btn btn-primary btn-sm px-3" style="border-radius: 0 8px 8px 0;">
+                    جستجو
+                </button>
+                {% if job_q %}
+                <a href="{% url 'candidate_score_entry' %}" class="btn btn-outline-secondary btn-sm px-2" title="پاک کردن فیلتر" style="border-radius: 0 8px 8px 0; margin-right: 4px;">✕</a>
+                {% endif %}
+            </div>
+            {% if job_q %}
+            <div class="mt-1">
+                <small class="text-muted">{{ jobs|length }} فرصت شغلی یافت شد برای «{{ job_q }}»</small>
+            </div>
+            {% endif %}
+        </form>
+
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label font-medium text-secondary mb-2" style="font-size: 0.9rem;">انتخاب فرصت شغلی</label>
+                <select name="job_id" 
+                        hx-get="{% url 'candidate_score_entry' %}{% if job_q %}?job_q={{ job_q }}{% endif %}" 
+                        hx-target="#score-entry-list-container" 
+                        hx-indicator="#loading-indicator"
+                        onchange="document.getElementById('score-entry-list-container').innerHTML = '<div class=\'text-center py-5 text-muted\'>در حال بارگذاری ماتریس ارزیابی...</div>';"
+                        class="form-select form-select-lg shadow-sm border-slate" 
+                        style="font-size: 0.95rem; border-radius: 10px;">
+                    <option value="">-- لطفاً یک فرصت شغلی را انتخاب کنید --</option>
+                    {% for job in jobs %}
+                        <option value="{{ job.id }}" {% if selected_job and selected_job.id == job.id %}selected{% endif %}>
+                            [{{ job.code }}] {{ job.title }} {% if job.status == 'CLOSED' or job.status == 'CANCELLED' or job.status == 'SUSPENDED' %}({{ job.get_status_display }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div id="loading-indicator" class="htmx-indicator mt-3 text-primary d-flex align-items-center gap-2">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span class="text-sm">در حال بارگذاری...</span>
+        </div>
+    </div>
+</div>
+
+
+<!-- Candidates Scoring Table Container -->
+<div id="score-entry-list-container">
+    {% include "candidates/partials/score_entry_list.html" %}
+</div>
+
+<!-- Auto-refresh mechanism on bulk score changes -->
+<div hx-get="{% url 'candidate_score_entry' %}"
+     hx-trigger="refresh-score-entry-list from:body"
+     hx-include="[name='job_id'], [name='q'], [name='eval_status'], [name='show_failed_prior'], [name='bypass_locks']"
+     hx-target="#score-entry-list-container"
+     hx-indicator="#loading-indicator"
+     style="display:none;">
+</div>
+
+<!-- Modal for Assessment Center Sheet -->
+<div class="modal fade" id="assessmentModal" tabindex="-1" aria-labelledby="assessmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="assessment-modal-content">
+            <!-- Loaded dynamically via HTMX -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Interview Scores Panel -->
+<div class="modal fade" id="interviewModal" tabindex="-1" aria-labelledby="interviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="interview-modal-content">
+            <!-- Loaded dynamically via HTMX -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal: مصاحبه‌گران پیش‌فرض فرصت شغلی -->
+<div class="modal fade" id="defaultInterviewersModal" tabindex="-1" aria-labelledby="defaultInterviewersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <h6 class="modal-title font-semibold" id="defaultInterviewersModalLabel">⚙️ مصاحبه‌گران پیش‌فرض فرصت شغلی</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body py-3" id="defaultInterviewersBody">
+                <div class="text-center text-muted text-sm py-3">در حال بارگذاری...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: ورود سریع نمرات گروهی مصاحبه‌گران -->
+<div class="modal fade" id="bulkInterviewModal" tabindex="-1" aria-labelledby="bulkInterviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <div>
+                    <h6 class="modal-title font-semibold mb-0" id="bulkInterviewModalLabel">📋 ورود سریع نمرات گروهی مصاحبه‌گران</h6>
+                    <small class="text-muted text-xs" id="bulkModalSubtitle">جدول ماتریسی: سطر = متقاضی، ستون = مصاحبه‌گر</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body py-3" id="bulkInterviewModalBody">
+                <div class="text-center text-muted text-sm py-3">در حال بارگذاری...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/kamadatepicker@1.5.3/dist/kamadatepicker.min.js"></script>
+<script>
+    function initializeDatepickers() {
+        if (document.getElementById('bulk_eval_date')) {
+            kamaDatepicker('bulk_eval_date', {
+                buttonsColor: '#0052cc',
+                markToday: true,
+                gotoToday: true,
+                twodigit: true,
+                closeAfterSelect: true,
+                nextButtonIcon: '>',
+                previousButtonIcon: '<'
+            });
+        }
+        
+        document.querySelectorAll('.jalali-datepicker-input').forEach(input => {
+            if (!input.disabled && input.id) {
+                kamaDatepicker(input.id, {
+                    buttonsColor: '#0052cc',
+                    markToday: true,
+                    gotoToday: true,
+                    twodigit: true,
+                    closeAfterSelect: true,
+                    nextButtonIcon: '>',
+                    previousButtonIcon: '<'
+                });
+            }
+        });
+    }
+
+    function applyBulkDate() {
+        const bulkDate = document.getElementById('bulk_eval_date').value.trim();
+        if (bulkDate) {
+            document.querySelectorAll('.jalali-datepicker-input').forEach(input => {
+                if (!input.disabled) {
+                    input.value = bulkDate;
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeDatepickers();
+    });
+
+    document.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'score-entry-list-container') {
+            initializeDatepickers();
+        }
+    });
+
+    // Delegated event listener for sorting headers
+    document.addEventListener('click', function(e) {
+        const th = e.target.closest('th.sortable-header');
+        if (th) {
+            const table = th.closest('table');
+            const colIndex = Array.from(th.parentNode.children).indexOf(th);
+            sortTable(table, colIndex, th);
+        }
+    });
+
+    function sortTable(table, colIndex, headerElement) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
+        if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('td[colspan]'))) {
+            return; // No data rows to sort
+        }
+
+        // Check if we are reversing the sort
+        const currentDir = headerElement.getAttribute('data-sort-dir') || 'none';
+        let newDir = 'asc';
+        if (currentDir === 'asc') {
+            newDir = 'desc';
+        }
+
+        // Reset all headers' icons and directions
+        const headers = table.querySelectorAll('th');
+        headers.forEach(th => {
+            th.setAttribute('data-sort-dir', 'none');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) {
+                icon.innerHTML = '⇅';
+                icon.className = 'sort-icon text-muted ms-1';
+            }
+        });
+
+        // Set direction on active header
+        headerElement.setAttribute('data-sort-dir', newDir);
+        const activeIcon = headerElement.querySelector('.sort-icon');
+        if (activeIcon) {
+            if (newDir === 'asc') {
+                activeIcon.innerHTML = '▲';
+                activeIcon.className = 'sort-icon text-primary ms-1';
+            } else {
+                activeIcon.innerHTML = '▼';
+                activeIcon.className = 'sort-icon text-primary ms-1';
+            }
+        }
+
+        // Sort logic
+        rows.sort((a, b) => {
+            let valA = getCellValue(a, colIndex);
+            let valB = getCellValue(b, colIndex);
+
+            let isNum = typeof valA === 'number' && typeof valB === 'number';
+            if (isNum) {
+                return newDir === 'asc' ? valA - valB : valB - valA;
+            } else {
+                valA = valA.toString().trim();
+                valB = valB.toString().trim();
+                return newDir === 'asc' ? valA.localeCompare(valB, 'fa') : valB.localeCompare(valA, 'fa');
+            }
+        });
+
+        // Re-append sorted rows to tbody
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function parseArabicPersianFloat(str) {
+        if (!str) return 0;
+        const persianDigits = [/۰/g, /۱/g, /۲/g, /۳/g, /۴/g, /۵/g, /۶/g, /۷/g, /۸/g, /۹/g];
+        const arabicDigits  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
+        let cleaned = str.toString().trim();
+        for (let i = 0; i < 10; i++) {
+            cleaned = cleaned.replace(persianDigits[i], i).replace(arabicDigits[i], i);
+        }
+        cleaned = cleaned.replace(/,/g, '.').replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function getCellValue(row, colIndex) {
+        const cells = row.querySelectorAll(':scope > td');
+        if (colIndex >= cells.length) return '';
+        const cell = cells[colIndex];
+
+        // 1. Column 0: Candidate name
+        if (colIndex === 0) {
+            const nameDiv = cell.querySelector('.font-semibold.text-secondary');
+            return nameDiv ? nameDiv.textContent.trim() : '';
+        }
+
+        // 2. Column N-1 (second to last): Cumulative Score
+        if (colIndex === cells.length - 2) {
+            const scoreSpan = cell.querySelector('span.text-primary') || cell;
+            return parseArabicPersianFloat(scoreSpan.textContent);
+        }
+
+        // 3. Column N (last): Final Decision
+        if (colIndex === cells.length - 1) {
+            const select = cell.querySelector('select');
+            if (select) {
+                const val = select.value;
+                if (val === 'SELECTED') return 4;
+                if (val === 'RESERVE') return 3;
+                if (val === 'IN_PROGRESS') return 2;
+                if (val === 'REJECTED') return 1;
+                return val;
+            }
+            const badge = cell.querySelector('.badge');
+            if (badge) {
+                const txt = badge.textContent.trim();
+                if (txt.includes('پذیرفته شده نهایی') || txt.includes('SELECTED')) return 4;
+                if (txt.includes('ذخیره') || txt.includes('RESERVE')) return 3;
+                if (txt.includes('در حال بررسی') || txt.includes('IN_PROGRESS')) return 2;
+                if (txt.includes('رد شده') || txt.includes('REJECTED')) return 1;
+                return txt;
+            }
+            return cell.textContent.trim();
+        }
+
+        // 4. Middle columns: Stage scores/statuses
+        // Check if there is a number input
+        const numInput = cell.querySelector('input[type="number"]');
+        if (numInput) {
+            return parseArabicPersianFloat(numInput.value);
+        }
+
+        // Check if there is a select dropdown (could be screening status or stage status)
+        const select = cell.querySelector('select');
+        if (select) {
+            const val = select.value;
+            if (val === 'COMPLETED') return 3;
+            if (val === 'PENDING') return 2;
+            if (val === 'FAILED') return 1;
+            return val;
+        }
+
+        // Check if read-only score-based stage
+        const scoreSpan = cell.querySelector('span.font-bold');
+        if (scoreSpan) {
+            return parseArabicPersianFloat(scoreSpan.textContent);
+        }
+
+        // Check if read-only screening or status text
+        const textSpan = cell.querySelector('.badge') || cell.querySelector('.font-semibold') || cell;
+        const txt = textSpan.textContent.trim();
+        if (txt.includes('قبول') || txt.includes('COMPLETED')) return 3;
+        if (txt.includes('در انتظار') || txt.includes('PENDING')) return 2;
+        if (txt.includes('رد') || txt.includes('FAILED')) return 1;
+
+        return txt;
+    }
+
+    // هنگام باز شدن هر مودال، همه popupهای کاما‌دیت‌پیکر را پنهان کن
+    // تا از خروج از modal overlay جلوگیری شود
+    document.addEventListener('show.bs.modal', function() {
+        // پنهان کردن تمام ریشه‌های datepicker
+        document.querySelectorAll('[id^="bd-root-"]').forEach(el => {
+            el.style.display = 'none';
+        });
+        // بستن هر picker باز شده از طریق کلیک خارج از آن
+        document.querySelectorAll('.kama-datepicker-wrap, .kd-main').forEach(el => {
+            el.style.display = 'none';
+        });
+    });
+
+    // هنگام بسته شدن مودال، پیکرها را بازگردانی کن (display را پاک کن تا مجدداً فعال شوند)
+    document.addEventListener('hidden.bs.modal', function() {
+        document.querySelectorAll('[id^="bd-root-"]').forEach(el => {
+            el.style.display = '';
+        });
+        document.querySelectorAll('.kama-datepicker-wrap, .kd-main').forEach(el => {
+            el.style.display = '';
+        });
+    });
+
+    // باز کردن مودال مصاحبه‌گران پیش‌فرض فرصت شغلی
+    function openDefaultInterviewersModal() {
+        const bulkModalEl = document.getElementById('bulkInterviewModal');
+        const bulkModal = bootstrap.Modal.getInstance(bulkModalEl);
+        if (bulkModal) {
+            bulkModal.hide();
+        }
+        
+        const jobSelect = document.querySelector('select[name="job_id"]');
+        const jobId = jobSelect ? jobSelect.value : "{% if selected_job %}{{ selected_job.id }}{% endif %}";
+        if (jobId) {
+            htmx.ajax('GET', `/score-entry/opportunity/${jobId}/default-interviewers/`, {target: '#defaultInterviewersBody'});
+            const diModal = new bootstrap.Modal(document.getElementById('defaultInterviewersModal'));
+            diModal.show();
+        }
+    }
+</script>
+
+<style>
+    /* اطمینان از اینکه popupهای datepicker هرگز روی مودال ظاهر نمی‌شوند */
+    .modal-backdrop ~ [id^="bd-root-"],
+    .modal.show ~ [id^="bd-root-"] {
+        z-index: 1 !important;
+        display: none !important;
+    }
+    /* جلوگیری از نمایش پیکر تاریخ در پشت‌زمینه وقتی مودال بازه */
+    body.modal-open [id^="bd-root-"] {
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+</style>
+{% endblock %}

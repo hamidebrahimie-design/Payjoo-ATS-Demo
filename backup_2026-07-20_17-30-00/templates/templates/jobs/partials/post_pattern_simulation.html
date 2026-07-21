@@ -1,0 +1,439 @@
+<div class="row g-4 animate__animated animate__fadeIn">
+    <!-- شناسنامه شایستگی‌های پست (ورودی‌ها - تمام عرض) -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <span class="badge bg-primary bg-opacity-10 text-primary text-xxs font-bold px-2 py-1 mb-1">شبیه‌ساز فعال</span>
+                    <h5 class="font-bold text-secondary m-0" style="font-size: 15px;">{{ post_title }}</h5>
+                    <small class="text-muted text-xxs">کد پست: {{ post_code }}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-secondary text-white font-bold text-xxs px-2.5 py-1.5">{{ competencies.count }} شایستگی تعریف‌شده</span>
+                </div>
+            </div>
+
+            <hr class="my-2.5 text-muted bg-opacity-20">
+
+            <div class="row g-3" style="direction: rtl;">
+                <!-- Column 1: Knowledge -->
+                <div class="col-md-4">
+                    <div class="p-3 bg-light bg-opacity-30 rounded-3 border h-100">
+                        <h6 class="font-bold text-primary text-xs mb-2.5 pb-1 border-bottom border-primary border-opacity-10 d-flex align-items-center gap-1.5">
+                            <span style="font-size: 14px;">📚</span>
+                            <span>شایستگی‌های دانشی (Knowledge)</span>
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% for comp in competencies %}
+                                {% if comp.competency_type == 'KN' %}
+                                    <div class="p-2 bg-white border border-light rounded-3 d-flex flex-column gap-1 shadow-xxs">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-xxs font-bold text-dark" style="font-size: 10px;">{{ comp.title }}</span>
+                                        </div>
+                                        <div class="d-flex gap-1.5 flex-wrap">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                سطح: {% if comp.level == 1 %}آشنایی{% elif comp.level == 2 %}توانایی{% elif comp.level == 3 %}تسلط{% else %}{{ comp.level }}{% endif %}
+                                            </span>
+                                            <span class="badge {% if comp.importance == 1 %}bg-danger{% else %}bg-warning{% endif %} bg-opacity-10 {% if comp.importance == 1 %}text-danger{% else %}text-warning{% endif %} font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                اهمیت: {% if comp.importance == 1 %}محوری{% elif comp.importance == 2 %}تکلیف‌محور{% else %}حداقلی{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Skill & Ability -->
+                <div class="col-md-4">
+                    <div class="p-3 bg-light bg-opacity-30 rounded-3 border h-100">
+                        <h6 class="font-bold text-success text-xs mb-2.5 pb-1 border-bottom border-success border-opacity-10 d-flex align-items-center gap-1.5">
+                            <span style="font-size: 14px;">⚙️</span>
+                            <span>شایستگی‌های مهارتی و توانایی (Skill & Ability)</span>
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% for comp in competencies %}
+                                {% if comp.competency_type == 'SK' or comp.competency_type == 'AB' %}
+                                    <div class="p-2 bg-white border border-light rounded-3 d-flex flex-column gap-1 shadow-xxs">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-xxs font-bold text-dark" style="font-size: 10px;">{{ comp.title }}</span>
+                                            <span class="badge bg-success bg-opacity-10 text-success font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                {% if comp.competency_type == 'SK' %}مهارت{% else %}توانایی{% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex gap-1.5 flex-wrap">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                سطح: {% if comp.level == 1 %}آشنایی{% elif comp.level == 2 %}توانایی{% elif comp.level == 3 %}تسلط{% else %}{{ comp.level }}{% endif %}
+                                            </span>
+                                            <span class="badge {% if comp.importance == 1 %}bg-danger{% else %}bg-warning{% endif %} bg-opacity-10 {% if comp.importance == 1 %}text-danger{% else %}text-warning{% endif %} font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                اهمیت: {% if comp.importance == 1 %}محوری{% elif comp.importance == 2 %}تکلیف‌محور{% else %}حداقلی{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Others -->
+                <div class="col-md-4">
+                    <div class="p-3 bg-light bg-opacity-30 rounded-3 border h-100">
+                        <h6 class="font-bold text-secondary text-xs mb-2.5 pb-1 border-bottom border-secondary border-opacity-10 d-flex align-items-center gap-1.5">
+                            <span style="font-size: 14px;">💼</span>
+                            <span>سایر شایستگی‌ها (Others)</span>
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% for comp in competencies %}
+                                {% if comp.competency_type != 'KN' and comp.competency_type != 'SK' and comp.competency_type != 'AB' %}
+                                    <div class="p-2 bg-white border border-light rounded-3 d-flex flex-column gap-1 shadow-xxs">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-xxs font-bold text-dark" style="font-size: 10px;">{{ comp.title }}</span>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                {% if comp.competency_type == 'GE' %}رفتاری
+                                                {% elif comp.competency_type == 'ST' %}ارزش‌ها
+                                                {% elif comp.competency_type == 'PR' %}گردشکار
+                                                {% elif comp.competency_type == 'CQ' %}صلاحیت
+                                                {% else %}علایق{% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex gap-1.5 flex-wrap">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                سطح: {% if comp.level == 1 %}آشنایی{% elif comp.level == 2 %}توانایی{% elif comp.level == 3 %}تسلط{% else %}{{ comp.level }}{% endif %}
+                                            </span>
+                                            <span class="badge {% if comp.importance == 1 %}bg-danger{% else %}bg-warning{% endif %} bg-opacity-10 {% if comp.importance == 1 %}text-danger{% else %}text-warning{% endif %} font-bold" style="font-size: 7.5px; padding: 1.5px 4px;">
+                                                اهمیت: {% if comp.importance == 1 %}محوری{% elif comp.importance == 2 %}تکلیف‌محور{% else %}حداقلی{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- پانل خروجی‌ها و تحلیل‌های شبیه‌ساز (تب‌بندی شده - تمام عرض) -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-white" style="border-radius: 16px; overflow: hidden; min-height: 520px;">
+            <!-- منوی ناوبری تب‌ها -->
+            <div class="card-header bg-light bg-opacity-50 border-bottom-0 p-3 pb-0">
+                <ul class="nav nav-tabs border-bottom-0" id="simulationTabs" role="tablist" style="direction: rtl; padding-right: 0;">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active font-bold text-xs px-3 py-2.5 d-flex align-items-center gap-1.5" 
+                                id="weights-tab" data-bs-toggle="tab" data-bs-target="#tab-weights" 
+                                type="button" role="tab" aria-controls="tab-weights" aria-selected="true"
+                                style="border: none; color: #475569;">
+                            ⚙️ ساختار فرآیند و اوزان
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link font-bold text-xs px-3 py-2.5 d-flex align-items-center gap-1.5" 
+                                id="ai-strategy-tab" data-bs-toggle="tab" data-bs-target="#tab-ai-strategy" 
+                                type="button" role="tab" aria-controls="tab-ai-strategy" aria-selected="false"
+                                style="border: none; color: #475569;">
+                            🪄 راهبرد هوشمند و بنچمارک (AI)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link font-bold text-xs px-3 py-2.5 d-flex align-items-center gap-1.5" 
+                                id="overlaps-tab" data-bs-toggle="tab" data-bs-target="#tab-overlaps" 
+                                type="button" role="tab" aria-controls="tab-overlaps" aria-selected="false"
+                                style="border: none; color: #475569;">
+                            🔗 ارزیابی‌های مشترک پیشنهادی
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link font-bold text-xs px-3 py-2.5 d-flex align-items-center gap-1.5" 
+                                id="talents-tab" data-bs-toggle="tab" data-bs-target="#tab-talents" 
+                                type="button" role="tab" aria-controls="tab-talents" aria-selected="false"
+                                style="border: none; color: #475569;">
+                            👥 افراد منطبق و پست‌های مشابه
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- محتوای تب‌ها -->
+            <div class="card-body p-4 tab-content">
+                <!-- تب ۱: ساختار اوزان -->
+                <div class="tab-pane fade show active animate__animated animate__fadeIn" id="tab-weights" role="tabpanel" aria-labelledby="weights-tab">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="font-bold text-secondary m-0" style="font-size: 12px;">⚙️ ساختار پیشنهادی فرآیند سنجش و اوزان مراحل ارزیابی</h6>
+                        
+                        <!-- سوییچ رند کردن اوزان -->
+                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1.5" style="direction: rtl;">
+                            <input class="form-check-input ms-0 me-1" type="checkbox" id="round_weights_sim" 
+                                   {% if round_weights %}checked{% endif %}
+                                   hx-get="{% url 'recruitment_patterns' %}?action=simulate&post_code={{ post_code }}"
+                                   hx-vals="js:{round: document.getElementById('round_weights_sim').checked}"
+                                   hx-target="#simulation-result"
+                                   style="cursor: pointer;">
+                            <label class="form-check-label text-xxs font-bold text-muted" for="round_weights_sim" style="cursor: pointer;">
+                                رند کردن (مضارب ۵)
+                            </label>
+                        </div>
+                    </div>
+
+                    <p class="text-muted text-xxs mb-4">پخش اوزان مراحل ارزیابی به صورت خودکار بر اساس اهمیت و سطح شایستگی‌های ورودی پست شبیه‌سازی شده محاسبه شده است:</p>
+
+                    <div class="d-flex flex-column gap-3.5 mb-2">
+                        {% for stype, sdata in plan.items %}
+                        <div class="p-3 border border-light rounded-3 bg-light bg-opacity-25 shadow-xxs">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-xs font-bold text-secondary">
+                                    {% if stype == 'EXAM' %}📝 آزمون کتبی تخصصی
+                                    {% elif stype == 'SKILL_TEST' %}⚙️ آزمون مهارتی عملی
+                                    {% elif stype == 'INTERVIEW' %}🗣️ مصاحبه تخصصی ساختاریافته
+                                    {% else %}🏢 کانون ارزیابی و شبیه‌سازی{% endif %}
+                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-xxs text-muted">حدنصاب قبولی: {{ sdata.passing_score }}٪</span>
+                                    <span class="badge bg-primary text-white text-xs font-bold px-2 py-1">{{ sdata.weight }}٪</span>
+                                </div>
+                            </div>
+                            <div class="progress progress-bar-custom bg-white border border-light" style="height: 8px;">
+                                <div class="progress-bar {% if stype == 'EXAM' %}bg-primary{% elif stype == 'SKILL_TEST' %}bg-success{% elif stype == 'INTERVIEW' %}bg-warning{% else %}bg-info{% endif %}"
+                                     role="progressbar" 
+                                     style="width: {{ sdata.weight }}%"></div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted py-5 text-xs">
+                            این پست فاقد شایستگی ارزیابی‌شونده (KN, SK, AB, GE, ST) است و فرآیند ارزیابی برای آن شبیه‌سازی نمی‌شود.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- تب ۲: راهبرد هوشمند و سناریوی AI -->
+                <div class="tab-pane fade animate__animated animate__fadeIn" id="tab-ai-strategy" role="tabpanel" aria-labelledby="ai-strategy-tab">
+                    <div id="ai-advice-container">
+                        {% if has_cached_ai and ai_data %}
+                            {% include "jobs/partials/ai_recruitment_strategy.html" with opt_advice=ai_data.opt_advice scenario=ai_data.scenario questions=ai_data.questions benchmark_mappings=ai_data.benchmark_mappings cached=True is_live=ai_data.is_live %}
+                        {% else %}
+                            <div class="text-center py-5 bg-light bg-opacity-50 rounded-4 border border-dashed mb-3" style="border: 1px dashed rgba(99, 102, 241, 0.25) !important;">
+                                <div class="text-primary mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096L3 15m6 6l8.813-5.096L21 15m-12 0L9 3m0 0L7.813 8.096L3 9m6-6l1.188 5.096L15 9m-6 0h.01" />
+                                    </svg>
+                                </div>
+                                <h6 class="font-bold text-secondary mb-2">تولید راهبرد اختصاصی و سناریوی ارزیابی با هوش مصنوعی</h6>
+                                <p class="text-muted text-xxs mx-auto mb-4" style="max-width: 440px; line-height: 1.6;">
+                                    جهت دریافت توصیه‌های بهینه‌سازی فرآیند استخدام، نگاشت شایستگی‌ها به بنچمارک‌های جهانی (Lominger, SHL)، سوالات مصاحبه CBI و سناریوی تفصیلی کانون ارزیابی دکمه زیر را کلیک کنید.
+                                </p>
+                                <button class="btn font-bold text-xs py-2 px-4 d-inline-flex align-items-center gap-2"
+                                        style="border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);"
+                                        hx-get="{% url 'recruitment_patterns' %}?action=ai_advise&post_code={{ post_code }}"
+                                        hx-target="#ai-advice-container"
+                                        hx-indicator="this, #ai-loading-indicator">
+                                    <span class="spinner-border spinner-border-sm htmx-indicator me-1" role="status" aria-hidden="true"></span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096L3 15m6 6l8.813-5.096L21 15m-12 0L9 3m0 0L7.813 8.096L3 9m6-6l1.188 5.096L15 9m-6 0h.01" />
+                                    </svg>
+                                    <span>🪄 تولید سناریو و راهبرد استخدامی هوشمند (AI)</span>
+                                </button>
+                            </div>
+                            
+                            <div id="ai-loading-indicator" class="htmx-indicator mt-2 text-center w-100">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span class="text-xxs text-muted ms-1 font-semibold">دستیار هوش مصنوعی در حال تحلیل شایستگی‌ها...</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- تب ۳: ارزیابی‌های مشترک پیشنهادی -->
+                <div class="tab-pane fade animate__animated animate__fadeIn" id="tab-overlaps" role="tabpanel" aria-labelledby="overlaps-tab">
+                    {% if overlap_list %}
+                    <p class="text-muted text-xs mb-3.5" style="line-height: 1.5;">جهت کاهش هزینه‌ها و صرفه‌جویی زمان، می‌توانید ارزیابی‌های مشترک زیر را ادغام کرده و از آزمون‌های موازی خودداری کنید:</p>
+                    
+                    <div class="d-flex flex-column gap-3">
+                        {% for item in overlap_list %}
+                        <div class="p-2.5 rounded-3 {% if item.is_active_opportunity %}bg-success bg-opacity-5{% else %}bg-light bg-opacity-50{% endif %}"
+                             style="border-radius: 10px; {% if item.is_active_opportunity %}border: 1px solid rgba(16, 185, 129, 0.2) !important;{% else %}border: 1px solid rgba(226, 232, 240, 0.6) !important;{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                <div class="d-flex align-items-center gap-2 flex-wrap" style="max-width: 75%;">
+                                    <h6 class="font-bold text-secondary m-0 text-xs">{{ item.post_title }}</h6>
+                                    <span class="text-muted text-xs">(کد: {{ item.post_code }})</span>
+                                    {% if item.is_active_opportunity %}
+                                    <span class="badge bg-success text-white font-bold animate__animated animate__pulse animate__infinite" style="font-size: 10px; border-radius: 4px; padding: 1.5px 4px;">🔥 فرصت شغلی فعال در جریان: {{ item.active_opp_title }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary font-bold" style="font-size: 10px; border-radius: 4px; padding: 1.5px 4px;">الگوی مرجع</span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge {% if item.is_active_opportunity %}bg-success bg-opacity-10 text-success{% else %}bg-primary bg-opacity-10 text-primary{% endif %} text-xs font-bold px-2 py-0.5" style="border-radius: 4px;">{{ item.overlap_pct }}٪ شباهت</span>
+                            </div>
+
+                            {% if item.shared_stages %}
+                            <div class="d-flex flex-wrap gap-1 align-items-center mb-1.5">
+                                {% for stage in item.shared_stages %}
+                                    {% if "کتبی" in stage %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary font-bold" style="font-size: 10.5px; border-radius: 4px; padding: 1.5px 4px; border: 1px solid rgba(0, 82, 204, 0.1);">📝 {{ stage }}</span>
+                                    {% elif "مهارتی" in stage %}
+                                    <span class="badge bg-success bg-opacity-10 text-success font-bold" style="font-size: 10.5px; border-radius: 4px; padding: 1.5px 4px; border: 1px solid rgba(16, 185, 129, 0.1);">⚙️ {{ stage }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger font-bold" style="font-size: 10.5px; border-radius: 4px; padding: 1.5px 4px; border: 1px solid rgba(239, 68, 68, 0.1);">🏢 {{ stage }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <div class="text-xs text-muted d-flex flex-wrap align-items-center gap-1" style="font-size: 11.5px;">
+                                <strong>شایستگی‌های مشترک:</strong>
+                                {% for c in item.shared_competencies %}
+                                <span class="badge bg-white text-secondary text-xs px-2 py-1 border" style="font-size: 10.5px; border-radius: 3px; border: 1px solid rgba(226, 232, 240, 0.8) !important;">{{ c }}</span>
+                                {% endfor %}
+                                {% if item.shared_count > 6 %}
+                                <span class="text-muted font-bold" style="font-size: 10.5px;">+{{ item.shared_count|add:"-6" }} مورد دیگر</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 bg-light bg-opacity-50 rounded-4 border border-light">
+                        <span class="text-muted text-xs">هیچ پست یا فرصت شغلی هم‌پوشانی (بالای ۸۰٪ شباهت) در سازمان یافت نشد.</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- تب ۴: افراد منطبق و پست‌های مشابه -->
+                <div class="tab-pane fade" id="tab-talents" role="tabpanel" aria-labelledby="talents-tab">
+                    <div class="row g-4">
+                        <!-- الگوهای سازمانی مشابه (Similar Posts) -->
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light bg-opacity-25 border border-light rounded-4 h-100 shadow-xxs">
+                                <h6 class="font-bold text-secondary mb-2" style="font-size: 11.5px;">📍 پست‌های با شایستگی مشابه در سازمان</h6>
+                                <p class="text-muted text-xxs mb-3">پست‌هایی که بیشترین اشتراک شایستگی را با پست شبیه‌سازی شده دارند.</p>
+                                
+                                <div class="d-flex flex-column gap-2">
+                                    {% for sp in similar_posts %}
+                                    <div class="p-2.5 border border-light rounded-3 bg-white d-flex flex-column gap-1.5 shadow-xxs" style="direction: rtl;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="text-xs font-bold text-dark">{{ sp.post_title }}</div>
+                                                <span class="text-xxs text-muted">کد پست: {{ sp.post_code }}</span>
+                                            </div>
+                                            <button class="btn btn-xxs btn-outline-secondary px-2 py-1 font-bold d-inline-flex align-items-center gap-1"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#collapse-sp-{{ sp.post_code }}"
+                                                    aria-expanded="false"
+                                                    aria-controls="collapse-sp-{{ sp.post_code }}"
+                                                    style="font-size: 8.5px; border-radius: 6px; padding: 2px 6px;">
+                                                <span>{{ sp.match_count }} شایستگی مشترک</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div class="collapse" id="collapse-sp-{{ sp.post_code }}">
+                                            <div class="p-2 bg-light bg-opacity-50 rounded-2 border border-light mt-1 d-flex flex-wrap gap-1">
+                                                {% for comp in sp.shared_competencies %}
+                                                <span class="badge bg-white text-secondary border text-xxs font-semibold" style="font-size: 8px; border-radius: 4px; border: 1px solid rgba(226, 232, 240, 0.8) !important;">{{ comp }}</span>
+                                                {% empty %}
+                                                <span class="text-muted text-xxs font-semibold" style="font-size: 8px;">موردی یافت نشد</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="text-center text-muted py-4 text-xs">هیچ پست مشابهی یافت نشد.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- استعدادهای منطبق در بانک رزومه‌ها (Talent Bank Matcher) -->
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light bg-opacity-25 border border-light rounded-4 h-100 shadow-xxs">
+                                <h6 class="font-bold text-secondary mb-2" style="font-size: 11.5px;">👥 افراد پیشنهادی در بانک استعدادها (Talents)</h6>
+                                <p class="text-muted text-xxs mb-3">کارشناسان و متقاضیان موجود در سیستم که مهارت یا سوابق متناسب دارند.</p>
+                                
+                                <div class="d-flex flex-column gap-2.5">
+                                    {% for tal in talents %}
+                                    <div class="p-2.5 border border-light rounded-3 bg-white d-flex flex-column gap-1.5 shadow-xxs" style="direction: rtl;">
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-xs font-bold text-dark">{{ tal.first_name }} {{ tal.last_name }}</span>
+                                                    <span class="badge bg-success bg-opacity-10 text-success text-xxs font-bold" style="font-size: 8.5px; padding: 1.5px 5px;">{{ tal.match_percent }}٪ تطابق</span>
+                                                </div>
+                                                <div class="text-xxs text-muted mt-0.5">📞 {{ tal.phone_number }}</div>
+                                            </div>
+                                            <div class="d-flex gap-1.5 align-items-center">
+                                                <a href="/candidates/{{ tal.id }}/" target="_blank" class="btn btn-xxs btn-outline-primary d-inline-flex align-items-center" style="font-size: 9px; padding: 2px 6px; border-radius: 6px;">
+                                                    👁️ رزومه
+                                                </a>
+                                                <button class="btn btn-xxs btn-primary d-inline-flex align-items-center gap-1 font-bold"
+                                                        style="font-size: 9px; padding: 2px 6px; border-radius: 6px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none;"
+                                                        hx-get="{% url 'recruitment_patterns' %}?action=ai_match_talent_scores&post_code={{ post_code }}&candidate_id={{ tal.id }}"
+                                                        hx-target="#ai-match-modal-content"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#aiMatchModal"
+                                                        hx-indicator="this">
+                                                    <span class="spinner-border spinner-border-sm htmx-indicator me-1" role="status" aria-hidden="true"></span>
+                                                    <span>🪄 تحلیل AI</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center text-xxs text-muted mt-0.5 flex-wrap gap-1 bg-light bg-opacity-50 p-2 rounded-2 border border-light">
+                                            <div>
+                                                <span>سابقه ارزیابی در:</span>
+                                                <strong class="text-secondary">{{ tal.source_job_title }}</strong>
+                                            </div>
+                                            {% if tal.source_job_score is not None %}
+                                            <div>
+                                                <span>نمره کل:</span>
+                                                <strong class="badge bg-primary text-white font-bold" style="font-size: 8px;">{{ tal.source_job_score }}٪</strong>
+                                            </div>
+                                            {% endif %}
+                                            <button class="btn btn-xxs btn-link text-xxs p-0 text-decoration-none font-bold"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#collapse-tal-comps-{{ tal.id }}"
+                                                    aria-expanded="false"
+                                                    aria-controls="collapse-tal-comps-{{ tal.id }}">
+                                                شایستگی‌های مشترک ({% if tal.shared_competencies %}{{ tal.shared_competencies|length }}{% else %}۰{% endif %}) ▾
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="collapse" id="collapse-tal-comps-{{ tal.id }}">
+                                            <div class="p-2 bg-light bg-opacity-30 rounded-2 border border-light mt-1 d-flex flex-wrap gap-1">
+                                                {% for comp in tal.shared_competencies %}
+                                                <span class="badge bg-white text-secondary border text-xxs font-semibold" style="font-size: 8px; border-radius: 4px; border: 1px solid rgba(226, 232, 240, 0.8) !important;">{{ comp }}</span>
+                                                {% empty %}
+                                                <span class="text-muted text-xxs font-semibold" style="font-size: 8px;">فاقد شایستگی مشترک مستقیم</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="text-center text-muted py-4 text-xs">هیچ متقاضی پیشنهادی یافت نشد.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for AI Talent Suitability Match analysis -->
+<div class="modal fade" id="aiMatchModal" tabindex="-1" aria-labelledby="aiMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;" id="ai-match-modal-content">
+            <div class="modal-body text-center py-4" style="direction: rtl;">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div class="text-xxs text-muted">دستیار هوشمند در حال تحلیل انطباق شایستگی‌ها...</div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,149 @@
+<div class="modal-header border-bottom border-slate py-3">
+    <h5 class="modal-title font-semibold text-secondary" id="interviewerModalLabel">مدیریت مصاحبه‌گران: {{ stage.name }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body p-4 text-start">
+    <!-- Passing Score Configuration -->
+    <div class="mb-4 p-3 bg-light rounded-3 d-flex align-items-center justify-content-between">
+        <div>
+            <h6 class="font-semibold text-secondary m-0" style="font-size: 0.9rem;">حد نصاب (کف نمره قبولی) مرحله:</h6>
+            <small class="text-muted text-xs">نمره نهایی متقاضی در این مرحله بر اساس این مقدار ارزیابی می‌شود.</small>
+        </div>
+        <div style="width: 120px;">
+            <input type="number" 
+                   name="passing_score" 
+                   value="{{ stage.passing_score }}" 
+                   hx-post="{% url 'manage_stage_interviewers' stage.id %}" 
+                   hx-target="#interviewer-modal-content"
+                   hx-trigger="change, keyup delay:800ms"
+                   class="form-control form-control-sm text-center font-bold" 
+                   style="border-radius: 6px; font-size: 14px;" 
+                   min="0" max="100" required>
+        </div>
+    </div>
+
+    <!-- Current Interviewers List -->
+    <h6 class="font-semibold text-secondary mb-3">مصاحبه‌گران منتسب شده فعلی:</h6>
+    <div class="table-responsive mb-4">
+        <table class="table table-sm table-bordered align-middle text-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>نام مصاحبه‌گر</th>
+                    <th>نقش کاربری</th>
+                    <th class="text-center" style="width: 100px;">وزن نمره (٪)</th>
+                    <th>کمیته / گروه</th>
+                    <th class="text-center" style="width: 80px;">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mapping in interviewers %}
+                <tr>
+                    <td class="font-medium text-dark">{{ mapping.user.get_full_name|default:mapping.user.username }}</td>
+                    <td><small class="text-muted">{{ mapping.user.profile.get_role_display }}</small></td>
+                    <td class="text-center font-bold">{{ mapping.weight }}٪</td>
+                    <td>{{ mapping.group_name|default:"-" }}</td>
+                    <td class="text-center">
+                        <button type="button" 
+                                hx-post="{% url 'manage_stage_interviewers' stage.id %}"
+                                hx-vals='{"action": "delete", "assignment_id": "{{ mapping.id }}"}'
+                                hx-include="[name='passing_score']"
+                                hx-target="#interviewer-modal-content"
+                                class="btn btn-xs btn-outline-danger py-0.5 px-2">حذف</button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">هیچ مصاحبه‌گری برای این مرحله ثبت نشده است.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <hr class="border-slate my-4">
+
+    <!-- Add Interviewer Form -->
+    <h6 class="font-semibold text-secondary mb-3">افزودن مصاحبه‌گر جدید:</h6>
+    <form hx-post="{% url 'manage_stage_interviewers' stage.id %}" 
+          hx-target="#interviewer-modal-content" 
+          hx-include="[name='passing_score']"
+          class="row g-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        
+        <div class="col-md-6">
+            <label class="form-label text-xs text-muted mb-1">انتخاب مصاحبه‌گر</label>
+            <select name="user_id" class="form-select form-select-sm" required>
+                <option value="">-- انتخاب کاربر --</option>
+                {% for u in available_users %}
+                    <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} ({{ u.profile.get_role_display }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs text-muted mb-1">وزن نمره (٪)</label>
+            <input type="number" name="weight" value="100" min="1" max="100" class="form-control form-control-sm text-center font-bold" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs text-muted mb-1">گروه / کمیته</label>
+            <input type="text" name="group_name" placeholder="مثال: فنی" class="form-control form-control-sm">
+        </div>
+        <div class="col-12 text-end mt-4">
+            <button type="submit" class="btn btn-sm btn-primary px-3">افزودن مصاحبه‌گر</button>
+        </div>
+    </form>
+
+    <hr class="border-slate my-4">
+
+    <!-- Competencies Configuration -->
+    <h6 class="font-semibold text-secondary mb-3">شایستگی‌های کانون ارزیابی (مخصوص ارزیابی تخصصی):</h6>
+    <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered align-middle text-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>نام شایستگی</th>
+                    <th class="text-center" style="width: 120px;">وزن (٪)</th>
+                    <th class="text-center" style="width: 80px;">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comp in competencies %}
+                <tr>
+                    <td class="font-medium text-dark">{{ comp.name }}</td>
+                    <td class="text-center font-bold">{{ comp.weight }}٪</td>
+                    <td class="text-center">
+                        <button type="button" 
+                                hx-post="{% url 'manage_stage_interviewers' stage.id %}"
+                                hx-vals='{"action": "delete_competency", "competency_id": "{{ comp.id }}"}'
+                                hx-include="[name='passing_score']"
+                                hx-target="#interviewer-modal-content"
+                                class="btn btn-xs btn-outline-danger py-0.5 px-2">حذف</button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center py-3 text-muted">هیچ شایستگی خاصی برای این مرحله تعریف نشده است.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add Competency Form -->
+    <form hx-post="{% url 'manage_stage_interviewers' stage.id %}" 
+          hx-target="#interviewer-modal-content" 
+          hx-include="[name='passing_score']"
+          class="row g-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_competency">
+        <div class="col-md-7">
+            <input type="text" name="competency_name" placeholder="نام شایستگی جدید (مثال: کار تیمی)..." class="form-control form-control-sm" required>
+        </div>
+        <div class="col-md-3">
+            <input type="number" name="competency_weight" value="100" min="1" max="100" class="form-control form-control-sm text-center font-bold" placeholder="وزن ٪" required>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100 py-1">افزودن</button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,235 @@
+<div class="card border-0 shadow-lg p-4 animate__animated animate__fadeInUp ai-advice-wrapper" 
+     style="border-radius: 20px; background: linear-gradient(170deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 1) 100%); border: 1px solid rgba(139, 92, 246, 0.18) !important;">
+    
+    <!-- Meta/Header bar -->
+    <div class="d-flex flex-column gap-3 mb-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-2.5 rounded-circle shadow-xs" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-primary">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l8.982-11.795H13l1-6.104L4.982 15H10L9.813 15.904z" />
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="font-bold text-secondary m-0" style="font-size: 1.15rem;">🪄 راهبرد استخدامی و ارزیابی پیشنهادی هوش مصنوعی (AI)</h5>
+                    <small class="text-muted text-xxs font-semibold">تحلیل عمیق پست سازمانی بر اساس مدل شایستگی و استانداردهای جهانی سنجش</small>
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'job_ai_strategy_print' %}?post_code={{ post_code }}"
+                   target="_blank"
+                   class="btn btn-xxs btn-outline-secondary d-inline-flex align-items-center gap-1.5 font-bold shadow-xs py-1.5 px-3"
+                   style="border-radius: 8px; font-size: 10.5px; border-color: rgba(139, 92, 246, 0.25);">
+                    🖨️ خروجی چاپی A4
+                </a>
+                <button class="btn btn-xxs btn-primary d-inline-flex align-items-center gap-1.5 font-bold shadow-xs py-1.5 px-3"
+                        style="border-radius: 8px; font-size: 10.5px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none;"
+                        hx-get="{% url 'recruitment_patterns' %}?action=ai_advise&post_code={{ post_code }}&refresh=true"
+                        hx-target="closest .ai-advice-wrapper"
+                        hx-swap="outerHTML"
+                        hx-indicator="this, #ai-loading-indicator">
+                    <span class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true"></span>
+                    <span>🔄 بازتولید هوشمند (AI)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Glassmorphic Details Bar -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 bg-white bg-opacity-60 border border-light rounded-4 shadow-xxs">
+            <div class="d-flex align-items-center gap-4 text-xs font-semibold text-secondary">
+                <div>
+                    <span class="text-muted">عنوان پست:</span>
+                    <span class="text-dark font-bold ms-1">{{ post_title }}</span>
+                </div>
+                <div class="d-none d-sm-block">
+                    <span class="text-muted">کد پست:</span>
+                    <span class="text-dark font-bold ms-1">{{ post_code }}</span>
+                </div>
+                <div>
+                    <span class="text-muted">تعداد بنچمارک‌ها:</span>
+                    <span class="badge bg-primary bg-opacity-10 text-primary ms-1 px-2 py-1" style="font-size: 10px;">{{ benchmark_mappings|length }} شایستگی نگاشت‌شده</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                {% if cached %}
+                <span class="badge bg-info bg-opacity-10 text-info text-xxs font-bold px-2.5 py-1.5" style="border-radius: 6px; border: 1px solid rgba(13, 148, 136, 0.15);">📂 لود شده از کش</span>
+                {% endif %}
+                {% if is_live %}
+                <span class="badge bg-success bg-opacity-10 text-success text-xxs font-bold px-2.5 py-1.5" style="border-radius: 6px; border: 1px solid rgba(22, 163, 74, 0.15);">✓ اتصال زنده واقعی (Live API)</span>
+                {% else %}
+                <span class="badge bg-warning bg-opacity-10 text-warning text-xxs font-bold px-2.5 py-1.5" 
+                      style="border-radius: 6px; border: 1px solid rgba(217, 119, 6, 0.15);"
+                      data-bs-toggle="tooltip" data-bs-placement="top"
+                      title="کلید API هوش مصنوعی در تنظیمات فعال نیست. این استراتژی بر اساس شایستگی‌های این پست به صورت محلی در سیستم شبیه‌سازی شده است.">
+                      ⚠️ شبیه‌سازی محلی (بدون اتصال به سرور AI)
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ۱. جدول نگاشت بنچمارک‌های جهانی (Global Benchmarks Table) -->
+    <div class="mb-4">
+        <div class="p-3 bg-white border border-light rounded-4 shadow-xs">
+            <h6 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                <span class="text-primary" style="font-size: 1.1rem;">🌍</span>
+                نگاشت شایستگی‌ها به بنچمارک‌های معتبر جهانی (SHL, Lominger, Korn Ferry, DDI)
+            </h6>
+            
+            {% if benchmark_mappings %}
+            <div class="table-responsive rounded-3 border border-light">
+                <table class="table table-hover align-middle mb-0 text-xs">
+                    <thead class="table-light text-secondary font-bold">
+                        <tr>
+                            <th class="py-2.5 px-3 text-right" style="width: 20%;">شایستگی و ابزار سنجش</th>
+                            <th class="py-2.5 px-3 text-right" style="width: 20%;">چارچوب و بعد مرجع</th>
+                            <th class="py-2.5 px-3 text-right" style="width: 25%;">نشانگرهای رفتاری کلیدی</th>
+                            <th class="py-2.5 px-3 text-center" style="width: 15%;">بنچمارک قبولی</th>
+                            <th class="py-2.5 px-3 text-right" style="width: 20%;">تحلیل فنی انتخاب ابزار</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-secondary font-medium">
+                        {% for mapping in benchmark_mappings %}
+                        <tr>
+                            <td class="py-2.5 px-3">
+                                <div class="text-dark font-bold mb-1.5">{{ mapping.competency }}</div>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1" style="border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.2); font-size: 9px; font-weight: 600;">
+                                    🛠️ {{ mapping.tool }}
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3">
+                                <div class="mb-1">
+                                {% if 'SHL' in mapping.framework or 'shl' in mapping.framework|lower %}
+                                    <span class="badge px-2 py-0.5" style="background-color: rgba(59, 130, 246, 0.12); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 6px; font-size: 9px; font-weight: 700;">{{ mapping.framework }}</span>
+                                {% elif 'Lominger' in mapping.framework or 'lominger' in mapping.framework|lower %}
+                                    <span class="badge px-2 py-0.5" style="background-color: rgba(139, 92, 246, 0.12); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 6px; font-size: 9px; font-weight: 700;">{{ mapping.framework }}</span>
+                                {% elif 'Korn Ferry' in mapping.framework or 'korn' in mapping.framework|lower or 'ferry' in mapping.framework|lower %}
+                                    <span class="badge px-2 py-0.5" style="background-color: rgba(20, 184, 166, 0.12); color: #0d9488; border: 1px solid rgba(20, 184, 166, 0.25); border-radius: 6px; font-size: 9px; font-weight: 700;">{{ mapping.framework }}</span>
+                                {% elif 'DDI' in mapping.framework or 'ddi' in mapping.framework|lower %}
+                                    <span class="badge px-2 py-0.5" style="background-color: rgba(99, 102, 241, 0.12); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 6px; font-size: 9px; font-weight: 700;">{{ mapping.framework }}</span>
+                                {% else %}
+                                    <span class="badge bg-light text-secondary border px-2 py-0.5" style="border-radius: 6px; font-size: 9px; font-weight: 700;">{{ mapping.framework }}</span>
+                                {% endif %}
+                                </div>
+                                <span class="font-semibold text-dark text-xxs" style="line-height: 1.4; font-family: monospace;">{{ mapping.dimension }}</span>
+                            </td>
+                            <td class="py-2.5 px-3 text-xxs text-secondary">
+                                {% if mapping.behavioral_indicators %}
+                                    <ul class="ps-3 mb-0" style="line-height: 1.5; padding-right: 15px;">
+                                        {% for indicator in mapping.behavioral_indicators %}
+                                            <li class="mb-1">{{ indicator }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5 px-3 text-center">
+                                {% if mapping.pass_benchmark %}
+                                    <span class="badge bg-success bg-opacity-10 text-success px-2 py-1.5" style="border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 9.5px; font-weight: 700; white-space: normal; line-height: 1.3;">
+                                        🎯 {{ mapping.pass_benchmark }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5 px-3 text-xxs text-muted" style="line-height: 1.6; text-align: justify;">{{ mapping.rationale }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 bg-light bg-opacity-25 rounded-3 border border-light">
+                <span class="text-muted text-xs">نگاشت بنچمارک در دسترس نیست. برای تولید، روی دکمه «بازتولید هوشمند (AI)» کلیک کنید.</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ۲. راهبرد بهینه‌سازی و سناریوی پیشنهادی -->
+    <div class="row g-4 mb-4">
+        <!-- بهینه‌سازی شایستگی‌ها -->
+        <div class="col-md-6">
+            <div class="p-3 bg-white border border-light rounded-4 h-100 shadow-xs">
+                <h6 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                    <span class="text-primary" style="font-size: 1.1rem;">🎯</span>
+                    توصیه‌های بهینه‌سازی و تنظیم اوزان ارزیابی
+                </h6>
+                <ul class="list-unstyled d-flex flex-column gap-3 m-0">
+                    {% for tip in opt_advice %}
+                    <li class="p-2.5 bg-light bg-opacity-20 rounded-3 border border-light d-flex align-items-start justify-content-between gap-3 text-xs text-secondary font-medium w-100">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="text-primary mt-0.5" style="font-size: 1.1rem;">•</span>
+                            <span style="line-height: 1.6;">
+                                {% if tip.text %}
+                                    {{ tip.text }}
+                                {% else %}
+                                    {{ tip }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if tip.weights %}
+                        <button type="button" 
+                                class="btn btn-xxs btn-success align-self-center py-1 px-2.5 font-bold shadow-xxs border-0 text-white" 
+                                style="font-size: 9.5px; white-space: nowrap; border-radius: 6px; background-color: #10b981;"
+                                data-weights='{{ tip.weights_json }}'
+                                onclick="if (window.applyAIWeights) { window.applyAIWeights(this.dataset.weights); } else { alert('این دکمه فقط در صفحه پیکربندی شایستگی‌ها کار می‌کند.'); }">
+                            📥 اعمال اوزان
+                        </button>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- سناریو و ابزارهای ارزیابی -->
+        <div class="col-md-6">
+            <div class="p-3 bg-white border border-light rounded-4 h-100 shadow-xs" style="background: linear-gradient(145deg, rgba(255,255,255,1) 0%, rgba(249,250,251,1) 100%);">
+                <h6 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                    <span class="text-success" style="font-size: 1.1rem;">🎬</span>
+                    سناریوی پیشنهادی کانون ارزیابی (Assessment Scenario)
+                </h6>
+                <div class="text-xs text-secondary font-medium p-3 bg-light bg-opacity-40 rounded-3 border border-light ai-scenario-text" style="line-height: 1.8; text-align: justify;">
+                    {{ scenario|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ۳. بانک سوالات مصاحبه شایستگی‌محور -->
+    <div class="mt-2">
+        <div class="p-3 bg-white border border-light rounded-4 shadow-xs">
+            <h6 class="font-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                <span class="text-warning" style="font-size: 1.1rem;">❓</span>
+                بانک سوالات مصاحبه ساختاریافته (CBI) پیشنهادی هوش مصنوعی
+            </h6>
+            <div class="row g-3">
+                {% for q in questions %}
+                <div class="col-md-4">
+                    <div class="p-3 border border-light rounded-3 bg-light bg-opacity-25 h-100 hover-shadow-xs position-relative" style="transition: all 0.2s ease;">
+                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-primary px-2 py-1" style="font-size: 9px; box-shadow: 0 2px 4px rgba(99, 102, 241, 0.25);">{{ forloop.counter }}</span>
+                        {% if q.question %}
+                            <div class="mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary font-bold px-2 py-1" style="font-size: 9px; border: 1px solid rgba(99, 102, 241, 0.15);">🎯 شایستگی: {{ q.competency }}</span>
+                            </div>
+                            <p class="text-xs text-secondary m-0 font-semibold mb-2" style="line-height: 1.7; text-align: justify;">{{ q.question }}</p>
+                            {% if q.criteria %}
+                                <div class="text-xxs text-muted mt-2 border-top pt-2" style="line-height: 1.5;">
+                                    <strong class="text-secondary">💡 راهنمای ارزیابی:</strong> {{ q.criteria }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-xs text-secondary m-0 font-semibold" style="line-height: 1.7; text-align: justify; padding-top: 2px;">{{ q }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-3 text-muted text-xs">سوالی یافت نشد.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,41 @@
+{# 
+  Table Empty State — reusable empty state row for tables
+  
+  Usage (inside {% empty %} block):
+    {% empty %}
+        {% include "includes/table_empty.html" with colspan=8 message="هیچ آیتمی یافت نشد." %}
+    {% endfor %}
+    
+  Parameters:
+    - colspan: Number of columns to span (required)
+    - message: Empty state message (default: "هیچ داده‌ای برای نمایش وجود ندارد.")
+    - icon: FontAwesome icon class (default: "fas fa-inbox")
+    - show_icon: Whether to show icon (default: True)
+    - extra_class: Additional CSS classes for the td (optional)
+#}
+<tr class="pj-empty-row">
+    <td colspan="{{ colspan|default:1 }}" 
+        class="text-center py-5 text-muted {{ extra_class|default:'' }}"
+        style="min-height: 200px;">
+        <div class="d-flex flex-column align-items-center gap-3 py-3">
+            {% if show_icon|default:True %}
+            <div class="pj-empty-icon">
+                <i class="{{ icon|default:'fas fa-inbox' }} fa-3x opacity-25"></i>
+            </div>
+            {% endif %}
+            <div class="pj-empty-text">
+                <p class="mb-1 fw-medium text-muted" style="font-size: 0.9rem;">
+                    {{ message|default:"هیچ داده‌ای برای نمایش وجود ندارد." }}
+                </p>
+                {% if hint %}
+                <small class="text-muted opacity-75" style="font-size: 0.75rem;">{{ hint }}</small>
+                {% endif %}
+            </div>
+            {% if action_url and action_label %}
+            <a href="{{ action_url }}" class="btn btn-sm btn-outline-primary mt-1">
+                <i class="fas fa-plus me-1"></i> {{ action_label }}
+            </a>
+            {% endif %}
+        </div>
+    </td>
+</tr>

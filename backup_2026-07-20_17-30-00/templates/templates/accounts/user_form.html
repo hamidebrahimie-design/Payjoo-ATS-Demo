@@ -1,0 +1,136 @@
+{% extends "base_page.html" %}
+{% block title %}{% if object %}ویرایش کاربر{% else %}افزودن کاربر جدید{% endif %}{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <a href="{% url 'user_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+        بازگشت به لیست
+    </a>
+    <h3 class="font-semibold text-secondary">
+        {% if object %}ویرایش کاربر: {{ object.username }}{% else %}افزودن کاربر جدید به سامانه{% endif %}
+    </h3>
+    <p class="text-muted text-sm m-0">اطلاعات هویتی و دسترسی کاربر را مشخص کنید</p>
+</div>
+
+<div class="card premium-card" style="max-width: 680px;">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نام کاربری</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                {% if not object %}
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">رمز عبور</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نام</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نام خانوادگی</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">آدرس ایمیل</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">شماره تماس</label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.phone_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-4 border-slate">
+
+                <div class="col-md-6">
+                    <label class="form-label font-medium text-secondary">نقش سازمانی</label>
+                    {{ form.role }}
+                    {% if form.role.errors %}
+                    <div class="text-danger text-xs mt-1">{{ form.role.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6 d-flex align-items-center mt-md-5" id="external_assessor_wrapper">
+                    <div class="form-check">
+                        {{ form.is_external }}
+                        <label class="form-check-label font-medium text-secondary" for="{{ form.is_external.id_for_label }}">
+                            ارزیاب خارجی است؟ (حداقل وزن ۳۰٪ در پنل مصاحبه)
+                        </label>
+                        {% if form.is_external.errors %}
+                        <div class="text-danger text-xs mt-1">{{ form.is_external.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="{% url 'user_list' %}" class="btn btn-outline-secondary px-4 py-2">انصراف</a>
+                <button type="submit" class="btn btn-primary-custom px-4 py-2">
+                    {% if object %}ذخیره تغییرات{% else %}ایجاد کاربر جدید{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelect = document.querySelector('select[name="role"]');
+        const externalWrapper = document.getElementById('external_assessor_wrapper');
+        const isExternalCheckbox = document.querySelector('input[name="is_external"]');
+
+        function toggleExternalAssessor() {
+            if (roleSelect.value === 'INTERVIEWER' || roleSelect.value === 'EXTERNAL_ASSESSOR') {
+                externalWrapper.style.opacity = '1';
+                externalWrapper.style.pointerEvents = 'auto';
+                isExternalCheckbox.disabled = false;
+                if (roleSelect.value === 'EXTERNAL_ASSESSOR') {
+                    isExternalCheckbox.checked = true;
+                    isExternalCheckbox.disabled = true;
+                }
+            } else {
+                externalWrapper.style.opacity = '0.5';
+                externalWrapper.style.pointerEvents = 'none';
+                isExternalCheckbox.checked = false;
+                isExternalCheckbox.disabled = true;
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleExternalAssessor);
+        toggleExternalAssessor(); // اجرای اولیه
+    });
+</script>
+{% endblock %}

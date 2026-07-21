@@ -228,9 +228,9 @@
                 <h5 class="font-semibold text-secondary m-0">تاریخچه درخواست‌های همکاری</h5>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                <div class="pj-table-wrapper">
+                    <table class="table pj-table pj-table-responsive-card align-middle mb-0">
+                        <thead>
                             <tr>
                                 <th class="ps-4">فرصت شغلی</th>
                                 <th>تاریخ درخواست</th>
@@ -274,11 +274,7 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    هنوز هیچ درخواستی برای این متقاضی ثبت نشده است.
-                                </td>
-                            </tr>
+                            {% include "includes/table_empty.html" with colspan=6 message="هنوز هیچ درخواستی برای این متقاضی ثبت نشده است." icon="fas fa-inbox" %}
                             {% endfor %}
                         </tbody>
                     </table>
