@@ -1,17 +1,15 @@
 {# 
   Table Empty State — reusable empty state row for tables
   
-  Usage (inside {% empty %} block):
-    {% empty %}
-        {% include "includes/table_empty.html" with colspan=8 message="هیچ آیتمی یافت نشد." %}
-    {% endfor %}
-    
   Parameters:
     - colspan: Number of columns to span (required)
     - message: Empty state message (default: "هیچ داده‌ای برای نمایش وجود ندارد.")
     - icon: FontAwesome icon class (default: "fas fa-inbox")
     - show_icon: Whether to show icon (default: True)
     - extra_class: Additional CSS classes for the td (optional)
+    - hint: Optional hint text below the message
+    - action_url: Optional action button URL
+    - action_label: Optional action button text
 #}
 <tr class="pj-empty-row">
     <td colspan="{{ colspan|default:1 }}" 

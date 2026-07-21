@@ -6,13 +6,86 @@
 <!-- Tom Select CSS -->
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
-    /* Style custom design for kamaDatepicker to match our theme */
-    #bd-root-id_start_date, #bd-root-id_end_date {
+    #bd-root-id_start_date, #bd-root-id_end_date,
+    #bd-root-id_initial_meeting_date, #bd-root-id_registration_start_date,
+    #bd-root-id_registration_end_date, #bd-root-id_screening_end_date,
+    #bd-root-id_written_exam_date, #bd-root-id_written_exam_result_date,
+    #bd-root-id_skill_exam_date, #bd-root-id_interview_date,
+    #bd-root-id_assessment_referral_date, #bd-root-id_assessment_result_date,
+    #bd-root-id_final_result_date {
         font-family: 'Vazirmatn', sans-serif !important;
     }
     .ts-dropdown {
         direction: rtl !important;
         text-align: right !important;
+    }
+    .nav-tabs .nav-link {
+        font-family: 'Vazirmatn', sans-serif;
+        font-weight: 500;
+        color: #6b7280;
+        border: none;
+        padding: 0.65rem 1.25rem;
+        transition: all 0.2s ease;
+    }
+    .nav-tabs .nav-link:hover {
+        color: #0052cc;
+        background: #f1f5f9;
+        border-radius: 8px 8px 0 0;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0052cc;
+        font-weight: 600;
+        background: transparent;
+        border-bottom: 3px solid #0052cc;
+    }
+    .nav-tabs .nav-link i {
+        margin-left: 6px;
+    }
+    .stat-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+        background: #fff;
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-card .stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.2;
+    }
+    .stat-card .stat-label {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 8px;
+    }
+    .checkbox-wrapper input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    .checkbox-wrapper label {
+        margin: 0;
+        cursor: pointer;
     }
 </style>
 {% endblock %}
@@ -28,7 +101,7 @@
     <h3 class="font-semibold text-secondary">
         {% if object %}ویرایش فرصت شغلی: {{ object.title }}{% else %}افزودن فرصت شغلی جدید{% endif %}
     </h3>
-    <p class="text-muted text-sm m-0">اطلاعات فرصت شغلی و مراحل فرآیند ارزیابی متقاضیان را مشخص کنید</p>
+    <p class="text-muted text-sm m-0">اطلاعات فرصت شغلی، زمان‌بندی و مراحل ارزیابی را مشخص کنید</p>
 </div>
 
 {% if form.non_field_errors %}
@@ -47,229 +120,488 @@
 </div>
 {% endif %}
 
-<div class="card premium-card mb-5" style="max-width: 780px;">
-    <div class="card-body p-4">
-        <form method="post">
-            {% csrf_token %}
-            
-            <!-- Section 1: General Info -->
-            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۱. اطلاعات عمومی فرصت شغلی</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label class="form-label font-medium text-secondary">شماره درخواست</label>
-                    {{ form.request_number }}
-                    {% if form.request_number.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.request_number.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label font-medium text-secondary">کد شغل</label>
-                    {{ form.code }}
-                    {% if form.code.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.code.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label font-medium text-secondary">عنوان شغل</label>
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.title.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">کارخانه</label>
-                    {{ form.factory }}
-                    {% if form.factory.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.factory.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">بخش / دپارتمان</label>
-                    {{ form.department }}
-                    {% if form.department.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.department.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">واحد سازمانی</label>
-                    {{ form.unit }}
-                    {% if form.unit.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.unit.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">رده شغلی</label>
-                    {{ form.job_category }}
-                    {% if form.job_category.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.job_category.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label font-medium text-secondary">ظرفیت جذب (تعداد)</label>
-                    {{ form.headcount }}
-                    {% if form.headcount.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.headcount.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">نوع استخدام</label>
-                    {{ form.recruitment_type }}
-                    {% if form.recruitment_type.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.recruitment_type.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Section 2: Planning -->
-            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۲. برنامه‌ریزی و زمان‌بندی</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label class="form-label font-medium text-secondary">کارشناس جذب مسئول</label>
-                    {{ form.assigned_recruiter }}
-                    {% if form.assigned_recruiter.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.assigned_recruiter.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label font-medium text-secondary">الگوی فرآیند استخدامی (Workflow)</label>
-                    {{ form.workflow }}
-                    <small class="text-muted text-xs d-block mt-1">با انتخاب الگو، مراحل فرآیند به صورت خودکار تخصیص می‌یابند.</small>
-                    {% if form.workflow.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.workflow.errors.0 }}</div>
-                    {% endif %}
-                    <div id="workflow-stages-preview" class="mt-2 border rounded p-2.5 bg-light d-none" style="border-color: #cbd5e1 !important; background-color: #f8fafc !important;">
-                        <!-- Workflow stages will be loaded here dynamically -->
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">وضعیت فرصت شغلی</label>
-                    {{ form.status }}
-                    {% if form.status.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.status.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">تاریخ شروع</label>
-                    {{ form.start_date }}
-                    {% if form.start_date.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.start_date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label font-medium text-secondary">تاریخ پایان</label>
-                    {{ form.end_date }}
-                    {% if form.end_date.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.end_date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Section 3: Descriptions -->
-            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۳. شرح شغل، شرایط احراز و یادداشت‌ها</h5>
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <label class="form-label font-medium text-secondary">شرح شغل</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.description.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label font-medium text-secondary">شرایط احراز</label>
-                    {{ form.requirements }}
-                    {% if form.requirements.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.requirements.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label font-medium text-secondary">یادداشت‌های داخلی و اداری</label>
-                    {{ form.notes }}
-                    {% if form.notes.errors %}
-                    <div class="text-danger text-xs mt-1">{{ form.notes.errors.0 }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Section 4: Dynamic Stages -->
-            <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">۴. مراحل فرآیند ارزیابی متقاضیان</h5>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <p class="text-muted text-xs m-0">مراحل ارزیابی را به همراه وزن هر کدام تعریف کنید. مجموع درصدها باید دقیقاً ۱۰۰٪ باشد.</p>
-                <button type="button" id="add-stage-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    افزودن مرحله
+<div class="card premium-card mb-5" style="max-width: 900px;">
+    <div class="card-header p-0" style="background: transparent; border-bottom: 1px solid #e2e8f0;">
+        <ul class="nav nav-tabs card-header-tabs px-3 pt-2" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-basic-tab" data-bs-toggle="tab" data-bs-target="#tab-basic" type="button" role="tab">
+                    <i class="fas fa-info-circle"></i> اطلاعات پایه
                 </button>
-            </div>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-schedule-tab" data-bs-toggle="tab" data-bs-target="#tab-schedule" type="button" role="tab">
+                    <i class="fas fa-calendar-alt"></i> زمان‌بندی
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-dashboard-tab" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab">
+                    <i class="fas fa-chart-bar"></i> داشبورد آمار
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4">
+        <form method="post" id="job-form">
+            {% csrf_token %}
 
-            {{ stages.management_form }}
-            
-            <div id="stages-formset-container" class="mb-3">
-                {% for stage_form in stages %}
-                <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-{{ forloop.counter0 }}">
-                    {{ stage_form.id }}
-                    <div class="col-md-4">
-                        <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی</label>
-                        {{ stage_form.name }}
-                        {% if stage_form.name.errors %}
-                        <div class="text-danger text-xs mt-1">{{ stage_form.name.errors.0 }}</div>
-                        {% endif %}
+            <div class="tab-content">
+                {# ========== TAB 1: اطلاعات پایه ========== #}
+                <div class="tab-pane fade show active" id="tab-basic" role="tabpanel">
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">اطلاعات عمومی</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label font-medium text-secondary">شماره درخواست</label>
+                            {{ form.request_number }}
+                            {% if form.request_number.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.request_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label font-medium text-secondary">کد شغل</label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label font-medium text-secondary">عنوان شغل</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">کارخانه</label>
+                            {{ form.factory }}
+                            {% if form.factory.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.factory.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">بخش / دپارتمان</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.department.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">واحد سازمانی</label>
+                            {{ form.unit }}
+                            {% if form.unit.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.unit.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">رده شغلی</label>
+                            {{ form.job_category }}
+                            {% if form.job_category.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.job_category.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label font-medium text-secondary">ظرفیت جذب</label>
+                            {{ form.headcount }}
+                            {% if form.headcount.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.headcount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">نوع استخدام</label>
+                            {{ form.recruitment_type }}
+                            {% if form.recruitment_type.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.recruitment_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label text-xs text-muted mb-1">نوع مرحله</label>
-                        {{ stage_form.stage_type }}
-                        {% if stage_form.stage_type.errors %}
-                        <div class="text-danger text-xs mt-1">{{ stage_form.stage_type.errors.0 }}</div>
-                        {% endif %}
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">مسئول و فرآیند</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label font-medium text-secondary">کارشناس جذب مسئول</label>
+                            {{ form.assigned_recruiter }}
+                            {% if form.assigned_recruiter.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.assigned_recruiter.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label font-medium text-secondary">الگوی فرآیند استخدامی</label>
+                            {{ form.workflow }}
+                            <small class="text-muted text-xs d-block mt-1">با انتخاب الگو، مراحل فرآیند به صورت خودکار تخصیص می‌یابند.</small>
+                            {% if form.workflow.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.workflow.errors.0 }}</div>
+                            {% endif %}
+                            <div id="workflow-stages-preview" class="mt-2 border rounded p-2.5 bg-light d-none" style="border-color: #cbd5e1 !important; background-color: #f8fafc !important;"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">وضعیت فرصت شغلی</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label text-xs text-muted mb-1">وزن (٪)</label>
-                        {{ stage_form.weight }}
-                        {% if stage_form.weight.errors %}
-                        <div class="text-danger text-xs mt-1">{{ stage_form.weight.errors.0 }}</div>
-                        {% endif %}
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">شرح شغل و شرایط</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label font-medium text-secondary">شرح شغل</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label font-medium text-secondary">شرایط احراز</label>
+                            {{ form.requirements }}
+                            {% if form.requirements.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.requirements.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label font-medium text-secondary">یادداشت‌های داخلی</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="col-md-1">
-                        <label class="form-label text-xs text-muted mb-1">ترتیب</label>
-                        {{ stage_form.sequence }}
-                        {% if stage_form.sequence.errors %}
-                        <div class="text-danger text-xs mt-1">{{ stage_form.sequence.errors.0 }}</div>
-                        {% endif %}
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">مراحل فرآیند ارزیابی</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted text-xs m-0">مراحل ارزیابی را به همراه وزن هر کدام تعریف کنید. مجموع درصدها باید دقیقاً ۱۰۰٪ باشد.</p>
+                        <button type="button" id="add-stage-btn" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            افزودن مرحله
+                        </button>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        {% if stage_form.instance.pk %}
-                            <div class="form-check d-none">
-                                {{ stage_form.DELETE }}
+
+                    {{ stages.management_form }}
+
+                    <div id="stages-formset-container" class="mb-3">
+                        {% for stage_form in stages %}
+                        <div class="row g-2 align-items-end stage-form-row mb-3" id="stage-form-{{ forloop.counter0 }}">
+                            {{ stage_form.id }}
+                            <div class="col-md-4">
+                                <label class="form-label text-xs text-muted mb-1">نام مرحله ارزیابی</label>
+                                {{ stage_form.name }}
+                                {% if stage_form.name.errors %}
+                                <div class="text-danger text-xs mt-1">{{ stage_form.name.errors.0 }}</div>
+                                {% endif %}
                             </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="deleteStageRow('{{ forloop.counter0 }}')">
-                                حذف
-                            </button>
-                        {% else %}
-                            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('{{ forloop.counter0 }}')">
-                                حذف
-                            </button>
-                        {% endif %}
+                            <div class="col-md-3">
+                                <label class="form-label text-xs text-muted mb-1">نوع مرحله</label>
+                                {{ stage_form.stage_type }}
+                                {% if stage_form.stage_type.errors %}
+                                <div class="text-danger text-xs mt-1">{{ stage_form.stage_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-xs text-muted mb-1">وزن (٪)</label>
+                                {{ stage_form.weight }}
+                                {% if stage_form.weight.errors %}
+                                <div class="text-danger text-xs mt-1">{{ stage_form.weight.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label text-xs text-muted mb-1">ترتیب</label>
+                                {{ stage_form.sequence }}
+                                {% if stage_form.sequence.errors %}
+                                <div class="text-danger text-xs mt-1">{{ stage_form.sequence.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                {% if stage_form.instance.pk %}
+                                    <div class="form-check d-none">{{ stage_form.DELETE }}</div>
+                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="deleteStageRow('{{ forloop.counter0 }}')">حذف</button>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('{{ forloop.counter0 }}')">حذف</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                </div>
-                {% endfor %}
-            </div>
 
-            <div class="col-12 mt-1 mb-4">
-                <div class="alert alert-info py-2.5 px-3 text-sm d-flex align-items-center justify-content-between mb-0" id="weight_sum_alert">
-                    <span>مجموع درصد وزن مراحل: <strong id="weight_sum_val">۰</strong>٪</span>
-                    <span class="font-semibold text-xs" id="weight_sum_status">مجموع مقادیر معتبر است.</span>
-                </div>
-            </div>
+                    <div class="col-12 mt-1 mb-3">
+                        <div class="alert alert-info py-2 px-3 text-sm d-flex align-items-center justify-content-between mb-0" id="weight_sum_alert">
+                            <span>مجموع درصد وزن مراحل: <strong id="weight_sum_val">۰</strong>٪</span>
+                            <span class="font-semibold text-xs" id="weight_sum_status">مجموع مقادیر معتبر است.</span>
+                        </div>
+                    </div>
 
-            <div class="mt-4 d-flex justify-content-end gap-2">
+                </div>{# /tab-basic #}
+
+                {# ========== TAB 2: زمان‌بندی ========== #}
+                <div class="tab-pane fade" id="tab-schedule" role="tabpanel">
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">جلسه اولیه و ثبت‌نام</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ جلسه اولیه</label>
+                            {{ form.initial_meeting_date }}
+                            {% if form.initial_meeting_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.initial_meeting_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">شروع ثبت‌نام</label>
+                            {{ form.registration_start_date }}
+                            {% if form.registration_start_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.registration_start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">پایان ثبت‌نام</label>
+                            {{ form.registration_end_date }}
+                            {% if form.registration_end_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.registration_end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">پایان غربالگری</label>
+                            {{ form.screening_end_date }}
+                            {% if form.screening_end_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.screening_end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ شروع (نمایش)</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ پایان (نمایش)</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if object and object.status == 'FINAL_SELECTION' %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-info-circle fa-2x mb-2" style="color:#cbd5e1;"></i>
+                        <p class="m-0 font-medium">در این مرحله آزمونی نیست</p>
+                    </div>
+                    {% else %}
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">آزمون کتبی</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">کد آزمون</label>
+                            {{ form.exam_code }}
+                            {% if form.exam_code.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.exam_code.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <div class="checkbox-wrapper">
+                                {{ form.has_written_exam }}
+                                <label for="{{ form.has_written_exam.id_for_label }}" class="form-label font-medium text-secondary m-0">آزمون کتبی دارد</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 written-exam-fields">
+                            <label class="form-label font-medium text-secondary">تاریخ آزمون کتبی</label>
+                            {{ form.written_exam_date }}
+                            {% if form.written_exam_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.written_exam_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 written-exam-fields">
+                            <label class="form-label font-medium text-secondary">تاریخ اعلام نتایج کتبی</label>
+                            {{ form.written_exam_result_date }}
+                            {% if form.written_exam_result_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.written_exam_result_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">آزمون مهارتی و مصاحبه</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-12">
+                            <div class="checkbox-wrapper">
+                                {{ form.has_skill_exam }}
+                                <label for="{{ form.has_skill_exam.id_for_label }}" class="form-label font-medium text-secondary m-0">آزمون مهارتی دارد</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 skill-exam-fields">
+                            <label class="form-label font-medium text-secondary">تاریخ آزمون مهارتی</label>
+                            {{ form.skill_exam_date }}
+                            {% if form.skill_exam_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.skill_exam_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ مصاحبه</label>
+                            {{ form.interview_date }}
+                            {% if form.interview_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.interview_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <h5 class="font-semibold text-secondary mb-3 pb-2 border-bottom border-slate">کانون ارزیابی و نتیجه نهایی</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ معرفی به کانون</label>
+                            {{ form.assessment_referral_date }}
+                            {% if form.assessment_referral_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.assessment_referral_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ اعلام نتیجه کانون</label>
+                            {{ form.assessment_result_date }}
+                            {% if form.assessment_result_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.assessment_result_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">تاریخ اعلام نتیجه نهایی</label>
+                            {{ form.final_result_date }}
+                            {% if form.final_result_date.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.final_result_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-medium text-secondary">شماره نامه اعلام نتیجه نهایی</label>
+                            {{ form.final_result_letter_number }}
+                            {% if form.final_result_letter_number.errors %}
+                            <div class="text-danger text-xs mt-1">{{ form.final_result_letter_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>{# /tab-schedule #}
+
+                {# ========== TAB 3: داشبورد آمار ========== #}
+                <div class="tab-pane fade" id="tab-dashboard" role="tabpanel">
+                    {% if object and object.pk %}
+                    <div class="row g-3">
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#e0f2fe;color:#0284c7;">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.registered_count }}</div>
+                                    <div class="stat-label">کل متقاضیان</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#dcfce7;color:#16a34a;">
+                                    <i class="fas fa-user-check"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.qualified_count }}</div>
+                                    <div class="stat-label">در حال فرآیند</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#fef3c7;color:#d97706;">
+                                    <i class="fas fa-layer-group"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.current_stage_name }}</div>
+                                    <div class="stat-label">مرحله فعلی</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#ede9fe;color:#7c3aed;">
+                                    <i class="fas fa-pen"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.written_exam_attendees }}</div>
+                                    <div class="stat-label">شرکت در آزمون کتبی</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#dbeafe;color:#2563eb;">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.written_exam_passed }}</div>
+                                    <div class="stat-label">قبول شدگان کتبی</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#fce7f3;color:#db2777;">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.skill_exam_attendees }}</div>
+                                    <div class="stat-label">شرکت در آزمون مهارتی</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#e0f2fe;color:#0284c7;">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.interview_invited }}</div>
+                                    <div class="stat-label">دعوت به مصاحبه</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#dcfce7;color:#16a34a;">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.interview_attendees }}</div>
+                                    <div class="stat-label">شرکت در مصاحبه</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div class="stat-card d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="background:#fef3c7;color:#d97706;">
+                                    <i class="fas fa-flag"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value">{{ object.assessment_referred }}</div>
+                                    <div class="stat-label">معرفی به کانون</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-chart-pie fa-3x mb-3" style="color:#cbd5e1;"></i>
+                        <p class="m-0">پس از ذخیره فرصت شغلی، آمار و اطلاعات این بخش نمایش داده می‌شود.</p>
+                    </div>
+                    {% endif %}
+                </div>{# /tab-dashboard #}
+            </div>{# /tab-content #}
+
+            {# دکمه‌های ثابت پایین فرم #}
+            <hr class="my-3">
+            <div class="d-flex justify-content-end gap-2">
                 <a href="{% url 'job_list' %}" class="btn btn-outline-secondary px-4 py-2">انصراف</a>
                 <button type="submit" class="btn btn-primary-custom px-4 py-2">
                     {% if object %}ذخیره تغییرات{% else %}ایجاد فرصت شغلی{% endif %}
                 </button>
             </div>
         </form>
-    </div>
-</div>
+    </div>{# /card-body #}
+</div>{# /card #}
 
 <!-- Template HTML for dynamic row cloning -->
 <div id="stage-form-template" class="d-none">
@@ -292,9 +624,7 @@
             {{ stages.empty_form.sequence }}
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('__prefix__')">
-                حذف
-            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeNewStageRow('__prefix__')">حذف</button>
         </div>
     </div>
 </div>
@@ -307,7 +637,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Tom Select for Code (post code) autocomplete
+        // ===== Tom Select for post code =====
         new TomSelect('#id_code', {
             valueField: 'post_code',
             labelField: 'display_name',
@@ -320,11 +650,8 @@
                 var url = '{% url "search_posts_api" %}?q=' + encodeURIComponent(query);
                 fetch(url)
                     .then(response => response.json())
-                    .then(json => {
-                        callback(json.items);
-                    }).catch(() => {
-                        callback();
-                    });
+                    .then(json => { callback(json.items); })
+                    .catch(() => { callback(); });
             },
             onChange: function(value) {
                 if (value) {
@@ -333,63 +660,118 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data && !data.error) {
-                                if (data.title) {
-                                    document.getElementById('id_title').value = data.title;
-                                }
-                                if (data.department) {
-                                    document.getElementById('id_department').value = data.department;
-                                }
-                                if (data.unit) {
-                                    document.getElementById('id_unit').value = data.unit;
-                                }
-                                if (data.job_category) {
-                                    document.getElementById('id_job_category').value = data.job_category;
-                                }
+                                if (data.title) document.getElementById('id_title').value = data.title;
+                                if (data.department) document.getElementById('id_department').value = data.department;
+                                if (data.unit) document.getElementById('id_unit').value = data.unit;
+                                if (data.job_category) document.getElementById('id_job_category').value = data.job_category;
                             }
-                        }).catch(err => {
-                            console.error('Error fetching post details:', err);
-                        });
+                        }).catch(err => { console.error('Error fetching post details:', err); });
                 }
             }
         });
 
-        // Initialize Persian Datepicker
-        kamaDatepicker('id_start_date', {
-            buttonsColor: '#0052cc',
-            markToday: true,
-            gotoToday: true,
-            twodigit: true,
-            closeAfterSelect: true,
-            nextButtonIcon: '>',
-            previousButtonIcon: '<'
-        });
-        kamaDatepicker('id_end_date', {
-            buttonsColor: '#0052cc',
-            markToday: true,
-            gotoToday: true,
-            twodigit: true,
-            closeAfterSelect: true,
-            nextButtonIcon: '>',
-            previousButtonIcon: '<'
-        });
+        // ===== Helper: init kamaDatepicker for an element =====
+        function initDatepicker(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            // Avoid re-initializing
+            if (el.getAttribute('data-kama-initialized')) return;
+            kamaDatepicker(id, {
+                buttonsColor: '#0052cc',
+                markToday: true,
+                gotoToday: true,
+                twodigit: true,
+                closeAfterSelect: true,
+                nextButtonIcon: '>',
+                previousButtonIcon: '<'
+            });
+            el.setAttribute('data-kama-initialized', '1');
+        }
 
+        // All datepicker field IDs
+        var datePickerIds = [
+            'id_start_date', 'id_end_date',
+            'id_initial_meeting_date', 'id_registration_start_date',
+            'id_registration_end_date', 'id_screening_end_date',
+            'id_written_exam_date', 'id_written_exam_result_date',
+            'id_skill_exam_date', 'id_interview_date',
+            'id_assessment_referral_date', 'id_assessment_result_date',
+            'id_final_result_date'
+        ];
+
+        // Initialize datepickers for active tab fields
+        function initVisibleDatepickers() {
+            datePickerIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.offsetParent !== null) {
+                    initDatepicker(id);
+                }
+            });
+        }
+
+        // Initialize all datepickers (called when tabs switch)
+        function initAllDatepickers() {
+            datePickerIds.forEach(function(id) {
+                initDatepicker(id);
+            });
+        }
+
+        // Initial: init visible datepickers
+        initVisibleDatepickers();
+
+        // ===== Tab switching: init datepickers when a tab is shown =====
+        var scheduleTab = document.getElementById('tab-schedule-tab');
+        if (scheduleTab) {
+            scheduleTab.addEventListener('shown.bs.tab', function() {
+                // Init all datepickers when scheduling tab is shown
+                datePickerIds.forEach(function(id) {
+                    initDatepicker(id);
+                });
+            });
+        }
+
+        // ===== Written exam conditional toggle =====
+        var hasWrittenExamChk = document.getElementById('{{ form.has_written_exam.id_for_label }}');
+        function toggleWrittenExamFields() {
+            var visible = hasWrittenExamChk ? hasWrittenExamChk.checked : false;
+            document.querySelectorAll('.written-exam-fields').forEach(function(el) {
+                el.style.display = visible ? 'block' : 'none';
+            });
+        }
+        if (hasWrittenExamChk) {
+            hasWrittenExamChk.addEventListener('change', toggleWrittenExamFields);
+            toggleWrittenExamFields();
+        }
+
+        // ===== Skill exam conditional toggle =====
+        var hasSkillExamChk = document.getElementById('{{ form.has_skill_exam.id_for_label }}');
+        function toggleSkillExamFields() {
+            var visible = hasSkillExamChk ? hasSkillExamChk.checked : false;
+            document.querySelectorAll('.skill-exam-fields').forEach(function(el) {
+                el.style.display = visible ? 'block' : 'none';
+            });
+        }
+        if (hasSkillExamChk) {
+            hasSkillExamChk.addEventListener('change', toggleSkillExamFields);
+            toggleSkillExamFields();
+        }
+
+        // ===== Stage formset logic =====
         const container = document.getElementById('stages-formset-container');
         const template = document.getElementById('stage-form-template').innerHTML;
         const totalFormsInput = document.getElementById('id_stages-TOTAL_FORMS');
         const addBtn = document.getElementById('add-stage-btn');
-        
+
         const sumVal = document.getElementById('weight_sum_val');
         const sumStatus = document.getElementById('weight_sum_status');
         const sumAlert = document.getElementById('weight_sum_alert');
-        
+
         function updateSum() {
             const weightInputs = document.querySelectorAll('.stage-form-row:not(.deleted-stage-row) .stage-weight');
             let total = 0;
-            weightInputs.forEach(input => {
-                const val = parseInt(input.value) || 0;
-                total += val;
+            weightInputs.forEach(function(input) {
+                total += parseInt(input.value) || 0;
             });
-            
             sumVal.textContent = total;
             if (total === 100) {
                 sumAlert.classList.remove('alert-info', 'alert-danger');
@@ -401,79 +783,68 @@
                 sumStatus.textContent = 'مجموع مقادیر باید دقیقاً ۱۰۰٪ باشد.';
             }
         }
-        
+
         function attachWeightListeners() {
-            const weightInputs = document.querySelectorAll('.stage-weight');
-            weightInputs.forEach(input => {
+            document.querySelectorAll('.stage-weight').forEach(function(input) {
                 input.removeEventListener('input', updateSum);
                 input.addEventListener('input', updateSum);
             });
         }
-        
-        addBtn.addEventListener('click', function() {
-            const currentCount = parseInt(totalFormsInput.value);
-            let rowHtml = template.replace(/__prefix__/g, currentCount);
-            
-            container.insertAdjacentHTML('beforeend', rowHtml);
-            
-            const newSeqInput = document.getElementById('id_stages-' + currentCount + '-sequence');
-            if (newSeqInput) {
-                newSeqInput.value = currentCount + 1;
-            }
-            
-            totalFormsInput.value = currentCount + 1;
-            
-            attachWeightListeners();
-            updateSum();
-        });
-        
+
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                var currentCount = parseInt(totalFormsInput.value);
+                var rowHtml = template.replace(/__prefix__/g, currentCount);
+                container.insertAdjacentHTML('beforeend', rowHtml);
+                var newSeqInput = document.getElementById('id_stages-' + currentCount + '-sequence');
+                if (newSeqInput) newSeqInput.value = currentCount + 1;
+                totalFormsInput.value = currentCount + 1;
+                attachWeightListeners();
+                updateSum();
+            });
+        }
+
         window.deleteStageRow = function(index) {
-            const row = document.getElementById('stage-form-' + index);
-            const deleteCheckbox = document.getElementById('id_stages-' + index + '-DELETE');
-            if (deleteCheckbox) {
-                deleteCheckbox.checked = true;
-            }
+            var row = document.getElementById('stage-form-' + index);
+            var deleteCheckbox = document.getElementById('id_stages-' + index + '-DELETE');
+            if (deleteCheckbox) deleteCheckbox.checked = true;
             row.style.display = 'none';
             row.classList.add('deleted-stage-row');
             updateSum();
         };
-        
+
         window.removeNewStageRow = function(index) {
-            const row = document.getElementById('stage-form-' + index);
-            const nameInput = document.getElementById('id_stages-' + index + '-name');
-            const weightInput = document.getElementById('id_stages-' + index + '-weight');
+            var row = document.getElementById('stage-form-' + index);
+            var nameInput = document.getElementById('id_stages-' + index + '-name');
+            var weightInput = document.getElementById('id_stages-' + index + '-weight');
             if (nameInput) nameInput.value = '';
             if (weightInput) weightInput.value = '';
             row.style.display = 'none';
             row.classList.add('deleted-stage-row');
             updateSum();
         };
-        
-        // Fetch and show workflow stages preview
-        const workflowSelect = document.getElementById('id_workflow');
-        const previewContainer = document.getElementById('workflow-stages-preview');
+
+        // ===== Workflow preview =====
+        var workflowSelect = document.getElementById('id_workflow');
+        var previewContainer = document.getElementById('workflow-stages-preview');
 
         function updateWorkflowPreview() {
-            const workflowId = workflowSelect.value;
+            var workflowId = workflowSelect.value;
             if (!workflowId) {
                 previewContainer.innerHTML = '';
                 previewContainer.classList.add('d-none');
                 return;
             }
-
-            // Fetch stages
-            fetch(`/jobs/workflows/${workflowId}/stages/`)
-                .then(response => {
-                    if (response.ok) {
-                        return response.text();
-                    }
+            fetch('/jobs/workflows/' + workflowId + '/stages/')
+                .then(function(response) {
+                    if (response.ok) return response.text();
                     throw new Error('Failed to fetch stages');
                 })
-                .then(html => {
+                .then(function(html) {
                     previewContainer.innerHTML = html;
                     previewContainer.classList.remove('d-none');
                 })
-                .catch(error => {
+                .catch(function(error) {
                     console.error('Error fetching workflow stages:', error);
                     previewContainer.innerHTML = '<span class="text-danger text-xs">خطا در بارگذاری مراحل الگو</span>';
                     previewContainer.classList.remove('d-none');
@@ -482,10 +853,9 @@
 
         if (workflowSelect) {
             workflowSelect.addEventListener('change', updateWorkflowPreview);
-            updateWorkflowPreview(); // Check initial state (e.g., when editing an existing job)
+            updateWorkflowPreview();
         }
-        
-        // Initial setup
+
         attachWeightListeners();
         updateSum();
     });

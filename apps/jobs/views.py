@@ -33,13 +33,24 @@ def apply_job_filters(queryset, params):
             vals = vals[0].split(',')
         return [v.strip() for v in vals if v.strip()]
 
+    def get_first(key):
+        v = params.get(key, '').strip()
+        return v if v else None
+
     statuses = get_clean_list('status')
     departments = get_clean_list('department')
     units = get_clean_list('unit')
     sources = get_clean_list('source')
-    recruitment_types = get_clean_list('recruitment_type')
     job_categories = get_clean_list('job_category')
     factories = get_clean_list('factory')
+    workflows = get_clean_list('workflow')
+    recruiters = get_clean_list('assigned_recruiter')
+    has_written_exam = get_first('has_written_exam')
+    has_skill_exam = get_first('has_skill_exam')
+    start_date_from = get_first('start_date_from')
+    start_date_to = get_first('start_date_to')
+    end_date_from = get_first('end_date_from')
+    end_date_to = get_first('end_date_to')
     
     if q:
         q_norm = normalize_digits(q)
@@ -48,7 +59,11 @@ def apply_job_filters(queryset, params):
             Q(code__icontains=q) | 
             Q(code__icontains=q_norm) |
             Q(request_number__icontains=q) |
-            Q(request_number__icontains=q_norm)
+            Q(request_number__icontains=q_norm) |
+            Q(exam_code__icontains=q) |
+            Q(exam_code__icontains=q_norm) |
+            Q(description__icontains=q) |
+            Q(requirements__icontains=q)
         )
     if statuses:
         queryset = queryset.filter(status__in=statuses)
@@ -58,12 +73,54 @@ def apply_job_filters(queryset, params):
         queryset = queryset.filter(unit__in=units)
     if sources:
         queryset = queryset.filter(source__in=sources)
-    if recruitment_types:
-        queryset = queryset.filter(recruitment_type__in=recruitment_types)
     if job_categories:
         queryset = queryset.filter(job_category__in=job_categories)
     if factories:
         queryset = queryset.filter(factory__in=factories)
+    if workflows:
+        queryset = queryset.filter(workflow_id__in=workflows)
+    if recruiters:
+        queryset = queryset.filter(assigned_recruiter_id__in=recruiters)
+    if has_written_exam == 'yes':
+        queryset = queryset.filter(has_written_exam=True)
+    elif has_written_exam == 'no':
+        queryset = queryset.filter(has_written_exam=False)
+    if has_skill_exam == 'yes':
+        queryset = queryset.filter(has_skill_exam=True)
+    elif has_skill_exam == 'no':
+        queryset = queryset.filter(has_skill_exam=False)
+    if start_date_from:
+        try:
+            import jdatetime
+            parts = [int(p) for p in start_date_from.split('/')]
+            jd = jdatetime.date(parts[0], parts[1], parts[2])
+            queryset = queryset.filter(start_date__gte=jd.togregorian())
+        except Exception:
+            pass
+    if start_date_to:
+        try:
+            import jdatetime
+            parts = [int(p) for p in start_date_to.split('/')]
+            jd = jdatetime.date(parts[0], parts[1], parts[2])
+            queryset = queryset.filter(start_date__lte=jd.togregorian())
+        except Exception:
+            pass
+    if end_date_from:
+        try:
+            import jdatetime
+            parts = [int(p) for p in end_date_from.split('/')]
+            jd = jdatetime.date(parts[0], parts[1], parts[2])
+            queryset = queryset.filter(end_date__gte=jd.togregorian())
+        except Exception:
+            pass
+    if end_date_to:
+        try:
+            import jdatetime
+            parts = [int(p) for p in end_date_to.split('/')]
+            jd = jdatetime.date(parts[0], parts[1], parts[2])
+            queryset = queryset.filter(end_date__lte=jd.togregorian())
+        except Exception:
+            pass
         
     return queryset
 
@@ -178,9 +235,17 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         # Pass filter choices to template
         context['status_choices'] = JobOpportunity.STATUS_CHOICES
         context['source_choices'] = JobOpportunity.SOURCE_CHOICES
-        context['recruitment_choices'] = JobOpportunity.RECRUITMENT_TYPE_CHOICES
         context['category_choices'] = JobOpportunity.CATEGORY_CHOICES
         context['factory_choices'] = JobOpportunity.FACTORY_CHOICES
+
+        # New filter data sources
+        context['workflows'] = WorkflowTemplate.objects.filter(is_deleted=False).order_by('name')
+        from django.contrib.auth.models import User
+        context['recruiters'] = User.objects.filter(
+            assigned_jobs__is_deleted=False
+        ).exclude(
+            profile__role=UserProfile.ROLE_CANDIDATE
+        ).distinct().order_by('first_name', 'username')
         
         def get_clean_list(key):
             vals = self.request.GET.getlist(key)
@@ -195,15 +260,22 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
             'department': get_clean_list('department'),
             'unit': get_clean_list('unit'),
             'source': get_clean_list('source'),
-            'recruitment_type': get_clean_list('recruitment_type'),
             'job_category': get_clean_list('job_category'),
             'factory': get_clean_list('factory'),
+            'workflow': get_clean_list('workflow'),
+            'assigned_recruiter': get_clean_list('assigned_recruiter'),
+            'has_written_exam': self.request.GET.get('has_written_exam', ''),
+            'has_skill_exam': self.request.GET.get('has_skill_exam', ''),
+            'start_date_from': self.request.GET.get('start_date_from', ''),
+            'start_date_to': self.request.GET.get('start_date_to', ''),
+            'end_date_from': self.request.GET.get('end_date_from', ''),
+            'end_date_to': self.request.GET.get('end_date_to', ''),
         }
         
         # Count active filters
         context['active_filters_count'] = sum(
             1 for k, val in context['filters'].items() 
-            if (isinstance(val, list) and len(val) > 0) or (not isinstance(val, list) and val)
+            if (isinstance(val, list) and len(val) > 0) or (not isinstance(val, list) and val and val != '')
         )
         
         return context

@@ -269,29 +269,8 @@
                             </a>
                         </th>
                         <th class="align-middle">
-                            <a href="{% sort_url 'recruitment_type' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                نوع استخدام
-                                {% if current_sort == 'recruitment_type' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle text-secondary font-semibold text-xs">متقاضیان ثبت‌نامی</th>
-                        <th class="align-middle">
                             <a href="{% sort_url 'status' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                وضعیت
+                                آخرین مرحله
                                 {% if current_sort == 'status' %}
                                     {% if current_order == 'asc' %}
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
@@ -417,13 +396,7 @@
                             {{ job.created_at.date|to_jalali|default:"-" }}
                         </td>
                         <td data-label="ظرفیت جذب">{{ job.headcount }} نفر</td>
-                        <td data-label="نوع استخدام">{{ job.get_recruitment_type_display }}</td>
-                        <td data-label="متقاضیان">
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2 py-1.5 rounded font-semibold text-xs">
-                                {{ job.candidate_count|default:"0" }} نفر
-                            </span>
-                        </td>
-                        <td data-label="وضعیت">
+                        <td data-label="آخرین مرحله">
                             {% if job.status == 'RECEIVED' %}
                                 <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded font-medium">دریافت شده</span>
                             {% elif job.status == 'PLANNING' %}
@@ -455,7 +428,7 @@
 
                     </tr>
                     {% empty %}
-                    {% include "includes/table_empty.html" with colspan=10 message="هیچ فرصت شغلی در سیستم تعریف نشده است." hint="برای شروع، یک فرصت شغلی جدید ایجاد کنید." icon="fas fa-briefcase" %}
+                    {% include "includes/table_empty.html" with colspan=8 message="هیچ فرصت شغلی در سیستم تعریف نشده است." hint="برای شروع، یک فرصت شغلی جدید ایجاد کنید." icon="fas fa-briefcase" %}
                     {% endfor %}
                 </tbody>
             </table>
