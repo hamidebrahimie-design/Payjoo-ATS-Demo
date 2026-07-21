@@ -31,7 +31,7 @@
     <link href="/static/css/samim.css" rel="stylesheet" type="text/css" />
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/css/custom.css?v=1.4.5">
-    <link rel="stylesheet" href="/static/css/layout.css?v=2.0">
+    <link rel="stylesheet" href="/static/css/layout.css?v=2.1">
     <!-- HTMX -->
     <script src="/static/js/htmx.min.js"></script>
     {% block extra_head %}{% endblock %}
@@ -64,6 +64,8 @@
     <!-- Sidebar Overlay (mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
+
+
     <!-- FAB + Quick Actions Menu -->
     <div class="pj-fab-container">
         <button class="pj-fab" id="fabButton" aria-label="اقدام سریع" title="اقدام سریع">
@@ -86,18 +88,63 @@
     {% if user.is_authenticated %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar Toggle (mobile)
+            // Sidebar Toggle (desktop + mobile)
             const sidebar = document.getElementById('mainSidebar');
             const overlay = document.getElementById('sidebarOverlay');
             const toggleBtn = document.getElementById('sidebarToggle');
+            const closeBtn = document.getElementById('sidebarClose');
 
             function toggleSidebar() {
-                if (sidebar) sidebar.classList.toggle('show');
-                if (overlay) overlay.classList.toggle('show');
+                if (window.innerWidth < 992) {
+                    // Mobile: slide in/out with overlay
+                    if (sidebar) sidebar.classList.toggle('show');
+                    if (overlay) overlay.classList.toggle('show');
+                } else {
+                    // Desktop: collapse/expand
+                    if (sidebar) sidebar.classList.toggle('collapsed');
+                    document.body.classList.toggle('pj-sidebar-closed');
+                    localStorage.setItem('payjoo-sidebar', document.body.classList.contains('pj-sidebar-closed') ? 'closed' : 'open');
+                }
+                // Update hamburger icon
+                var icon = toggleBtn ? toggleBtn.querySelector('i') : null;
+                if (icon) {
+                    var isClosed = document.body.classList.contains('pj-sidebar-closed') || (sidebar && sidebar.classList.contains('collapsed'));
+                    icon.className = isClosed ? 'fas fa-bars' : 'fas fa-times';
+                }
+            }
+
+            // Sync hamburger icon on load
+            (function syncHamburger() {
+                var icon = toggleBtn ? toggleBtn.querySelector('i') : null;
+                if (icon && window.innerWidth >= 992) {
+                    var isClosed = document.body.classList.contains('pj-sidebar-closed') || (sidebar && sidebar.classList.contains('collapsed'));
+                    icon.className = isClosed ? 'fas fa-bars' : 'fas fa-times';
+                }
+            })();
+
+            function closeSidebarDesktop() {
+                if (window.innerWidth >= 992 && sidebar && !sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.add('collapsed');
+                    document.body.classList.add('pj-sidebar-closed');
+                    localStorage.setItem('payjoo-sidebar', 'closed');
+                    // Update hamburger icon
+                    var icon = toggleBtn ? toggleBtn.querySelector('i') : null;
+                    if (icon) icon.className = 'fas fa-bars';
+                }
+            }
+
+            // Load saved sidebar state on desktop
+            if (window.innerWidth >= 992) {
+                var savedState = localStorage.getItem('payjoo-sidebar');
+                if (savedState === 'closed' && sidebar) {
+                    sidebar.classList.add('collapsed');
+                    document.body.classList.add('pj-sidebar-closed');
+                }
             }
 
             if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
             if (overlay) overlay.addEventListener('click', toggleSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebarDesktop);
 
             // Theme Toggle
             const themeToggle = document.getElementById('themeToggle');

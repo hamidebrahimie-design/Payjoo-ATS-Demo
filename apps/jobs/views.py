@@ -6,12 +6,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.db import transaction
 from django.utils import timezone
+import logging
 
 from apps.accounts.permissions import RoleRequiredMixin
 from apps.accounts.models import UserProfile
 from .models import JobOpportunity, JobOpportunityStage, WorkflowTemplate, WorkflowStageTemplate, CompetencyModel
 from .forms import JobOpportunityForm, JobOpportunityFormSet, WorkflowTemplateForm, WorkflowStageTemplateFormSet
 import jdatetime
+
+logger = logging.getLogger(__name__)
 
 def normalize_digits(s):
     if not s:
@@ -95,32 +98,32 @@ def apply_job_filters(queryset, params):
             parts = [int(p) for p in start_date_from.split('/')]
             jd = jdatetime.date(parts[0], parts[1], parts[2])
             queryset = queryset.filter(start_date__gte=jd.togregorian())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in apply_job_filters parsing start_date_from '{start_date_from}': {e}", exc_info=True)
     if start_date_to:
         try:
             import jdatetime
             parts = [int(p) for p in start_date_to.split('/')]
             jd = jdatetime.date(parts[0], parts[1], parts[2])
             queryset = queryset.filter(start_date__lte=jd.togregorian())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in apply_job_filters parsing start_date_to '{start_date_to}': {e}", exc_info=True)
     if end_date_from:
         try:
             import jdatetime
             parts = [int(p) for p in end_date_from.split('/')]
             jd = jdatetime.date(parts[0], parts[1], parts[2])
             queryset = queryset.filter(end_date__gte=jd.togregorian())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in apply_job_filters parsing end_date_from '{end_date_from}': {e}", exc_info=True)
     if end_date_to:
         try:
             import jdatetime
             parts = [int(p) for p in end_date_to.split('/')]
             jd = jdatetime.date(parts[0], parts[1], parts[2])
             queryset = queryset.filter(end_date__lte=jd.togregorian())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in apply_job_filters parsing end_date_to '{end_date_to}': {e}", exc_info=True)
         
     return queryset
 
@@ -1087,8 +1090,8 @@ def get_ai_recommendation(post_code, post_title, comps, refresh=False):
                                 'is_deleted': False
                             }
                         )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in AI recommendation caching: {e}", exc_info=True)
 
     # 3. Fallback to local mock data if not live
     if not is_live:
@@ -1635,8 +1638,8 @@ class RecruitmentPatternDashboardView(LoginRequiredMixin, RoleRequiredMixin, Tem
                             res_body = response.read().decode('utf-8')
                             res_json = json.loads(res_body)
                             ai_analysis = res_json['choices'][0]['message']['content'].strip()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"Error in AI analysis API call: {e}", exc_info=True)
             
             if not ai_analysis:
                 # Fallback to local simulated assessment if offline or failed
@@ -1959,8 +1962,8 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                 import json
                 try:
                     vals = json.loads(vals[0])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"Error parsing JSON competency IDs: {e}", exc_info=True)
             return [int(v) for v in vals if str(v).strip().isdigit() or isinstance(v, int)]
 
         # HTMX partial renders (Live Preview)
@@ -1995,8 +1998,8 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     import json
                     cc_data = json.loads(cc_json)
                     custom_comps_parsed.append(cc_data)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"Error parsing custom competency JSON: {e}", exc_info=True)
 
             # Temporary list for calculation
             class TempComp:
@@ -2085,8 +2088,8 @@ class JobCompetencyConfigView(LoginRequiredMixin, RoleRequiredMixin, View):
                     import json
                     cc_data = json.loads(cc_json)
                     custom_comps_parsed.append(cc_data)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(f"Error parsing custom competency JSON (loop): {e}", exc_info=True)
 
             class TempComp:
                 def __init__(self, title, competency_type, importance, level, code="CUSTOM"):
@@ -2613,7 +2616,8 @@ class AISettingView(LoginRequiredMixin, RoleRequiredMixin, View):
             except urllib.error.HTTPError as he:
                 try:
                     error_text = he.read().decode('utf-8')[:120]
-                except Exception:
+                except Exception as e2:
+                    logger.error(f"Error decoding HTTP error response: {e2}", exc_info=True)
                     error_text = str(he)
                 html = (
                     f'<div class="alert alert-danger d-flex align-items-center gap-2 m-0 animate__animated animate__fadeIn">'

@@ -1,0 +1,14 @@
+# ruff configuration for Payjoo-ATS
+# Prevents blind `except Exception:` without logging
+exclude = [
+    "backup_*/",
+    "exam data/",
+    "*/migrations/*",
+    "__pycache__/",
+]
+
+target-version = "py311"
+
+[lint]
+select = ["BLE"]
+ignore = []

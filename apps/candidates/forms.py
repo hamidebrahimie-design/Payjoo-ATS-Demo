@@ -23,7 +23,7 @@ class CandidateForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 09123456789'}),
             'national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 0012345678'}),
             'personnel_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 991234 (اختیاری)'}),
-            'resume': forms.FileInput(attrs={'class': 'form-control'}),
+            'resume': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
         }
 
     def clean_national_id(self):
@@ -172,7 +172,7 @@ class CandidateSignUpForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 09123456789'}),
             'national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد ملی ۱۰ رقمی'}),
             'personnel_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد پرسنلی (اختیاری برای کارکنان داخلی)'}),
-            'resume': forms.FileInput(attrs={'class': 'form-control'}),
+            'resume': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
         }
 
     def clean_national_id(self):

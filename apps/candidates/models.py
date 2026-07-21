@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from apps.core.models import SoftDeleteModel
+from apps.core.validators import validate_resume_file_size, validate_resume_file_extension
 from apps.jobs.models import JobOpportunity, JobOpportunityStage, AssessmentCompetency
 
 class Candidate(SoftDeleteModel):
@@ -12,7 +13,10 @@ class Candidate(SoftDeleteModel):
     phone_number = models.CharField(max_length=15, verbose_name="شماره تماس")
     national_id = models.CharField(max_length=10, unique=True, verbose_name="کد ملی")
     personnel_number = models.CharField(max_length=20, blank=True, null=True, unique=True, verbose_name="شماره پرسنلی")
-    resume = models.FileField(upload_to='resumes/', blank=True, null=True, verbose_name="فایل رزومه")
+    resume = models.FileField(
+        upload_to='resumes/', blank=True, null=True, verbose_name="فایل رزومه",
+        validators=[validate_resume_file_size, validate_resume_file_extension]
+    )
 
     class Meta:
         verbose_name = "متقاضی"
