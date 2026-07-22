@@ -237,7 +237,7 @@
     <!-- PJ-MIGRATED-v2 -->
     <div class="card-body p-0">
         <div class="pj-table-wrapper" id="pj-full-table-wrapper" style="overflow-x: auto;">
-            <table class="pj-table pj-table-responsive-card" id="pj-status-table" style="min-width: 3000px;">
+            <table class="pj-table pj-table-responsive-card" id="pj-status-table" style="width: auto;">
                                 <thead>
                     <tr class="pj-table-group-header">
                         <th colspan="7" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📋 مشخصات اصلی</th>
@@ -248,48 +248,48 @@
                     </tr>
                     <tr>
                         <!-- گروه ۱: مشخصات اصلی (۷ ستون — default) -->
-                        <th class="default-col ps-4 align-middle text-secondary font-semibold text-xs" style="width: 50px; min-width: 50px;">ردیف</th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">کد پست</th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">
+                        <th style="white-space: nowrap;" class="default-col ps-4 align-middle text-secondary font-semibold text-xs">ردیف</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">کد پست</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">
                             <a href="{% sort_url 'code' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">کد{% if current_sort == 'code' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 110px;">
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">
                             <a href="{% sort_url 'status' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">آخرین مرحله{% if current_sort == 'status' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 120px;">مسئول</th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 140px;">
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">مسئول</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">
                             <a href="{% sort_url 'department' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">واحد متقاضی{% if current_sort == 'department' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
-                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 180px;">
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">
                             <a href="{% sort_url 'title' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">عنوان پست{% if current_sort == 'title' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
                         <!-- گروه ۲: ثبت‌نام و غربالگری (۸ ستون — expandable) -->
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">رده شغلی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد مورد نیاز</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">جلسه اولیه</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">شروع ثبت‌نام</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">پایان ثبت‌نام</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">تعداد ثبت‌نام</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">پایان غربالگری</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد واجد شرایط</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">رده شغلی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد مورد نیاز</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">جلسه اولیه</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شروع ثبت‌نام</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">پایان ثبت‌نام</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد ثبت‌نام</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">پایان غربالگری</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد واجد شرایط</th>
                         <!-- گروه ۳: آزمون کتبی (۵ ستون) -->
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 60px;">کتبی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">آزمون کتبی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین آزمون کتبی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتایج کتبی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد نفرات خروجی کتبی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">کتبی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">آزمون کتبی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد حاضرین آزمون کتبی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">اعلام نتایج کتبی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد نفرات خروجی کتبی</th>
                         <!-- گروه ۴: مهارتی و مصاحبه (۶ ستون) -->
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 60px;">مهارتی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">آزمون مهارتی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین آزمون مهارتی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد دعوت به مصاحبه</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">مصاحبه</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین مصاحبه</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">مهارتی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">آزمون مهارتی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد حاضرین آزمون مهارتی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد دعوت به مصاحبه</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">مصاحبه</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد حاضرین مصاحبه</th>
                         <!-- گروه ۵: کانون و نتیجه نهایی (۸ ستون) -->
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">معرفی به کانون</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد معرفی به کانون</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتیجه کانون</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتیجه نهایی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 130px;">شماره نامه اعلام نتیجه نهایی</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 200px;">توضیحات</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 130px;">شماره نامه درخواست</th>
-                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 150px;">مسیر پیشنهادی (عنوان)</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">معرفی به کانون</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد معرفی به کانون</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">اعلام نتیجه کانون</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">اعلام نتیجه نهایی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شماره نامه اعلام نتیجه نهایی</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">توضیحات</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شماره نامه درخواست</th>
+                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">مسیر پیشنهادی (عنوان)</th>
                     </tr>
                 </thead>
                                 <tbody id="job-table-body">
