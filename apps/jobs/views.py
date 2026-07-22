@@ -132,7 +132,7 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     model = JobOpportunity
     template_name = 'jobs/job_list.html'
     context_object_name = 'jobs'
-    paginate_by = 10
+    paginate_by = 100
     allowed_roles = [
         UserProfile.ROLE_ADMIN,
         UserProfile.ROLE_RECRUITMENT_DIRECTOR,
@@ -166,13 +166,13 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_paginate_by(self, queryset):
-        per_page = self.request.GET.get('per_page', '10')
+        per_page = self.request.GET.get('per_page', '100')
         if per_page == 'all':
             return 100000  # Large enough to show all records
         try:
             return int(per_page)
         except (ValueError, TypeError):
-            return 10
+            return 100
 
     def get_queryset(self):
         from django.db.models import Count, Q
@@ -217,7 +217,7 @@ class JobOpportunityListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
         # Pass current sorting details to template
         context['current_sort'] = self.request.GET.get('sort', 'created_at').strip()
         context['current_order'] = self.request.GET.get('order', 'desc').strip()
-        context['current_per_page'] = self.request.GET.get('per_page', '10')
+        context['current_per_page'] = self.request.GET.get('per_page', '100')
         
         # Clean current parameters to attach to pagination links
         query_params = self.request.GET.copy()

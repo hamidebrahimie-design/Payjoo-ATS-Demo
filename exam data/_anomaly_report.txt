@@ -1,0 +1,252 @@
+Anomaly Report - Payjoo ATS Excel Files
+Generated: 2026-07-22
+Total files scanned: 108
+Files with anomalies: 66
+
+=== 4102.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (9 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (5 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (4 total rows, no ID, no Status)
+
+=== 4103.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (32 total rows, no ID, no Status)
+- Sheet "مهارتی": no Status column (75 total rows, has ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (26 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (7 total rows, no ID, no Status)
+
+=== 4105.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (37 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (33 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (18 total rows, no ID, no Status)
+
+=== 4106.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (12 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+
+=== 4107.xlsx ===
+- Sheet "ثبت نامی": no Status column (26 total rows, has ID, no Status)
+- Sheet "آزمون": no ID column; no Status column (20 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (8 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (15 total rows, no ID, no Status)
+
+=== 4108.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (12 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+
+=== 4109.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (41 total rows, no ID, no Status)
+- Sheet "مهارتی": no ID column; no Status column (22 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (11 total rows, no ID, no Status)
+
+=== 4110.xlsx ===
+- Sheet "ثبت نامی": no Status column (83 total rows, has ID, no Status)
+- Sheet "کتبی": no ID column; no Status column (22 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (31 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (4 total rows, no ID, no Status)
+
+=== 4111.xlsx ===
+- Sheet "مصاحبه": no Status column (8 total rows, has ID, no Status)
+
+=== 4112.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (9 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (6 total rows, no ID, no Status)
+
+=== 4113.xlsx ===
+- Sheet "کتبی": no Status column (30 total rows, has ID, no Status)
+
+=== 4114.xlsx ===
+- Sheet "کتبی": no Status column (43 total rows, has ID, no Status)
+
+=== 4115.xlsx ===
+- Sheet "ثبت نامی": no Status column (29 total rows, has ID, no Status)
+- Sheet "مصاحبه": no Status column (10 total rows, has ID, no Status)
+
+=== 4116.xlsx ===
+- Sheet "مصاحبه": no Status column (15 total rows, has ID, no Status)
+- Sheet "مهارتی": no ID column; no Status column (8 total rows, no ID, no Status)
+- Sheet "کانون": no ID column (4 total rows, no ID, has Status)
+
+=== 4120.xlsx ===
+- Sheet "آزمون": no ID column; no Status column (26 total rows, no ID, no Status)
+
+=== 4121.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (23 total rows, no ID, no Status)
+
+=== 4122.xlsx ===
+- Sheet "کانون": no ID column; no Status column (6 total rows, no ID, no Status)
+
+=== 4123.xlsx ===
+- Sheet "آزمون": no ID column; no Status column (16 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (8 total rows, no ID, no Status)
+- Sheet "رفتاری": no ID column; no Status column (6 total rows, no ID, no Status)
+
+=== 4124.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (10 total rows, no ID, no Status)
+
+=== 4126.xlsx ===
+- Sheet "آزمون": no ID column; no Status column (16 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (5 total rows, no ID, no Status)
+
+=== 4128.xlsx ===
+- Sheet "اطلاعات متقاضیان": no Status column (82 total rows, has ID, no Status)
+- Sheet "خدمات پرسنلی": no Status column (82 total rows, has ID, no Status)
+- Sheet "مهارتی": no Status column (3 total rows, has ID, no Status)
+
+=== 4129.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (53 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (14 total rows, no ID, no Status)
+
+=== 4130.xlsx ===
+- Sheet "آزمون": no Status column (17 total rows, has ID, no Status)
+- Sheet "مصاحبه": no Status column (7 total rows, has ID, no Status)
+
+=== 4131.xlsx ===
+- Sheet "اطلاعات متقاضیان": no Status column (46 total rows, has ID, no Status)
+
+=== 4132.xlsx ===
+- Sheet "مهارتی": no ID column (23 total rows, no ID, has Status)
+
+=== 4133.xlsx ===
+- Sheet "کتبی": no Status column (19 total rows, has ID, no Status)
+- Sheet "کانون": no Status column (8 total rows, has ID, no Status)
+
+=== 4135.xlsx ===
+- Sheet "ریز نمرات کتبی": no Status column (43 total rows, has ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (27 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (17 total rows, no ID, no Status)
+
+=== 4136.xlsx ===
+- Sheet "مصاحبه": no ID column; no Status column (16 total rows, no ID, no Status)
+
+=== 4137.xlsx ===
+- Sheet "مصاحبه": no ID column; no Status column (13 total rows, no ID, no Status)
+
+=== 4138.xlsx ===
+- Sheet "مصاحبه": no ID column; no Status column (6 total rows, no ID, no Status)
+
+=== 4139.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (28 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (26 total rows, no ID, no Status)
+- Sheet "مهارتی": no ID column; no Status column (13 total rows, no ID, no Status)
+- Sheet "نمره کل به همراه کانون": no ID column; no Status column (13 total rows, no ID, no Status)
+
+=== 4140.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (27 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (10 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (4 total rows, no ID, no Status)
+
+=== 4142.xlsx ===
+- Sheet "کانون": no Status column (3 total rows, has ID, no Status)
+
+=== 4143.xlsx ===
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (5 total rows, no ID, no Status)
+
+=== 4144.xlsx ===
+- Sheet "مصاحبه": no Status column (5 total rows, has ID, no Status)
+
+=== 4146.xlsx ===
+- Sheet "مصاحبه": no ID column; no Status column (8 total rows, no ID, no Status)
+- Sheet "کانون": no ID column; no Status column (5 total rows, no ID, no Status)
+
+=== 4147.xlsx ===
+- Sheet "روند": no ID column; no Status column (2 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (11 total rows, no ID, no Status)
+
+=== 4148.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (16 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+
+=== 4149.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (10 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (5 total rows, no ID, no Status)
+
+=== 4150.xlsx ===
+- Sheet "کتبی": no Status column (4 total rows, has ID, no Status)
+
+=== 4152.xlsx ===
+- Sheet "مهارتی": no Status column (3 total rows, has ID, no Status)
+
+=== 4153.xlsx ===
+- Sheet "غربالگری1": no Status column (83 total rows, has ID, no Status)
+- Sheet "کتبی": no ID column; no Status column (46 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (26 total rows, no ID, no Status)
+
+=== 4156.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (8 total rows, no ID, no Status)
+
+=== 4157.xlsx ===
+- Sheet "مهارتی": no Status column (11 total rows, has ID, no Status)
+
+=== 4158.xlsx ===
+- Sheet "کتبی": no Status column (4 total rows, has ID, no Status)
+
+=== 4159.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (11 total rows, no ID, no Status)
+
+=== 4161.xlsx ===
+- Sheet "مهارتی": no Status column (5 total rows, has ID, no Status)
+
+=== 4164.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (21 total rows, no ID, no Status)
+- Sheet "مهارتی": no ID column; no Status column (13 total rows, no ID, no Status)
+
+=== 4168.xlsx ===
+- Sheet "مهارتی": no Status column (8 total rows, has ID, no Status)
+
+=== 4169.xlsx ===
+- Sheet "مصاحبه": no Status column (7 total rows, has ID, no Status)
+
+=== 4172.xlsx ===
+- Sheet "کتبی": empty sheet (no rows found)
+
+=== 4173.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (14 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (6 total rows, no ID, no Status)
+
+=== 4174.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (12 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (5 total rows, no ID, no Status)
+
+=== 4175.xlsx ===
+- Sheet "مهارتی": no ID column; no Status column (10 total rows, no ID, no Status)
+- Sheet "مصاحبه": no ID column; no Status column (7 total rows, no ID, no Status)
+
+=== 4179.xlsx ===
+- Sheet "مهارتی": no Status column (27 total rows, has ID, no Status)
+
+=== 4181.xlsx ===
+- Sheet "مهارتی": no Status column (12 total rows, has ID, no Status)
+
+=== 4182.xlsx ===
+- Sheet "کتبی": no Status column (23 total rows, has ID, no Status)
+
+=== 4185.xlsx ===
+- Sheet "کتبی": no Status column (44 total rows, has ID, no Status)
+
+=== 4189.xlsx ===
+- Sheet "مهارتی": no Status column (14 total rows, has ID, no Status)
+
+=== 4190.xlsx ===
+- Sheet "مهارتی": no Status column (36 total rows, has ID, no Status)
+
+=== 4193.xlsx ===
+- Sheet "کتبی": no Status column (18 total rows, has ID, no Status)
+
+=== 4194.xlsx ===
+- Sheet "کتبی": no Status column (35 total rows, has ID, no Status)
+
+=== 4195.xlsx ===
+- Sheet "کتبی": no Status column (40 total rows, has ID, no Status)
+
+=== 4196.xlsx ===
+- Sheet "کتبی": no Status column (25 total rows, has ID, no Status)
+
+=== 4197.xlsx ===
+- Sheet "کتبی": no Status column (17 total rows, has ID, no Status)
+
+=== 50088030.xlsx ===
+- Sheet "کتبی": no ID column; no Status column (30 total rows, no ID, no Status)
+- Sheet "مهارتی": no ID column; no Status column (23 total rows, no ID, no Status)
