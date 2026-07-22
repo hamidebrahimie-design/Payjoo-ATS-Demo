@@ -184,6 +184,16 @@ class JobOpportunity(SoftDeleteModel):
         verbose_name="شماره نامه اعلام نتیجه نهایی"
     )
 
+    # -- فاز ۵: کد پست و مسیر پیشنهادی (مطابق جدول وضعیت اکسل) --
+    post_code = models.CharField(
+        max_length=50, blank=True, null=True,
+        verbose_name="کد پست"
+    )
+    suggested_path = models.CharField(
+        max_length=200, blank=True, null=True,
+        verbose_name="مسیر پیشنهادی"
+    )
+
     class Meta:
         verbose_name = "فرصت شغلی"
         verbose_name_plural = "فرصت‌های شغلی"

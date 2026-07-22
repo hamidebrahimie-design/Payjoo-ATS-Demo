@@ -12,6 +12,85 @@
 <!-- Tom Select CSS -->
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
+    /* Expand/Collapse برای جدول کامل */
+    .pj-table-expand-btn {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    .pj-table-expand-btn:hover {
+        background-color: #e9ecef !important;
+    }
+    .pj-table-expand-btn .expand-icon {
+        display: inline-block;
+        transition: transform 0.3s ease;
+    }
+    .pj-table-expand-btn.expanded .expand-icon {
+        transform: rotate(45deg);
+    }
+    .expandable-col {
+        display: none;
+    }
+    .pj-table-wrapper.expanded .expandable-col {
+        display: table-cell;
+    }
+    .pj-table-group-header th {
+        font-size: 10px;
+        letter-spacing: 0.3px;
+        border-bottom: 2px solid #dee2e6 !important;
+        white-space: nowrap;
+    }
+    /* Sticky header */
+    #pj-status-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: white;
+    }
+    #pj-status-table thead::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e2e8f0;
+        z-index: 5;
+    }
+    /* Sticky first column (ردیف) */
+    #pj-status-table td.default-col:first-child,
+    #pj-status-table thead th.default-col:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: white;
+    }
+    #pj-status-table thead th.default-col:first-child {
+        z-index: 6;
+    }
+    /* Sticky second column (کد پست) */
+    #pj-status-table td.default-col:nth-child(2),
+    #pj-status-table thead th.default-col:nth-child(2) {
+        position: sticky;
+        left: 50px;
+        z-index: 2;
+        background: white;
+    }
+    #pj-status-table thead th.default-col:nth-child(2) {
+        z-index: 5;
+    }
+    /* سایه برای ستون‌های sticky */
+    #pj-status-table td.default-col:first-child::after,
+    #pj-status-table thead th.default-col:first-child::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 100%;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(to left, transparent, rgba(0,0,0,0.06));
+        pointer-events: none;
+    }
     .ts-wrapper.multi .ts-control > div {
         margin: 2px 0 2px 4px !important;
         padding: 3px 6px !important;
@@ -141,294 +220,210 @@
 </div>
 
 <div class="card premium-card">
+    <!-- دکمه expand/collapse جدول کامل -->
+    <div class="card-header bg-white border-bottom border-slate py-2 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <span class="font-semibold text-sm text-secondary">لیست فرصت‌های شغلی</span>
+            <span class="badge bg-secondary bg-opacity-10 text-secondary px-2 py-1 text-xs">{{ paginator.count }} مورد</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary pj-table-expand-btn d-inline-flex align-items-center gap-1.5 font-semibold text-xs" 
+                id="pj-expand-toggle" 
+                onclick="toggleFullTable()"
+                title="نمایش/مخفی‌سازی جزئیات کامل">
+            <span class="expand-icon" style="font-size: 16px; line-height: 1;">+</span>
+            <span class="expand-text">مشاهده جزئیات کامل</span>
+        </button>
+    </div>
     <!-- PJ-MIGRATED-v2 -->
     <div class="card-body p-0">
-        <div class="pj-table-wrapper">
-            <table class="pj-table pj-table-responsive-card">
-                <thead>
+        <div class="pj-table-wrapper" id="pj-full-table-wrapper" style="overflow-x: auto;">
+            <table class="pj-table pj-table-responsive-card" id="pj-status-table" style="min-width: 3000px;">
+                                <thead>
+                    <tr class="pj-table-group-header">
+                        <th colspan="7" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📋 مشخصات اصلی</th>
+                        <th colspan="8" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📅 ثبت‌نام و غربالگری</th>
+                        <th colspan="5" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📝 آزمون کتبی</th>
+                        <th colspan="6" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">🔧 مهارتی و مصاحبه</th>
+                        <th colspan="8" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">🏆 کانون و نتیجه نهایی</th>
+                    </tr>
                     <tr>
-                        <th class="ps-4 align-middle text-secondary font-semibold text-xs" style="width: 50px;">ردیف</th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'request_number' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                آزمون
-                                {% if current_sort == 'request_number' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'code' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                کد پست
-                                {% if current_sort == 'code' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'title' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                عنوان شغل
-                                {% if current_sort == 'title' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'department' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                دپارتمان / واحد
-                                {% if current_sort == 'department' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'created_at' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                شروع
-                                {% if current_sort == 'created_at' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'headcount' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                ظرفیت جذب
-                                {% if current_sort == 'headcount' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th class="align-middle">
-                            <a href="{% sort_url 'status' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold">
-                                آخرین مرحله
-                                {% if current_sort == 'status' %}
-                                    {% if current_order == 'asc' %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    {% endif %}
-                                {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                                    </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-
+                        <!-- گروه ۱: مشخصات اصلی (۷ ستون — default) -->
+                        <th class="default-col ps-4 align-middle text-secondary font-semibold text-xs" style="width: 50px; min-width: 50px;">ردیف</th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">کد پست</th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">
+                            <a href="{% sort_url 'code' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">کد{% if current_sort == 'code' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 110px;">
+                            <a href="{% sort_url 'status' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">آخرین مرحله{% if current_sort == 'status' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 120px;">مسئول</th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 140px;">
+                            <a href="{% sort_url 'department' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">واحد متقاضی{% if current_sort == 'department' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
+                        <th class="default-col align-middle text-secondary font-semibold text-xs" style="min-width: 180px;">
+                            <a href="{% sort_url 'title' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">عنوان پست{% if current_sort == 'title' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
+                        <!-- گروه ۲: ثبت‌نام و غربالگری (۸ ستون — expandable) -->
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">رده شغلی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد مورد نیاز</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">جلسه اولیه</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">شروع ثبت‌نام</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">پایان ثبت‌نام</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 80px;">تعداد ثبت‌نام</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">پایان غربالگری</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد واجد شرایط</th>
+                        <!-- گروه ۳: آزمون کتبی (۵ ستون) -->
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 60px;">کتبی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">آزمون کتبی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین آزمون کتبی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتایج کتبی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد نفرات خروجی کتبی</th>
+                        <!-- گروه ۴: مهارتی و مصاحبه (۶ ستون) -->
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 60px;">مهارتی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">آزمون مهارتی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین آزمون مهارتی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد دعوت به مصاحبه</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">مصاحبه</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد حاضرین مصاحبه</th>
+                        <!-- گروه ۵: کانون و نتیجه نهایی (۸ ستون) -->
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">معرفی به کانون</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 90px;">تعداد معرفی به کانون</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتیجه کانون</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 100px;">اعلام نتیجه نهایی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 130px;">شماره نامه اعلام نتیجه نهایی</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 200px;">توضیحات</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 130px;">شماره نامه درخواست</th>
+                        <th class="expandable-col align-middle text-secondary font-semibold text-xs" style="min-width: 150px;">مسیر پیشنهادی (عنوان)</th>
                     </tr>
                 </thead>
-                <tbody id="job-table-body">
+                                <tbody id="job-table-body">
                     {% for job in jobs %}
                     <tr id="job-{{ job.id }}">
-                        <td class="ps-4 text-muted text-xs text-center" data-label="ردیف">{{ page_obj.start_index|default:1|add:forloop.counter0 }}</td>
-                        <td data-label="آزمون">
+                        <!-- 1. ردیف -->
+                        <td class="default-col ps-4 text-muted text-xs text-center">{{ page_obj.start_index|default:1|add:forloop.counter0 }}</td>
+                        <!-- 2. کد پست -->
+                        <td class="default-col">{{ job.post_code|default:"-" }}</td>
+                        <!-- 3. کد -->
+                        <td class="default-col">
                             <div class="dropdown d-inline-block pj-req-dropdown">
-                                <span class="pj-request-number dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="گزینه‌های اقدام">
-                                    {{ job.request_number }}
-                                </span>
+                                <span class="pj-request-number dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">{{ job.code }}</span>
                                 <ul class="dropdown-menu text-sm p-1 shadow border-slate" style="border-radius: 10px; min-width: 190px;">
                                     {% if user.profile.is_recruitment_staff %}
                                     <li><hr class="dropdown-divider my-1 opacity-10"></li>
-                                    <span class="dropdown-header text-xxs font-bold text-muted px-3 py-0.5" style="letter-spacing: 0.5px;">مدیریت فرآیند</span>
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_pipeline' job.id %}">
-                                            🎯 پایپلاین
-                                        </a>
-                                    </li>
+                                    <span class="dropdown-header text-xxs font-bold text-muted px-3 py-0.5">مدیریت فرآیند</span>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_pipeline' job.id %}">🎯 پایپلاین</a></li>
                                     {% endif %}
-                                    
                                     {% if user.profile.is_recruitment_staff or user.profile.role == 'ADMIN' or user.profile.role == 'JOB_CLASSIFICATION_USER' %}
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_competency_config' job.id %}">
-                                            ⚙️ تنظیم شایستگی‌ها
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_competency_config' job.id %}">⚙️ تنظیم شایستگی‌ها</a></li>
                                     {% endif %}
-                                    
                                     {% if user.profile.can_manage_jobs %}
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_edit' job.id %}">
-                                            ✏️ ویرایش اطلاعات
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_edit' job.id %}">✏️ ویرایش اطلاعات</a></li>
                                     {% endif %}
-
                                     {% if job.selected_competencies.exists or user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
                                     <li><hr class="dropdown-divider my-1 opacity-10"></li>
-                                    <span class="dropdown-header text-xxs font-bold text-muted px-3 py-0.5" style="letter-spacing: 0.5px;">گزارشات و چاپ</span>
+                                    <span class="dropdown-header text-xxs font-bold text-muted px-3 py-0.5">گزارشات و چاپ</span>
                                     {% endif %}
-
                                     {% if user.profile.is_recruitment_staff or user.profile.can_manage_jobs %}
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_opportunity_report' job.id %}" target="_blank">
-                                            📊 شناسنامه جذب (PDF)
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_doc' job.id %}" target="_blank">
-                                            🖨️ سند آزمون استخدامی
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_ad' job.id %}" target="_blank">
-                                            📢 چاپ آگهی استخدامی
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_opportunity_report' job.id %}" target="_blank">📊 شناسنامه جذب (PDF)</a></li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_doc' job.id %}" target="_blank">🖨️ سند آزمون استخدامی</a></li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_print_ad' job.id %}" target="_blank">📢 چاپ آگهی استخدامی</a></li>
                                     {% endif %}
-
                                     {% if job.selected_competencies.exists %}
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_assessment_plan_print' job.id %}" target="_blank">
-                                            📄 Assessment Plan
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_assessment_plan_print' job.id %}" target="_blank">📄 Assessment Plan</a></li>
                                     {% endif %}
-
                                     {% if job.has_exam_stage %}
-                                    <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_exam_specification_print' job.id %}" target="_blank">
-                                            📝 سند مرکز آزمون (A4)
-                                        </a>
-                                    </li>
+                                    <li><a class="dropdown-item rounded d-flex align-items-center gap-2 py-1.5" href="{% url 'job_exam_specification_print' job.id %}" target="_blank">📝 سند مرکز آزمون</a></li>
                                     {% endif %}
-
                                     {% if user.profile.can_manage_jobs %}
                                     <li><hr class="dropdown-divider my-1 opacity-10"></li>
-                                    <li>
-                                        <button class="dropdown-item text-danger rounded d-flex align-items-center gap-2 py-1.5 w-100 text-start"
-                                                hx-get="{% url 'job_delete_confirm' job.id %}"
-                                                hx-target="#deleteJobModalContainer">
-                                            ❌ حذف فرصت شغلی
-                                        </button>
-                                    </li>
+                                    <li><button class="dropdown-item text-danger rounded d-flex align-items-center gap-2 py-1.5 w-100 text-start" hx-get="{% url 'job_delete_confirm' job.id %}" hx-target="#deleteJobModalContainer">❌ حذف فرصت شغلی</button></li>
                                     {% endif %}
                                 </ul>
                             </div>
                         </td>
-                        <td class="ps-4" data-label="کد پست">
-                            <span class="font-medium text-primary">{{ job.code }}</span>
+                        <!-- 4. آخرین مرحله -->
+                        <td class="default-col">
+                            {% if job.status == 'RECEIVED' %}<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1 rounded font-medium text-xs">دریافت شده</span>
+                            {% elif job.status == 'PLANNING' %}<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1 rounded font-medium text-xs">برنامه‌ریزی</span>
+                            {% elif job.status == 'PUBLISHED' %}<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded font-medium text-xs">منتشر شده</span>
+                            {% elif job.status == 'REGISTRATION_CLOSED' %}<span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-25 px-2 py-1 rounded font-medium text-xs">خاتمه ثبت‌نام</span>
+                            {% elif job.status == 'SCREENING' %}<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded font-medium text-xs">غربالگری اولیه</span>
+                            {% elif job.status == 'EXAM' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded font-medium text-xs">آزمون کتبی</span>
+                            {% elif job.status == 'SKILL_TEST' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded font-medium text-xs">آزمون مهارتی</span>
+                            {% elif job.status == 'INTERVIEW' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded font-medium text-xs">مصاحبه حضوری</span>
+                            {% elif job.status == 'ASSESSMENT' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded font-medium text-xs">کانون ارزیابی</span>
+                            {% elif job.status == 'FINAL_SELECTION' %}<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded font-medium text-xs">انتخاب نهایی</span>
+                            {% elif job.status == 'CLOSED' %}<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1 rounded font-medium text-xs">اتمام یافته</span>
+                            {% elif job.status == 'CANCELLED' %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded font-medium text-xs">لغو شده</span>
+                            {% elif job.status == 'SUSPENDED' %}<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded font-medium text-xs">توقف موقت</span>{% endif %}
                         </td>
-                        <td class="font-semibold" data-label="عنوان شغل">{{ job.title }}</td>
-                        <td data-label="دپارتمان / واحد">
-                            <span>{{ job.department }}</span>
-                            {% if job.unit %}
-                            <small class="text-muted d-block">{{ job.unit }}</small>
-                            {% endif %}
-                            {% if job.job_category %}
-                            <span class="badge bg-light text-secondary text-xxs mt-1 px-1.5 py-0.5 rounded font-normal d-inline-block border">{{ job.job_category }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-sm font-medium text-secondary" data-label="شروع">
-                            {{ job.created_at.date|to_jalali|default:"-" }}
-                        </td>
-                        <td data-label="ظرفیت جذب">{{ job.headcount }} نفر</td>
-                        <td data-label="آخرین مرحله">
-                            {% if job.status == 'RECEIVED' %}
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded font-medium">دریافت شده</span>
-                            {% elif job.status == 'PLANNING' %}
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1.5 rounded font-medium">برنامه‌ریزی</span>
-                            {% elif job.status == 'PUBLISHED' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded font-medium">منتشر شده</span>
-                            {% elif job.status == 'REGISTRATION_CLOSED' %}
-                                <span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-25 px-2.5 py-1.5 rounded font-medium">خاتمه ثبت‌نام</span>
-                            {% elif job.status == 'SCREENING' %}
-                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded font-medium">غربالگری اولیه</span>
-                            {% elif job.status == 'EXAM' %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">آزمون کتبی</span>
-                            {% elif job.status == 'SKILL_TEST' %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">آزمون مهارتی</span>
-                            {% elif job.status == 'INTERVIEW' %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">مصاحبه حضوری</span>
-                            {% elif job.status == 'ASSESSMENT' %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded font-medium">کانون ارزیابی</span>
-                            {% elif job.status == 'FINAL_SELECTION' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded font-medium">انتخاب نهایی</span>
-                            {% elif job.status == 'CLOSED' %}
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5 rounded font-medium">اتمام یافته</span>
-                            {% elif job.status == 'CANCELLED' %}
-                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded font-medium">لغو شده</span>
-                            {% elif job.status == 'SUSPENDED' %}
-                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded font-medium">توقف موقت</span>
-                            {% endif %}
-                        </td>
+                        <!-- 5. مسئول -->
+                        <td class="default-col">{% if job.assigned_recruiter %}{{ job.assigned_recruiter.get_full_name }}{% else %}-{% endif %}</td>
+                        <!-- 6. واحد متقاضی -->
+                        <td class="default-col"><span>{{ job.department }}</span>{% if job.unit %}<small class="text-muted d-block">{{ job.unit }}</small>{% endif %}</td>
+                        <!-- 7. عنوان پست -->
+                        <td class="default-col font-semibold">{{ job.title }}</td>
 
+                        <!-- === گروه ۲ === -->
+                        <!-- 8. رده شغلی -->
+                        <td class="expandable-col">{{ job.get_job_category_display|default:"-" }}</td>
+                        <!-- 9. تعداد مورد نیاز -->
+                        <td class="expandable-col">{{ job.headcount }} نفر</td>
+                        <!-- 10. جلسه اولیه -->
+                        <td class="expandable-col">{{ job.initial_meeting_date|to_jalali|default:"-" }}</td>
+                        <!-- 11. شروع ثبت‌نام -->
+                        <td class="expandable-col">{{ job.registration_start_date|to_jalali|default:"-" }}</td>
+                        <!-- 12. پایان ثبت‌نام -->
+                        <td class="expandable-col">{{ job.registration_end_date|to_jalali|default:"-" }}</td>
+                        <!-- 13. تعداد ثبت‌نام -->
+                        <td class="expandable-col">{{ job.registered_count }}</td>
+                        <!-- 14. پایان غربالگری -->
+                        <td class="expandable-col">{{ job.screening_end_date|to_jalali|default:"-" }}</td>
+                        <!-- 15. واجد شرایط -->
+                        <td class="expandable-col">{{ job.qualified_count }}</td>
+
+                        <!-- === گروه ۳ === -->
+                        <!-- 16. کتبی -->
+                        <td class="expandable-col">{% if job.has_written_exam %}<span class="badge bg-success bg-opacity-10 text-success px-1 py-0.5 text-xxs">دارد</span>{% else %}<span class="text-muted text-xxs">ندارد</span>{% endif %}</td>
+                        <!-- 17. آزمون کتبی -->
+                        <td class="expandable-col">{{ job.written_exam_date|to_jalali|default:"-" }}</td>
+                        <!-- 18. حاضرین کتبی -->
+                        <td class="expandable-col">{{ job.written_exam_attendees }}</td>
+                        <!-- 19. اعلام نتایج کتبی -->
+                        <td class="expandable-col">{{ job.written_exam_result_date|to_jalali|default:"-" }}</td>
+                        <!-- 20. خروجی کتبی -->
+                        <td class="expandable-col">{{ job.written_exam_passed }}</td>
+
+                        <!-- === گروه ۴ === -->
+                        <!-- 21. مهارتی -->
+                        <td class="expandable-col">{% if job.has_skill_exam %}<span class="badge bg-success bg-opacity-10 text-success px-1 py-0.5 text-xxs">دارد</span>{% else %}<span class="text-muted text-xxs">ندارد</span>{% endif %}</td>
+                        <!-- 22. آزمون مهارتی -->
+                        <td class="expandable-col">{{ job.skill_exam_date|to_jalali|default:"-" }}</td>
+                        <!-- 23. حاضرین مهارتی -->
+                        <td class="expandable-col">{{ job.skill_exam_attendees }}</td>
+                        <!-- 24. دعوت به مصاحبه -->
+                        <td class="expandable-col">{{ job.interview_invited }}</td>
+                        <!-- 25. مصاحبه -->
+                        <td class="expandable-col">{{ job.interview_date|to_jalali|default:"-" }}</td>
+                        <!-- 26. حاضرین مصاحبه -->
+                        <td class="expandable-col">{{ job.interview_attendees }}</td>
+
+                        <!-- === گروه ۵ === -->
+                        <!-- 27. معرفی به کانون -->
+                        <td class="expandable-col">{{ job.assessment_referral_date|to_jalali|default:"-" }}</td>
+                        <!-- 28. تعداد معرفی -->
+                        <td class="expandable-col">{{ job.assessment_referred }}</td>
+                        <!-- 29. اعلام نتیجه کانون -->
+                        <td class="expandable-col">{{ job.assessment_result_date|to_jalali|default:"-" }}</td>
+                        <!-- 30. اعلام نتیجه نهایی -->
+                        <td class="expandable-col">{{ job.final_result_date|to_jalali|default:"-" }}</td>
+                        <!-- 31. شماره نامه نتیجه -->
+                        <td class="expandable-col">{{ job.final_result_letter_number|default:"-" }}</td>
+                        <!-- 32. توضیحات -->
+                        <td class="expandable-col">{{ job.notes|default:"-"|truncatechars:40 }}</td>
+                        <!-- 33. شماره نامه درخواست -->
+                        <td class="expandable-col">{{ job.request_number }}</td>
+                        <!-- 34. مسیر پیشنهادی -->
+                        <td class="expandable-col">{{ job.suggested_path|default:"-" }}</td>
                     </tr>
                     {% empty %}
-                    {% include "includes/table_empty.html" with colspan=8 message="هیچ فرصت شغلی در سیستم تعریف نشده است." hint="برای شروع، یک فرصت شغلی جدید ایجاد کنید." icon="fas fa-briefcase" %}
+                    {% include "includes/table_empty.html" with colspan=34 message="هیچ فرصت شغلی در سیستم تعریف نشده است." hint="برای شروع، یک فرصت شغلی جدید ایجاد کنید." icon="fas fa-briefcase" %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -538,6 +533,35 @@
             if (modal) {
                 modal.hide();
             }
+        }
+    });
+
+    // Expand/Collapse full table with all Excel columns
+    window.toggleFullTable = function() {
+        var wrapper = document.getElementById('pj-full-table-wrapper');
+        var btn = document.getElementById('pj-expand-toggle');
+        var icon = btn.querySelector('.expand-icon');
+        var text = btn.querySelector('.expand-text');
+        
+        wrapper.classList.toggle('expanded');
+        btn.classList.toggle('expanded');
+        
+        if (wrapper.classList.contains('expanded')) {
+            icon.textContent = '−';
+            text.textContent = 'بستن جزئیات';
+            localStorage.setItem('pj_job_table_expanded', 'true');
+        } else {
+            icon.textContent = '+';
+            text.textContent = 'مشاهده جزئیات کامل';
+            localStorage.setItem('pj_job_table_expanded', 'false');
+        }
+    };
+
+    // Restore expand state from localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        var saved = localStorage.getItem('pj_job_table_expanded');
+        if (saved === 'true') {
+            toggleFullTable();
         }
     });
 </script>
