@@ -4598,3 +4598,57 @@ class BulkSendNotificationView(LoginRequiredMixin, RoleRequiredMixin, View):
         return redirect('job_pipeline', pk=job_id)
 
 
+
+import tempfile, os
+from django.shortcuts import render, redirect
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+
+class ImportScreeningView(LoginRequiredMixin, View):
+    template_name = "candidates/import_screening.html"
+
+    def get(self, request):
+        return render(request, self.template_name, {})
+
+    def post(self, request):
+        phase = request.POST.get('phase', 'dry_run')
+        uploaded_file = request.FILES.get('excel_file')
+
+        # Phase 1: Dry-Run
+        if phase == 'dry_run' and uploaded_file:
+            from .services import dry_run_import_screening
+            with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+                for chunk in uploaded_file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+            try:
+                result = dry_run_import_screening(tmp_path)
+                result['phase'] = 'dry_run'
+                # ذخیره valid_rows در session برای فاز commit
+                request.session['import_screening_valid_rows'] = result['valid_rows']
+            finally:
+                os.unlink(tmp_path)
+            return render(request, self.template_name, {'result': result})
+
+        # Phase 2: Commit
+        if phase == 'commit':
+            from .services import commit_import_screening
+            valid_rows = request.session.get('import_screening_valid_rows', [])
+            if valid_rows:
+                commit_result = commit_import_screening(valid_rows)
+                del request.session['import_screening_valid_rows']
+                return render(request, self.template_name, {
+                    'result': {
+                        'phase': 'commit',
+                        'total_rows': len(valid_rows),
+                        'summary': {
+                            'valid_count': len(valid_rows),
+                            'invalid_count': 0,
+                            'updated': commit_result['updated'],
+                        },
+                        'errors': commit_result.get('errors', []),
+                    }
+                })
+
+        return redirect('import_screening')

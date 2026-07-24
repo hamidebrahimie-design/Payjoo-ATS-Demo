@@ -58,6 +58,7 @@ from .views import (
     DataIntegrityDashboardView,
     ResolveDiscrepancyView,
     UndoIntegrityActionView,
+    ImportScreeningView,
     SelectedCandidatesListView,
     EditAdmissionDateView,
     UpdateAdmissionDateView,
@@ -68,6 +69,8 @@ from .views import (
 
 
 urlpatterns = [
+    path('import/screening/', ImportScreeningView.as_view(), name='import_screening'),
+
     path('', CandidateListView.as_view(), name='candidate_list'),
     path('selected/', SelectedCandidatesListView.as_view(), name='selected_candidates_list'),
     path('add/', CandidateCreateView.as_view(), name='candidate_add'),

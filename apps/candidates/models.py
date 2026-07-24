@@ -115,6 +115,10 @@ class JobApplication(SoftDeleteModel):
     final_score = models.FloatField(default=0.0, verbose_name="امتیاز کل محاسبه شده")
     admission_date = models.DateField(null=True, blank=True, verbose_name="تاریخ پذیرش نهایی")
 
+    # -- فیلدهای غربالگری (Excel Import) --
+    screening_result = models.CharField(max_length=50, blank=True, null=True, verbose_name="نتیجه غربالگری")
+    screening_reason = models.TextField(blank=True, null=True, verbose_name="علت نتیجه غربالگری")
+
     @property
     def effective_status(self):
         # 1. If any active stage state is FAILED, then status is REJECTED
