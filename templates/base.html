@@ -109,7 +109,7 @@
                 var icon = toggleBtn ? toggleBtn.querySelector('i') : null;
                 if (icon) {
                     var isClosed = document.body.classList.contains('pj-sidebar-closed') || (sidebar && sidebar.classList.contains('collapsed'));
-                    icon.className = isClosed ? 'fas fa-bars' : 'fas fa-times';
+                    icon.className = isClosed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
                 }
             }
 
@@ -118,7 +118,7 @@
                 var icon = toggleBtn ? toggleBtn.querySelector('i') : null;
                 if (icon && window.innerWidth >= 992) {
                     var isClosed = document.body.classList.contains('pj-sidebar-closed') || (sidebar && sidebar.classList.contains('collapsed'));
-                    icon.className = isClosed ? 'fas fa-bars' : 'fas fa-times';
+                    icon.className = isClosed ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
                 }
             })();
 

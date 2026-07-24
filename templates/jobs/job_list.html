@@ -40,44 +40,20 @@
         border-bottom: 2px solid #dee2e6 !important;
         white-space: nowrap;
     }
-    /* Sticky header */
-    #pj-status-table thead {
+    /* Sticky header - روی th ها */
+    #pj-status-table thead th {
         position: sticky;
         top: 0;
-        z-index: 5;
+        z-index: 4;
         background: white;
-    }
-    #pj-status-table thead::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: #e2e8f0;
-        z-index: 5;
     }
     /* Sticky first column (ردیف) */
     #pj-status-table td.default-col:first-child,
     #pj-status-table thead th.default-col:first-child {
         position: sticky;
         left: 0;
-        z-index: 3;
-        background: white;
-    }
-    #pj-status-table thead th.default-col:first-child {
-        z-index: 6;
-    }
-    /* Sticky second column (کد پست) */
-    #pj-status-table td.default-col:nth-child(2),
-    #pj-status-table thead th.default-col:nth-child(2) {
-        position: sticky;
-        left: 50px;
-        z-index: 2;
-        background: white;
-    }
-    #pj-status-table thead th.default-col:nth-child(2) {
         z-index: 5;
+        background: white;
     }
     /* سایه برای ستون‌های sticky */
     #pj-status-table td.default-col:first-child::after,
@@ -133,7 +109,6 @@
 {% endblock %}
 
 {% block page_content %}
-<p class="text-muted text-sm mb-4">تعریف فرصت‌های شغلی جدید و تنظیم مراحل و وزن‌های پویای فرآیند ارزیابی متقاضیان</p>
 
 <!-- بخش فیلترهای پیشرفته -->
 <div class="card premium-card mb-4 shadow-sm border-0 bg-light-subtle">
@@ -151,16 +126,6 @@
                 <select name="department" id="id_department" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه دپارتمان‌ها">
                     {% for dept in departments %}
                         <option value="{{ dept }}" {% if dept in filters.department %}selected{% endif %}>{{ dept }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- واحد سازمانی -->
-            <div class="col-6 col-md-4 col-lg-3">
-                <label for="id_unit" class="form-label text-xs font-bold text-muted mb-1">⚙️ واحد سازمانی</label>
-                <select name="unit" id="id_unit" class="form-select form-select-sm text-sm multi-select" multiple placeholder="همه واحدها">
-                    {% for unit in units %}
-                        <option value="{{ unit }}" {% if unit in filters.unit %}selected{% endif %}>{{ unit }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -235,13 +200,13 @@
         </button>
     </div>
     <!-- PJ-MIGRATED-v2 -->
-    <div class="card-body p-0">
-        <div class="pj-table-wrapper" id="pj-full-table-wrapper" style="overflow-x: auto;">
+    <div class="card-body p-0" id="pj-table-card-body">
+        <div class="pj-table-wrapper" id="pj-full-table-wrapper" style="width: 100%; max-height: 60vh; overflow: auto;">
             <table class="pj-table pj-table-responsive-card" id="pj-status-table" style="width: auto;">
                                 <thead>
                     <tr class="pj-table-group-header">
-                        <th colspan="7" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📋 مشخصات اصلی</th>
-                        <th colspan="8" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📅 ثبت‌نام و غربالگری</th>
+                        <th colspan="10" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📋 مشخصات اصلی</th>
+                        <th colspan="5" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📅 ثبت‌نام و غربالگری</th>
                         <th colspan="5" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">📝 آزمون کتبی</th>
                         <th colspan="6" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">🔧 مهارتی و مصاحبه</th>
                         <th colspan="8" class="text-center text-xxs font-bold text-muted bg-light border-bottom-0 px-2 py-1">🏆 کانون و نتیجه نهایی</th>
@@ -260,10 +225,10 @@
                         <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">
                             <a href="{% sort_url 'title' %}" class="d-inline-flex align-items-center gap-1 text-decoration-none text-secondary hover-primary transition-all font-semibold text-xs">عنوان پست{% if current_sort == 'title' %}{% if current_order == 'asc' %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="text-primary-custom animate-bounce-subtle"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>{% endif %}{% else %}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-muted opacity-40"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>{% endif %}</a></th>
                         <!-- گروه ۲: ثبت‌نام و غربالگری (۸ ستون — expandable) -->
-                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">رده شغلی</th>
-                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد مورد نیاز</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">رده شغلی</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">تعداد مورد نیاز</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">شروع ثبت‌نام</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">جلسه اولیه</th>
-                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شروع ثبت‌نام</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">پایان ثبت‌نام</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">تعداد ثبت‌نام</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">پایان غربالگری</th>
@@ -289,7 +254,7 @@
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شماره نامه اعلام نتیجه نهایی</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">توضیحات</th>
                         <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">شماره نامه درخواست</th>
-                        <th style="white-space: nowrap;" class="expandable-col align-middle text-secondary font-semibold text-xs">مسیر پیشنهادی (عنوان)</th>
+                        <th style="white-space: nowrap;" class="default-col align-middle text-secondary font-semibold text-xs">مسیر پیشنهادی (عنوان)</th>
                     </tr>
                 </thead>
                                 <tbody id="job-table-body">
@@ -362,13 +327,13 @@
 
                         <!-- === گروه ۲ === -->
                         <!-- 8. رده شغلی -->
-                        <td class="expandable-col">{{ job.get_job_category_display|default:"-" }}</td>
+                        <td class="default-col">{{ job.get_job_category_display|default:"-" }}</td>
                         <!-- 9. تعداد مورد نیاز -->
-                        <td class="expandable-col">{{ job.headcount }} نفر</td>
+                        <td class="default-col">{{ job.headcount }} نفر</td>
+                        <!-- 11. شروع ثبت‌نام -->
+                        <td class="default-col">{{ job.registration_start_date|to_jalali|default:"-" }}</td>
                         <!-- 10. جلسه اولیه -->
                         <td class="expandable-col">{{ job.initial_meeting_date|to_jalali|default:"-" }}</td>
-                        <!-- 11. شروع ثبت‌نام -->
-                        <td class="expandable-col">{{ job.registration_start_date|to_jalali|default:"-" }}</td>
                         <!-- 12. پایان ثبت‌نام -->
                         <td class="expandable-col">{{ job.registration_end_date|to_jalali|default:"-" }}</td>
                         <!-- 13. تعداد ثبت‌نام -->
@@ -420,7 +385,7 @@
                         <!-- 33. شماره نامه درخواست -->
                         <td class="expandable-col">{{ job.request_number }}</td>
                         <!-- 34. مسیر پیشنهادی -->
-                        <td class="expandable-col">{{ job.suggested_path|default:"-" }}</td>
+                        <td class="default-col">{{ job.suggested_path|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     {% include "includes/table_empty.html" with colspan=34 message="هیچ فرصت شغلی در سیستم تعریف نشده است." hint="برای شروع، یک فرصت شغلی جدید ایجاد کنید." icon="fas fa-briefcase" %}
@@ -554,7 +519,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         var saved = localStorage.getItem('pj_job_table_expanded');
         if (saved === 'true') {
-            toggleFullTable();
+            var wrapper = document.getElementById('pj-full-table-wrapper');
+            wrapper.classList.add('expanded');
+            var btn = document.getElementById('pj-expand-toggle');
+            btn.classList.add('expanded');
+            btn.querySelector('.expand-icon').textContent = '−';
+            btn.querySelector('.expand-text').textContent = 'بستن جزئیات';
         }
     });
 </script>
